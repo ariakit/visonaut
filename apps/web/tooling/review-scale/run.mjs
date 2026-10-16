@@ -57,7 +57,7 @@ export async function run(chromium) {
   await using browser = await chromium.launch({ channel: "chrome", headless: true });
   const sourceFiles = [
     "review/review-workspace.tsx",
-    "review/item-list.tsx",
+    "components/kit/list/screenshot-list.tsx",
     "review/use-evidence.ts",
     "components/screenshot-viewer.tsx",
     "review.css",

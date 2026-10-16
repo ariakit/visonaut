@@ -20,6 +20,11 @@ function selected(page: Page) {
   return page.getByRole("combobox", { name: /^Variant: / });
 }
 
+/** The row of a screenshot in the list. */
+function row(scope: Page | Locator, key: string) {
+  return scope.locator(`a[data-row="${key}"]`);
+}
+
 /** The name of the stepper when the variant is selected. */
 function variantNamed(name: string) {
   return new RegExp(`^Variant: ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\. `);
@@ -63,7 +68,7 @@ test("review surfaces remain dark when the system uses dark mode", async ({ page
     };
     return {
       workspace: sample(".review-workspace"),
-      sidebar: sample(".review-sidebar"),
+      sidebar: sample("#review-screenshots"),
       dialog: sample(".review-help-dialog"),
     };
   });
@@ -78,18 +83,15 @@ for (const width of [1280, 390]) {
     if (width < 1024) {
       await page.getByRole("button", { name: "Show list", exact: true }).click();
     }
-    const accepted = page.getByRole("button", { name: "Accepted (1)" });
-    const addition = page.locator('[id="review-item-new%2Fopen"]');
+    const addition = row(page, "new/open");
     await expect(addition).toBeVisible();
-    await expect(accepted).toHaveAttribute("aria-expanded", "false");
-    await expect(addition).toContainText("0 of 1 need review");
+    await expect(addition).toHaveAccessibleName(/^new\/open\. 1 added$/);
     await expect(page.locator(".review-run-progress")).toContainText("9 left");
-    await page.locator('[id="review-item-menu%2Fopen"]').click();
+    await row(page, "menu/open").click();
     await page.keyboard.press("ArrowDown");
     await expect(addition).toBeFocused();
     await ready(page);
-    await expect(addition).toHaveAttribute("aria-current", "page");
-    await expect(accepted).toHaveAttribute("aria-expanded", "false");
+    await expect(addition).toHaveAttribute("aria-current", "true");
     if (width < 1024) {
       await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
     }
@@ -112,10 +114,7 @@ for (const width of [1280, 390]) {
     }
     await addition.click();
     await page.keyboard.press("ArrowDown");
-    await expect(page.locator('[id="review-item-removed%2Fopen"]')).toBeFocused();
-    await expect(accepted).toHaveAttribute("aria-expanded", "true");
-    await page.keyboard.press("Home");
-    await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toBeFocused();
+    await expect(row(page, "removed/open")).toBeFocused();
   });
 }
 
@@ -141,19 +140,18 @@ test("mixed items stay visible after their changed and added variants are approv
     }
     window.reviewFixture.update(model);
   });
-  const accepted = page.getByRole("button", { name: "Accepted (2)" });
-  const addition = page.locator('[id="review-item-new%2Fopen"]');
-  await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await expect(addition).toContainText("1 of 3 need review");
+  const addition = row(page, "new/open");
+  // A screenshot with no change is not in the list of the changes.
+  await expect(row(page, "menu/open")).toHaveCount(0);
+  await expect(addition).toHaveAccessibleName(/^new\/open\. 1 needs review, 1 added, 1 unchanged/);
   await expect(page.locator(".review-run-progress")).toContainText("8 left");
   await addition.click();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Existing"));
   await ready(page);
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
-  await expect(addition).toContainText("0 of 3 need review");
+  await expect(addition).toHaveAccessibleName(/^new\/open\. 1 approved, 1 added, 1 unchanged/);
   await expect(page.locator(".review-run-progress")).toContainText("7 left");
-  await expect(accepted).toHaveAttribute("aria-expanded", "false");
   await addition.click();
   await page
     .getByRole("group", { name: "Variants" })
@@ -163,9 +161,8 @@ test("mixed items stay visible after their changed and added variants are approv
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await callCount(page, 2);
   await expect(addition).toBeVisible();
-  await expect(addition).toContainText("0 of 3 need review");
+  await expect(addition).toHaveAccessibleName(/^new\/open\. 1 approved, 1 added, 1 unchanged/);
   await expect(page.locator(".review-run-progress")).toContainText("7 left");
-  await expect(accepted).toHaveAttribute("aria-expanded", "false");
   expect(
     await page.evaluate(() => window.reviewFixture.model().items[2]?.variants[0]),
   ).toMatchObject({
@@ -175,7 +172,7 @@ test("mixed items stay visible after their changed and added variants are approv
   });
 });
 
-test("comparison errors stay visible ahead of accepted items", async ({ page }) => {
+test("comparison errors stay visible in the list of the changes", async ({ page }) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     const variant = model.items[2]?.variants[0];
@@ -184,15 +181,13 @@ test("comparison errors stay visible ahead of accepted items", async ({ page }) 
     variant.verdict = null;
     window.reviewFixture.update(model);
   });
-  await expect(page.locator(".review-item")).toHaveCount(3);
-  await expect(page.locator('[id="review-item-new%2Fopen"]')).toContainText("1 comparison error");
-  await expect(page.getByRole("button", { name: "Accepted (1)" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
+  await expect(page.locator("a[data-row]")).toHaveCount(4);
+  await expect(row(page, "new/open")).toHaveAccessibleName(/^new\/open\. 1 failed/);
 });
 
-test("an accepted first item does not hide the initial attention selection", async ({ page }) => {
+test("the first selection is the first screenshot to review, and Up and Down follow the list", async ({
+  page,
+}) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     model.run.id = "run-43";
@@ -201,26 +196,15 @@ test("an accepted first item does not hide the initial attention selection", asy
     for (const variant of first.variants) variant.verdict = "approved";
     window.reviewFixture.update(model);
   });
-  const accepted = page.getByRole("button", { name: "Accepted (2)" });
-  await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await expect(page.locator('[id="review-item-menu%2Fopen"]')).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toHaveCount(0);
+  await expect(row(page, "menu/open")).toHaveAttribute("aria-current", "true");
+  // An approved screenshot keeps its place in the list.
+  await expect(row(page, "dialog/open")).toBeVisible();
   await focusWorkspace(page);
   await page.keyboard.press("ArrowDown");
-  await expect(page.locator('[id="review-item-new%2Fopen"]')).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await page.keyboard.press("ArrowDown");
-  await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(accepted).toHaveAttribute("aria-expanded", "true");
+  await expect(row(page, "new/open")).toHaveAttribute("aria-current", "true");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("ArrowUp");
+  await expect(row(page, "dialog/open")).toHaveAttribute("aria-current", "true");
 });
 
 test("a pending comparison stays visible without an evidence error", async ({ page }) => {
@@ -234,19 +218,17 @@ test("a pending comparison stays visible without an evidence error", async ({ pa
     comparing.kind = "pending";
     window.reviewFixture.update(model);
   });
-  await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toContainText(
-    "1 comparison running",
-  );
-  await expect(page.getByRole("button", { name: "Accepted (1)" })).toHaveAttribute(
-    "aria-expanded",
-    "false",
-  );
+  const comparing = row(page, "dialog/open");
+  await expect(comparing).toHaveAccessibleName(/^dialog\/open\. 1 comparing/);
+  await comparing.click();
   await expect(page.getByText("Comparison is still running…")).toBeVisible();
   await expect(page.getByText("Image evidence unavailable")).not.toBeVisible();
   await expect(page.locator(".review-actions button").first()).toBeDisabled();
 });
 
-test("keyboard item navigation follows attention items before accepted items", async ({ page }) => {
+test("Up and Down on a focused row follow the list, move the focus, and stop at the end", async ({
+  page,
+}) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     for (const index of [1, 3]) {
@@ -260,25 +242,18 @@ test("keyboard item navigation follows attention items before accepted items", a
     error.verdict = null;
     window.reviewFixture.update(model);
   });
-  const accepted = page.getByRole("button", { name: "Accepted (2)" });
-  await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await page.locator('[id="review-item-dialog%2Fopen"]').focus();
+  await row(page, "dialog/open").focus();
   await page.keyboard.press("ArrowDown");
-  await expect(page.locator('[id="review-item-new%2Fopen"]')).toBeFocused();
-  await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await page.keyboard.press("Home");
-  await expect(page.locator('[id="review-item-dialog%2Fopen"]')).toBeFocused();
-  await page.getByLabel("Review workspace", { exact: true }).focus();
+  await expect(row(page, "menu/open")).toBeFocused();
+  await expect(row(page, "menu/open")).toHaveAttribute("aria-current", "true");
   await page.keyboard.press("ArrowDown");
-  await expect(page.locator('[id="review-item-new%2Fopen"]')).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(accepted).toHaveAttribute("aria-expanded", "false");
-  await page.locator('[id="review-item-new%2Fopen"]').focus();
-  await page.keyboard.press("End");
-  await expect(page.locator('[id="review-item-removed%2Fopen"]')).toBeFocused();
-  await expect(accepted).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("ArrowDown");
+  await expect(row(page, "removed/open")).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(row(page, "removed/open")).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(row(page, "new/open")).toBeFocused();
+  await expect(row(page, "new/open")).toHaveAttribute("aria-current", "true");
 });
 
 test("item and variant navigation stops at ends and remembers each item", async ({ page }) => {
@@ -382,7 +357,7 @@ test("item navigation picks the first variant needing review unless one was chos
     first.source = "automatic";
     window.reviewFixture.update(model);
   });
-  await expect(page.locator('[id="review-item-menu%2Fopen"]')).toContainText("1 of 2 need review");
+  await expect(row(page, "menu/open")).toHaveAccessibleName(/^menu\/open\. 1 needs review, /);
   await page.keyboard.press("ArrowDown");
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu-dark"));
 });
@@ -1445,7 +1420,7 @@ test("stale decode completion cannot make a returned selection ready", async ({ 
 test("keyboard pan preserves image position across modes and item thumbnails stay stable", async ({
   page,
 }) => {
-  const thumbnail = page.locator(".review-item").first().locator("img");
+  const thumbnail = page.locator("a[data-row]").first().locator("img").first();
   const source = await thumbnail.getAttribute("src");
   await page.getByRole("button", { name: "200%", exact: true }).click();
   await page.getByRole("button", { name: "Pan New image right", exact: true }).focus();
@@ -1904,7 +1879,7 @@ test("page-wide arrows work from body focus and the off switch preserves native 
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
 });
 
-test("a diff loads on first use and keeps pan until the variant changes", async ({ page }) => {
+test("a diff loads once and keeps pan until the variant changes", async ({ page }) => {
   let requests = 0;
   await page.route("**/lazy-diff.svg", (route) => {
     requests++;
@@ -1921,8 +1896,10 @@ test("a diff loads on first use and keeps pan until the variant changes", async 
     window.reviewFixture.update(model);
   });
   await ready(page);
-  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
-  expect(requests).toBe(0);
+  // The picture of the list row reads the mask of the change, so the mask
+  // loads before the stage needs it, and the stage reads it again from the
+  // browser.
+  await expect.poll(() => requests).toBe(1);
   await page.getByRole("button", { name: "Difference D" }).click();
   await ready(page);
   await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
@@ -2066,7 +2043,7 @@ test("modal dialogs sit outside the shell and set the base text size themselves"
   await page.getByRole("button", { name: "Show list", exact: true }).click();
   const screenshots = page.getByRole("dialog", { name: "Screenshots", exact: true });
   await expect(screenshots).toBeVisible();
-  expect(await fontSize(screenshots.locator(".review-item").first())).toBe("14px");
+  expect(await fontSize(screenshots.locator("a[data-row]").first())).toBe("14px");
   // The headings keep the 16px that they had before the shell set its base size.
   expect(await fontSize(screenshots.getByRole("heading", { name: "Screenshots" }))).toBe("16px");
   await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
@@ -2130,9 +2107,8 @@ test("workspace arrows and screenshot buttons follow the filtered item order", a
     addition.name = "Focus addition";
     window.reviewFixture.update(model);
   });
-  await page.getByRole("combobox", { name: "Search screenshots" }).fill("Focus");
-  await page.keyboard.press("Escape");
-  await expect(page.locator(".review-item")).toHaveCount(2);
+  await page.getByRole("textbox", { name: "Search screenshots" }).fill("Focus");
+  await expect(page.locator("a[data-row]")).toHaveCount(2);
   await focusWorkspace(page);
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("heading", { name: /Focus addition$/ })).toBeVisible();
@@ -2147,25 +2123,55 @@ test("workspace arrows and screenshot buttons follow the filtered item order", a
   await callCount(page, 0);
 });
 
+test("the advance after a decision selects a screenshot that the filtered list shows", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const first = model.items[0];
+    if (!first) throw new Error("Missing first fixture item.");
+    // The first screenshot has one variant to review. The next variant to
+    // review in run order is in Open menu, which the search hides.
+    first.variants = first.variants.slice(0, 1);
+    // A second screenshot that the search shows, after Open menu in run order.
+    const removed = model.items[3];
+    const removal = removed?.variants[0];
+    if (!removed || !removal) throw new Error("Missing removed fixture item.");
+    removed.name = "Removed dialog";
+    removal.verdict = null;
+    removal.source = null;
+    window.reviewFixture.update(model);
+  });
+  await page.getByRole("textbox", { name: "Search screenshots" }).fill("dialog");
+  await expect(page.locator("a[data-row]")).toHaveCount(2);
+  await focusWorkspace(page);
+  await ready(page);
+  await page.keyboard.press("a");
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(row(page, "removed/open")).toHaveAttribute("aria-current", "true");
+  await expect(page.getByRole("heading", { name: /Removed dialog$/ })).toBeVisible();
+});
+
 test("mobile screenshot filters persist and update navigation while the dialog is closed", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Show list", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Screenshots", exact: true });
-  const search = dialog.getByRole("combobox", { name: "Search screenshots" });
+  const search = dialog.getByRole("textbox", { name: "Search screenshots" });
   await search.fill("Open menu");
-  await page.keyboard.press("Escape");
-  await expect(dialog.locator(".review-item")).toHaveCount(1);
+  await expect(dialog.locator("a[data-row]")).toHaveCount(1);
   await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
   await expect(dialog).toBeHidden();
   const next = page.getByRole("button", { name: "Next screenshot", exact: true });
-  await expect(
-    page.getByRole("button", { name: "Previous screenshot", exact: true }),
-  ).toBeDisabled();
+  // The page shows the first screenshot, which the search hides: Next goes
+  // to the first screenshot of the list.
   await next.click();
   await expect(page.getByRole("heading", { name: /Open menu$/ })).toBeVisible();
   await expect(next).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Previous screenshot", exact: true }),
+  ).toBeDisabled();
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     const addition = model.items[2];
@@ -2181,8 +2187,8 @@ test("mobile screenshot filters persist and update navigation while the dialog i
   ).toBeVisible();
   await page.getByRole("button", { name: "Show list", exact: true }).click();
   await expect(search).toHaveValue("Open menu");
-  await expect(dialog.locator(".review-item")).toHaveCount(2);
-  await expect(dialog.locator('.review-item[aria-current="page"]')).toContainText(
+  await expect(dialog.locator("a[data-row]")).toHaveCount(2);
+  await expect(dialog.locator('a[data-row][aria-current="true"]')).toContainText(
     "Open menu additional",
   );
   await callCount(page, 0);
@@ -2201,7 +2207,7 @@ test("the review shell sets one base text size and no visible text is under 12px
       if (!element.checkVisibility()) continue;
       smallest = Math.min(smallest, Number.parseFloat(getComputedStyle(element).fontSize));
     }
-    const control = document.querySelector(".review-item");
+    const control = document.querySelector("a[data-row]");
     return {
       base: shell ? getComputedStyle(shell).fontSize : null,
       smallest,

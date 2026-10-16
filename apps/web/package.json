@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@ariakit/react": "0.4.42",
-    "@ariakit/react-components": "0.7.1",
     "@ariakit/react-utils": "0.2.8",
     "@ariakit/tailwind": "0.2.9",
     "@ariakit/utils": "0.2.2",

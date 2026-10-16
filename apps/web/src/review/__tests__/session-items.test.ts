@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { ReviewItem, ReviewVariant, ReviewVariantPart } from "../model.ts";
-import { getSessionItem, pickVariant } from "../session-items.ts";
+import { getFamilyLabels, getSessionItem, pickItem, pickVariant } from "../session-items.ts";
 
 function parts(framework: string, browser: string, colorScheme: string): ReviewVariantPart[] {
   return [
@@ -92,4 +92,36 @@ test("a screenshot opens on its first variant to review, else its first change",
   expect(pickVariant(item("a", [unchanged, approved, open]))?.key).toBe("open");
   expect(pickVariant(item("b", [unchanged, approved]))?.key).toBe("approved");
   expect(pickVariant(item("c", [unchanged]))?.key).toBe("unchanged");
+});
+
+test("a page opens on the first screenshot to review, else the first change", () => {
+  const unchanged = item("a", [variant("light", { kind: "unchanged" })]);
+  const approved = item("b", [variant("light", { verdict: "approved" })]);
+  const open = item("c", [variant("light")]);
+  expect(pickItem([unchanged, approved, open])?.key).toBe("c");
+  expect(pickItem([unchanged, approved])?.key).toBe("b");
+  expect(pickItem([unchanged])?.key).toBe("a");
+  expect(pickItem([])).toBeUndefined();
+});
+
+test("a family label drops the prefix that most families share", () => {
+  const labels = getFamilyLabels([
+    "ariakit-ui-button",
+    "ariakit-ui-dialog",
+    "ariakit-ui-",
+    "ariakit-ui-button",
+    "menu",
+  ]);
+  expect(Object.fromEntries(labels)).toEqual({
+    "ariakit-ui-button": "button",
+    "ariakit-ui-dialog": "dialog",
+    // A family that is only the prefix keeps its name.
+    "ariakit-ui-": "ariakit-ui-",
+    menu: "menu",
+  });
+  // With no prefix that most families share, each family keeps its name.
+  expect(Object.fromEntries(getFamilyLabels(["ariakit-button", "dialog"]))).toEqual({
+    "ariakit-button": "ariakit-button",
+    dialog: "dialog",
+  });
 });

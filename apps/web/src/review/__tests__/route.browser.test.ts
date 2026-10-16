@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { Page, Route } from "@playwright/test";
+import type { Locator, Page, Route } from "@playwright/test";
 import { compactReviewItems, compactReviewModel } from "../compact-model.ts";
 import { previewReviewModel, previewRunId } from "../preview-fixtures.ts";
 import { fixtureModel } from "./fixture-model.ts";
@@ -570,25 +570,23 @@ test("item and variant links open a direct selection without reloading the run",
   const variants = page.getByRole("group", { name: "Variants" });
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
   await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await expect(items.getByRole("link", { name: /Open menu/ })).toHaveAttribute(
-    "href",
-    /variant=Menu-dark/,
-  );
-  await items.getByRole("link", { name: /Success dialog/ }).click();
-  await items.getByRole("link", { name: /Open menu/ }).click();
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  // A row links to its screenshot. The page opens the variant of a row click.
+  await expect(row(items, "menu/open")).toHaveAttribute("href", /\?item=menu%2Fopen$/);
+  await row(items, "dialog/open").click();
+  await row(items, "menu/open").click();
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
   await variants.getByRole("link", { name: /^Menu\./ }).click();
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/^Menu\./);
   await variants.getByRole("link", { name: /^Menu\./ }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
-  await items.getByRole("link", { name: /Success dialog/ }).click();
+  await row(items, "dialog/open").click();
   await expect(page.getByRole("heading", { name: "Success dialog" })).toBeVisible();
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/React/);
-  await items.getByRole("link", { name: /Success dialog/ }).focus();
+  await row(items, "dialog/open").focus();
   await page.keyboard.press("ArrowDown");
-  await expect(items.getByRole("link", { name: /Open menu/ })).toBeFocused();
+  await expect(row(items, "menu/open")).toBeFocused();
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
   expect(modelLoads).toBe(1);
 });
@@ -609,12 +607,35 @@ test("item links return to the first variant needing review after selecting an u
   const variants = page.getByRole("group", { name: "Variants" });
   await variants.getByRole("link", { name: /^Menu\./ }).click();
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/^Menu\./);
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await items.getByRole("link", { name: /Success dialog/ }).click();
-  const menuLink = items.getByRole("link", { name: /Open menu/ });
-  await expect(menuLink).toHaveAttribute("href", /variant=Menu-dark/);
-  await menuLink.click();
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await row(items, "dialog/open").click();
+  await row(items, "menu/open").click();
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
+});
+
+test("a direct link to a screenshot far down the list brings its row into view", async ({
+  page,
+}) => {
+  const model = fixtureModel();
+  const original = model.items[0];
+  if (!original) throw new Error("Missing first fixture item.");
+  model.items = Array.from({ length: 60 }, (_, index) => ({
+    ...original,
+    key: `screenshot/${String(index).padStart(2, "0")}`,
+    name: `Screenshot ${index + 1}`,
+    variants: original.variants.slice(0, 2).map((variant) => ({
+      ...variant,
+      id: `row-${index}-${variant.key}`,
+    })),
+  }));
+  await page.route("**/api/runs/run-42*", (route) =>
+    route.fulfill({ json: compactReviewModel(model) }),
+  );
+  await page.goto(runUrl("/runs/run-42?item=screenshot%2F57&variant=Solid"));
+  await expect(page.getByRole("heading", { name: /Screenshot 58$/ })).toBeVisible();
+  const linked = row(page.getByRole("navigation", { name: "Screenshots" }), "screenshot/57");
+  await expect(linked).toHaveAttribute("aria-current", "true");
+  await expect(linked).toBeInViewport();
 });
 
 test("a stale variant link keeps its valid item selected", async ({ page }) => {
@@ -1079,7 +1100,7 @@ let releaseFirstPage = () => {};
  */
 async function unchangedRun(
   page: Page,
-  { changed = true, failing = [] as number[], held = false } = {},
+  { changed = true, failing = [] as number[], held = false, moreZeta = 0 } = {},
 ) {
   const model = fixtureModel();
   model.items = changed ? model.items.slice(1) : [];
@@ -1103,7 +1124,15 @@ async function unchangedRun(
       // The first response has this item with its 2 changed variants.
       { key: "menu/open", name: "Open menu", variants: [unchanged("Menu-wide")] },
     ],
-    [{ key: "zeta/unchanged", name: "Zeta", variants: [unchanged("Light")] }],
+    [
+      { key: "zeta/unchanged", name: "Zeta", variants: [unchanged("Light")] },
+      // More screenshots of the family, so that a row can be far down.
+      ...Array.from({ length: moreZeta }, (_, index) => ({
+        key: `zeta/more-${String(index).padStart(2, "0")}`,
+        name: `Zeta ${index + 1}`,
+        variants: [unchanged("Light")],
+      })),
+    ],
   ];
   const requests: string[] = [];
   let running = 0;
@@ -1166,39 +1195,54 @@ async function unchangedRun(
   return requests;
 }
 
-const unchangedFailure =
-  "The unchanged screenshots could not be loaded. Load them again in the group Accepted.";
+const unchangedFailure = "The unchanged screenshots could not be loaded. Try again";
 
 function runUrl(entry: string) {
   return `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(entry)}`;
 }
 
-test("the changed screenshots show first, and the unchanged group loads one page at a time", async ({
+/** The row of a screenshot in the list. */
+function row(scope: Page | Locator, key: string) {
+  return scope.locator(`a[data-row="${key}"]`);
+}
+
+/** Selects an entry of the status select of the list, by the start of its name. */
+async function chooseStatus(page: Page, entry: string) {
+  await page.getByRole("combobox", { name: /^Status: / }).click();
+  await page.getByRole("option", { name: new RegExp(`^${entry}`) }).click();
+}
+
+test("the changed screenshots show first, and the status Unchanged loads each page", async ({
   page,
 }) => {
   const requests = await unchangedRun(page);
   await page.goto(runUrl("/runs/run-42"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
-  await expect(items.getByRole("link", { name: /New item/ })).toBeVisible();
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await expect(row(items, "menu/open")).toBeVisible();
+  await expect(row(items, "new/open")).toBeVisible();
   await expect(
     page.locator(".review-run-progress").getByText("2 left", { exact: true }),
   ).toBeVisible();
   // A request at the load of the page would start before the network is idle.
   await page.waitForLoadState("networkidle");
   expect(requests).toEqual([]);
-  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
-  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
-  await expect(items.getByRole("link", { name: /Removed item/ })).toBeVisible();
-  expect(requests).toEqual(["page=0"]);
-  await expect(items.getByRole("link", { name: /Zeta/ })).toHaveCount(0);
-  await items.getByRole("button", { name: "Load more" }).click();
-  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  // The run model has the number of the unchanged screenshots.
+  await chooseStatus(page, "Unchanged 3");
+  // The families are closed.
+  const alpha = items.getByRole("button", { name: /^alpha/ });
+  await alpha.click();
+  await expect(row(items, "alpha/unchanged")).toBeVisible();
   expect(requests).toEqual(["page=0", "page=1"]);
-  await expect(items.getByRole("button", { name: "Accepted (3)" })).toBeVisible();
-  await expect(items.getByRole("button", { name: /Load more/ })).toHaveCount(0);
+  await expect(row(items, "zeta/unchanged")).toHaveCount(0);
+  await items.getByRole("button", { name: /^zeta/ }).click();
+  await expect(row(items, "zeta/unchanged")).toBeVisible();
+  // Down follows the unchanged screenshots of the list.
+  await row(items, "alpha/unchanged").click();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("heading", { name: "Zeta" })).toBeVisible();
   // The unchanged variant of an item of the first response is in its variants.
-  await items.getByRole("link", { name: /Open menu/ }).click();
+  await chooseStatus(page, "Changes");
+  await row(items, "menu/open").click();
   const variants = page.getByRole("group", { name: "Variants" });
   await expect(variants.getByRole("link", { name: /Menu-wide/ })).toBeVisible();
   await expect(
@@ -1214,17 +1258,73 @@ test("a direct link to an unchanged variant loads its page and opens the variant
   await expect(page.getByRole("heading", { name: "Zeta" })).toBeVisible();
   // The screenshot has one variant, so the variant row names it as text.
   await expect(page.getByRole("combobox", { name: /^Variant: / })).toHaveCount(0);
-  expect(requests).toEqual(["item=zeta%2Funchanged&variant=Light"]);
   expect(
     await page.evaluate(async () => {
       const { router } = await import("./route-fixture.tsx");
       return router.state.location.search;
     }),
   ).toMatchObject({ item: "zeta/unchanged", variant: "Light" });
-  // The group of the selected screenshot is open.
+  // The list shows the unchanged screenshots with the family of the link
+  // open, so it loads the other page too.
+  const linked = row(page.getByRole("navigation", { name: "Screenshots" }), "zeta/unchanged");
+  await expect(linked).toHaveAttribute("aria-current", "true");
+  await expect(linked).toBeInViewport();
+  expect(requests).toEqual(["item=zeta%2Funchanged&variant=Light", "page=0"]);
+});
+
+test("a link to an unchanged screenshot far down its family brings its row into view after each page loads", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { moreZeta: 40 });
+  await page.goto(runUrl("/runs/run-42?item=zeta%2Fmore-39&variant=Light"));
+  await expect(page.getByRole("heading", { name: /Zeta 40$/ })).toBeVisible();
+  // The rows of the families come after the other page, which the list needs.
+  const linked = row(page.getByRole("navigation", { name: "Screenshots" }), "zeta/more-39");
+  await expect(linked).toHaveAttribute("aria-current", "true");
+  await expect(linked).toBeInViewport();
+  expect(requests).toEqual(["item=zeta%2Fmore-39&variant=Light", "page=0"]);
+});
+
+test("a direct link to a screenshot whose comparison runs opens their group", async ({ page }) => {
+  await page.route("**/api/runs/run-42*", (route) => {
+    const model = fixtureModel();
+    const first = model.items[0];
+    if (!first) throw new Error("Missing first fixture item.");
+    for (const variant of first.variants) {
+      variant.kind = "pending";
+    }
+    return route.fulfill({ json: compactReviewModel(model) });
+  });
+  await page.goto(runUrl("/runs/run-42?item=dialog%2Fopen&variant=Solid"));
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await expect(items.getByRole("button", { name: /^Comparing/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await expect(row(items, "dialog/open")).toHaveAttribute("aria-current", "true");
+  await expect(row(items, "dialog/open")).toBeInViewport();
+});
+
+test("a direct link to an unchanged screenshot with no variant loads each page and opens it", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42?item=zeta%2Funchanged"));
+  await expect(page.getByRole("heading", { name: "Zeta" })).toBeVisible();
+  // The page of a capture is found by its item and its variant, so the page
+  // reads each page.
+  expect(requests).toEqual(["page=0", "page=1"]);
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { router } = await import("./route-fixture.tsx");
+        return router.state.location.search;
+      }),
+    )
+    .toMatchObject({ item: "zeta/unchanged", variant: "Light" });
   await expect(
-    page.getByRole("navigation", { name: "Review items" }).getByRole("link", { name: /Zeta/ }),
-  ).toHaveAttribute("aria-current", "page");
+    row(page.getByRole("navigation", { name: "Screenshots" }), "zeta/unchanged"),
+  ).toHaveAttribute("aria-current", "true");
 });
 
 test("a link whose page request fails keeps its address and shows the failure", async ({
@@ -1232,9 +1332,8 @@ test("a link whose page request fails keeps its address and shows the failure", 
 }) => {
   const requests = await unchangedRun(page, { failing: [1] });
   await page.goto(runUrl("/runs/run-42?item=zeta%2Funchanged&variant=Light"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
-  // The group is closed, and the text shows.
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await expect(row(items, "menu/open")).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: "unchanged" })).toHaveText(
     unchangedFailure,
   );
@@ -1264,15 +1363,44 @@ test("a link to a screenshot that the run does not have selects a changed screen
   expect(requests).toEqual(["item=none&variant=Light"]);
 });
 
+test("a link whose page loads after the reviewer left it keeps the status of the list", async ({
+  page,
+}) => {
+  await unchangedRun(page, { failing: [1] });
+  await page.goto(runUrl("/runs/run-42?item=zeta%2Funchanged"));
+  const failure = page.getByRole("alert").filter({ hasText: "unchanged" });
+  await expect(failure).toHaveText(unchangedFailure);
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await row(items, "menu/open").click();
+  await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
+  await chooseStatus(page, "Needs review");
+  const lastPage = page.waitForResponse((response) => response.url().includes("page=1"));
+  await failure.getByRole("button", { name: "Try again" }).click();
+  await lastPage;
+  // The status must not change, so the page renders the loaded pages first.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  await expect(failure).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: /^Status: / })).toHaveAccessibleName(
+    "Status: Needs review",
+  );
+  await expect(row(items, "zeta/unchanged")).toHaveCount(0);
+});
+
 test("a search loads each page of the unchanged screenshots", async ({ page }) => {
   const requests = await unchangedRun(page);
   await page.goto(runUrl("/runs/run-42"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await expect(row(items, "menu/open")).toBeVisible();
   // Each of the 4 changes of the text asks for each page.
-  await page.getByRole("combobox", { name: "Search screenshots" }).pressSequentially("zeta");
-  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
-  await expect(items.getByRole("link", { name: /Open menu/ })).toHaveCount(0);
+  await page.getByRole("textbox", { name: "Search screenshots" }).pressSequentially("zeta");
+  // No change matches, so the list shows the unchanged screenshots that do.
+  await expect(row(items, "zeta/unchanged")).toBeVisible();
+  await expect(row(items, "menu/open")).toHaveCount(0);
   expect(requests).toEqual(["page=0", "page=1"]);
   expect(pageRequestPeak).toBe(1);
 });
@@ -1282,9 +1410,9 @@ test("a search whose first page fails asks one time for each change that follows
 }) => {
   const requests = await unchangedRun(page, { failing: [1], held: true });
   await page.goto(runUrl("/runs/run-42"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
-  const search = page.getByRole("combobox", { name: "Search screenshots" });
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await expect(row(items, "menu/open")).toBeVisible();
+  const search = page.getByRole("textbox", { name: "Search screenshots" });
   // 4 changes of the text wait behind the first request, which then fails.
   await search.pressSequentially("zeta");
   releaseFirstPage();
@@ -1294,64 +1422,40 @@ test("a search whose first page fails asks one time for each change that follows
   await page.waitForLoadState("networkidle");
   expect(requests).toEqual(["page=0"]);
   await search.press("Backspace");
-  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  await expect(row(items, "zeta/unchanged")).toBeVisible();
   expect(requests).toEqual(["page=0", "page=0", "page=1"]);
 });
 
-test("a page after the first one that fails loads when the reviewer opens the group again", async ({
-  page,
-}) => {
+test("a page after the first one that fails loads again with Try again", async ({ page }) => {
   const requests = await unchangedRun(page, { failing: [2] });
   await page.goto(runUrl("/runs/run-42"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
-  const search = page.getByRole("combobox", { name: "Search screenshots" });
-  await search.fill("a");
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await expect(row(items, "menu/open")).toBeVisible();
+  await page.getByRole("textbox", { name: "Search screenshots" }).fill("zeta");
   const failure = page.getByRole("alert").filter({ hasText: "unchanged" });
   await expect(failure).toHaveText(unchangedFailure);
   expect(requests).toEqual(["page=0", "page=1"]);
-  await page.keyboard.press("Escape");
-  const group = items.getByRole("button", { name: "Accepted · 3 unchanged" });
-  await group.click();
-  await group.click();
-  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  await failure.getByRole("button", { name: "Try again" }).click();
+  await expect(row(items, "zeta/unchanged")).toBeVisible();
   await expect(failure).toHaveCount(0);
   expect(requests).toEqual(["page=0", "page=1", "page=1"]);
 });
 
-test("a filter that no unchanged screenshot can match does not show their group", async ({
-  page,
-}) => {
+test("a status of the changes loads no page of the unchanged screenshots", async ({ page }) => {
   const requests = await unchangedRun(page);
   await page.goto(runUrl("/runs/run-42"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
-  await page.getByRole("option", { name: "Review status: All" }).click();
-  await page
-    .getByRole("listbox", { name: "Review status", exact: true })
-    .getByRole("option", { name: "Rejected" })
-    .click();
-  await expect(items.getByText("No screenshots match. Change the search or filter.")).toBeVisible();
-  await expect(items.getByRole("button", { name: /Accepted/ })).toHaveCount(0);
-  await expect(items.getByRole("button", { name: "Load more" })).toHaveCount(0);
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await expect(row(items, "menu/open")).toBeVisible();
+  await chooseStatus(page, "Approved");
+  await expect(row(items, "new/open")).toBeVisible();
+  await expect(row(items, "menu/open")).toHaveCount(0);
+  await chooseStatus(page, "Needs review");
+  await expect(row(items, "menu/open")).toBeVisible();
+  await expect(row(items, "new/open")).toHaveCount(0);
+  // A page request would start right after the status renders. The page has
+  // no state that tracks an absent request, so the test waits a short time.
+  await page.waitForTimeout(300);
   expect(requests).toEqual([]);
-});
-
-test("the filter of approved screenshots loads each page of the unchanged screenshots", async ({
-  page,
-}) => {
-  const requests = await unchangedRun(page);
-  await page.goto(runUrl("/runs/run-42"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
-  await page.getByRole("option", { name: "Review status: All" }).click();
-  await page
-    .getByRole("listbox", { name: "Review status", exact: true })
-    .getByRole("option", { name: "Approved" })
-    .click();
-  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
-  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
-  expect(requests).toEqual(["page=0", "page=1"]);
 });
 
 test("a run with no change loads the first page of its unchanged screenshots at once", async ({
@@ -1363,24 +1467,21 @@ test("a run with no change loads the first page of its unchanged screenshots at 
   expect(requests).toEqual(["page=0"]);
 });
 
-test("a run with no change shows the progress and a failure of its first page, and loads it again", async ({
+test("a run with no change shows a failure of its first page, and loads it again", async ({
   page,
 }) => {
   const requests = await unchangedRun(page, { changed: false, failing: [1], held: true });
   await page.goto(runUrl("/runs/run-42"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
-  // The run page started the first load, and the group shows that it runs.
-  await expect(items.getByRole("button", { name: "Loading…" })).toBeDisabled();
+  // The run page started the first load, and the status waits behind it.
+  await chooseStatus(page, "Unchanged 3");
   releaseFirstPage();
-  // The failure drops the load of the open group, which waited in the queue.
-  await expect(page.getByRole("alert").filter({ hasText: "unchanged" })).toHaveText(
-    unchangedFailure,
-  );
+  // The failure drops the load of the status, which waited in the queue.
+  const failure = page.getByRole("alert").filter({ hasText: "unchanged" });
+  await expect(failure).toHaveText(unchangedFailure);
   expect(requests).toEqual(["page=0"]);
-  await items.getByRole("button", { name: "Load more" }).click();
+  await failure.getByRole("button", { name: "Try again" }).click();
   await expect(page.getByRole("heading", { name: "Alpha" })).toBeVisible();
-  expect(requests).toEqual(["page=0", "page=0"]);
+  expect(requests).toEqual(["page=0", "page=0", "page=1"]);
 });
 
 test("a page of unchanged screenshots that fails to load shows the failure and loads again", async ({
@@ -1388,14 +1489,15 @@ test("a page of unchanged screenshots that fails to load shows the failure and l
 }) => {
   const requests = await unchangedRun(page, { failing: [1] });
   await page.goto(runUrl("/runs/run-42"));
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await chooseStatus(page, "Unchanged 3");
   const failure = page.getByRole("alert").filter({ hasText: "unchanged" });
   await expect(failure).toHaveText(unchangedFailure);
-  await items.getByRole("button", { name: "Load more" }).click();
-  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
+  await failure.getByRole("button", { name: "Try again" }).click();
+  await items.getByRole("button", { name: /^alpha/ }).click();
+  await expect(row(items, "alpha/unchanged")).toBeVisible();
   await expect(failure).toHaveCount(0);
-  expect(requests).toEqual(["page=0", "page=0"]);
+  expect(requests).toEqual(["page=0", "page=0", "page=1"]);
 });
 
 test("a decision for the whole item saves when the selected variant is an unchanged one", async ({
@@ -1454,8 +1556,7 @@ test("Up and Down open the variant that the reviewer selected last, and a row cl
     .poll(() => page.evaluate(() => window.fixtureRouter.state.location.search))
     .toMatchObject({ item: "dialog/open", variant: "Dark" });
   // A row click has no memory: it opens the first variant that needs review.
-  const items = page.getByRole("navigation", { name: "Review items" });
-  await items.getByRole("link", { name: /Success dialog/ }).click();
+  await row(page, "dialog/open").click();
   await expect(variant).toHaveAccessibleName(/^Variant: React\. .* 1 of 7$/);
 });
 

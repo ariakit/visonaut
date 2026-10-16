@@ -195,6 +195,8 @@ function getGroupNote(item: SessionItem) {
 export interface ScreenshotStepperProps {
   /** The screenshot on the stage. Null when the page shows no screenshot. */
   item: SessionItem | null;
+  /** The family label of the list, without the prefix that most families share. */
+  family?: string | null;
   /** The position in the order of Up and Down from 0, or -1. */
   position: number;
   count: number;
@@ -214,6 +216,7 @@ export interface ScreenshotStepperProps {
  */
 export function ScreenshotStepper({
   item,
+  family,
   position,
   count,
   listOpen,
@@ -224,6 +227,7 @@ export function ScreenshotStepper({
   className,
 }: ScreenshotStepperProps) {
   const note = item ? getGroupNote(item) : null;
+  const familyLabel = family ?? item?.family;
   const keys = (key: string) => (shortcuts ? [key] : undefined);
   return (
     <div className={cx("flex max-w-full min-w-0 items-center gap-1", className)}>
@@ -267,7 +271,7 @@ export function ScreenshotStepper({
               "min-w-0 shrink-[9999] truncate text-sm font-normal @max-xl/shell:hidden",
             )}
           >
-            {note ? `${item.family} · ${note}` : item.family}
+            {note ? `${familyLabel} · ${note}` : familyLabel}
           </Text>
           <span className="min-w-0 truncate">{item.label}</span>
         </Heading>

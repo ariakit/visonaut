@@ -160,7 +160,10 @@ export function ScreenshotList({ list, className }: ScreenshotListProps) {
   const tabStopKey = inList ? selectedKey : (rows[0]?.key ?? null);
 
   // The selected row stays in view, and it keeps the focus of the list when
-  // a key moves the selection.
+  // a key moves the selection. The rows of the families come when the
+  // unchanged screenshots load, so a selected row can come after the
+  // selection.
+  const { familiesReady } = list;
   useEffect(() => {
     const box = body.current;
     if (!box || !selectedKey) return;
@@ -187,7 +190,7 @@ export function ScreenshotList({ list, className }: ScreenshotListProps) {
     if (!active?.matches(rowSelector)) return;
     if (!box.contains(active)) return;
     selected.focus({ preventScroll: true });
-  }, [selectedKey, filter.status]);
+  }, [selectedKey, filter.status, familiesReady]);
 
   const focusRows = () => {
     const box = body.current;

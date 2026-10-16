@@ -1,19 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ReviewCommandError } from "./model.ts";
-import type {
-  ReviewCapturePlace,
-  ReviewCommands,
-  ReviewItem,
-  ReviewModel,
-  ReviewSelection,
-} from "./model.ts";
+import type { ReviewCapturePlace, ReviewCommands, ReviewItem, ReviewModel } from "./model.ts";
 import { withUnchangedItems } from "./navigation.ts";
 
 interface UnchangedScreenshotsParams {
   model: ReviewModel;
   commands: ReviewCommands;
-  /** The screenshot that the address names. */
-  selection?: ReviewSelection;
+  /** The screenshot that the address names, with or without a variant. */
+  selection?: { itemKey: string; variantKey?: string };
 }
 
 export interface UnchangedScreenshots {
@@ -22,25 +16,24 @@ export interface UnchangedScreenshots {
   /** The unchanged screenshots of the run, loaded or not. */
   count: number;
   complete: boolean;
-  loading: boolean;
   failed: boolean;
   /** The page of the selected screenshot is not yet known. */
   locating: boolean;
-  /** Loads a page when the reviewer opens the group and it needs one. */
-  loadOnOpen(): void;
-  loadNext(): void;
+  /** Loads each page that is not loaded, one request at a time. */
   loadAll(): void;
 }
 
-function hasVariant(items: ReviewItem[], selection: ReviewSelection) {
+function hasPlace(items: ReviewItem[], selection: { itemKey: string; variantKey?: string }) {
   const item = items.find((entry) => entry.key === selection.itemKey);
-  return Boolean(item?.variants.some((variant) => variant.key === selection.variantKey));
+  if (!item) return false;
+  if (selection.variantKey === undefined) return true;
+  return item.variants.some((variant) => variant.key === selection.variantKey);
 }
 
 /**
  * The unchanged screenshots of a run. The first response does not have them.
- * They load one page at a time: when the reviewer opens their group, searches,
- * or follows a link to one of them.
+ * They load one page at a time: when the reviewer selects them in the status
+ * select of the list, searches, or follows a link to one of them.
  */
 export function useUnchangedScreenshots({
   model,
@@ -108,17 +101,23 @@ export function useUnchangedScreenshots({
   const itemKey = selection?.itemKey;
   const variantKey = selection?.variantKey;
   const selectionKey = JSON.stringify([itemKey, variantKey]);
-  const missing = Boolean(selection && total > 0 && !hasVariant(items, selection));
+  const missing = Boolean(selection && total > 0 && !hasPlace(items, selection));
+  const complete = pages.size >= total;
   // A failed request keeps the address, so that a reload asks again.
   const asked = useRef<string>(undefined);
   useEffect(() => {
     if (itemKey === undefined) return;
-    if (variantKey === undefined) return;
     if (!missing) return;
     if (asked.current === selectionKey) return;
     asked.current = selectionKey;
-    load([{ itemKey, variantKey }]);
-  }, [itemKey, variantKey, missing, selectionKey, load]);
+    if (variantKey !== undefined) {
+      load([{ itemKey, variantKey }]);
+      return;
+    }
+    // The page of a capture is found by its item and its variant. A link
+    // with no variant reads each page, as a search does.
+    load(Array.from({ length: total }, (_, page) => ({ page })));
+  }, [itemKey, variantKey, missing, selectionKey, load, total]);
 
   // A run with no change has nothing else to show.
   const empty = model.items.length === 0;
@@ -128,19 +127,6 @@ export function useUnchangedScreenshots({
     }
   }, [empty, load]);
 
-  const loadNext = () => {
-    for (let page = 0; page < total; page++) {
-      if (pages.has(page)) continue;
-      load([{ page }]);
-      return;
-    }
-  };
-  // An open group with no page, or after a failure, asks for the page that is next.
-  const loadOnOpen = () => {
-    if (pages.size === 0 || status === "failed") {
-      loadNext();
-    }
-  };
   const loadAll = () => {
     if (pages.size >= total) return;
     load(Array.from({ length: total }, (_, page) => ({ page })));
@@ -149,12 +135,10 @@ export function useUnchangedScreenshots({
   return {
     items,
     count: model.unchanged.count,
-    complete: pages.size >= total,
-    loading: status === "loading",
+    complete,
     failed: status === "failed",
-    locating: missing && located !== selectionKey,
-    loadOnOpen,
-    loadNext,
+    // A link with no variant waits for each page.
+    locating: missing && (variantKey === undefined ? !complete : located !== selectionKey),
     loadAll,
   };
 }
