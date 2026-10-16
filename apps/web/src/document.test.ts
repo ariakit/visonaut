@@ -119,7 +119,6 @@ beforeAll(async () => {
       d1Databases: ["DB"],
       r2Buckets: ["IMAGES", "QUARANTINE"],
       queueProducers: ["OPERATIONS"],
-      serviceBindings: { COMPARATOR: async () => new Response(null, { status: 503 }) },
       // Each request that the Worker sends goes to the stub and not to the network.
       outboundService: createGitHubStub({
         appId: String(variables.GITHUB_APP_ID),

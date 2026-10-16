@@ -5,9 +5,7 @@ import { nativeTestStorage } from "./test-storage.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { createRequire } from "node:module";
-import { decodeImage, validateImage } from "@visonaut/compare";
-import { createCodecs } from "@visonaut/compare/jsquash";
+import { validateImage } from "@visonaut/compare";
 import {
   digestJson,
   digestEnvironmentProfile,
@@ -45,15 +43,6 @@ const quarantine = await runtime.getR2Bucket("QUARANTINE");
 const privateKey = await exportPKCS8(
   (await generateKeyPair("RS256", { extractable: true })).privateKey,
 );
-const require = createRequire(import.meta.resolve("@visonaut/compare"));
-const codecs = await createCodecs({
-  png: await WebAssembly.compile(
-    await readFile(require.resolve("@jsquash/png/codec/pkg/squoosh_png_bg.wasm")),
-  ),
-  webp: await WebAssembly.compile(
-    await readFile(require.resolve("@jsquash/webp/codec/dec/webp_dec.wasm")),
-  ),
-});
 const bytes = new Uint8Array(
   await readFile(new URL("../test/fixtures/rgba.png", import.meta.resolve("@visonaut/compare"))),
 );
@@ -212,20 +201,6 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
     images: nativeTestStorage(images),
     quarantine: nativeTestStorage(quarantine),
     operations: { async send() {} },
-    comparator: {
-      async fetch(input, init) {
-        const request = new Request(input, init);
-        const validated = await validateImage(new Uint8Array(await request.arrayBuffer()));
-        await decodeImage(validated, codecs);
-        return Response.json({
-          digest: validated.digest,
-          width: validated.width,
-          height: validated.height,
-          bytes: validated.original.byteLength,
-          contentType: "image/png",
-        });
-      },
-    },
     configuration: {
       origin: "https://preview.example",
       projectId,

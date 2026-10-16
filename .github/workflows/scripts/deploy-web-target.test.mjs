@@ -126,7 +126,7 @@ for (const action of ["preview-web", "production-fence"]) {
 for (const [name, patch] of [
   ["database", { d1_databases: [{ binding: "DB", database_id: "preview-database" }] }],
   ["images bucket", { r2_buckets: [{ binding: "IMAGES", bucket_name: "preview-images" }] }],
-  ["comparator service", { services: [{ binding: "COMPARATOR", service: "preview-compare" }] }],
+  ["service binding", { services: [{ binding: "SERVICE", service: "preview-service" }] }],
   [
     "queue producer",
     { queues: { producers: [{ binding: "OPERATIONS", queue: "preview-operations" }] } },
