@@ -115,7 +115,7 @@ it("reads fewer rows for the history list and returns the same rows", async () =
   if (!history) {
     throw new Error("Expected the history statement.");
   }
-  // The same statement again, for its raw rows. It has two new columns, and it
+  // The same statement again, for its raw rows. It has five new columns, and it
   // has no failures column, because no task of a comparison row exists now.
   const current = await database.prepare(history.sql).bind("project").all();
   expect(former.results).toHaveLength(100);
@@ -125,8 +125,11 @@ it("reads fewer rows for the history list and returns the same rows", async () =
   }
   expect(
     current.results.map((row) => {
-      const { closedReason, compacted, ...columns } = row;
+      const { closedReason, compacted, storedPending, storedRejected, storedApproved, ...columns } =
+        row;
       expect({ closedReason, compacted }).toEqual({ closedReason: null, compacted: 0 });
+      // The three stored counts come with the run row, and no run here has them.
+      expect([storedPending, storedRejected, storedApproved]).toEqual([null, null, null]);
       return columns;
     }),
   ).toEqual(

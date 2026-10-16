@@ -28,6 +28,8 @@ import {
 import {
   ArchivedCommandResultError,
   comparisonReviewCountsSql,
+  reviewCountsOrZero,
+  storedReviewCounts,
   ConcurrentWriteError,
   ConflictError,
   maximumReviewTargets,
@@ -187,10 +189,8 @@ export async function reviewPollState(
  * stored, or else the counts of its rows.
  */
 async function closedRunCounts(database: Database, run: RunRow): Promise<ReviewCounts> {
-  const { review_pending: pending, review_rejected: rejected, review_approved: approved } = run;
-  if (pending != null && rejected != null && approved != null) {
-    return { pending, rejected, approved };
-  }
+  const stored = storedReviewCounts(run);
+  if (stored) return stored;
   if (!run.comparison_id) {
     return { pending: 0, rejected: 0, approved: 0 };
   }
@@ -789,7 +789,7 @@ export async function reviewModel(
   const captureCount =
     comparison && run.inventory_key && !importedBaseline ? (run.capture_count ?? 0) : 0;
   const unchangedCount = Math.max(0, captureCount - rowsWithCandidate);
-  const counts = closedCounts ?? status;
+  const counts = closedCounts ?? reviewCountsOrZero(status);
   const model: ReviewModel = {
     viewerId: context.identity.githubUserId,
     run: {
