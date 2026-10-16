@@ -447,9 +447,11 @@ describe("trusted local Submit", () => {
       }
       // The statements are the same for both sizes. The rows differ by a few
       // between two runs of one size: a seek of a random id can read one more row.
+      // 16 statements: the 15 of the model before, and the alert count of the
+      // header, which sits in a batch that the read already sends.
       expect(reads.map((read) => [read.statements, read.roundTrips])).toEqual([
-        [15, 9],
-        [15, 9],
+        [16, 9],
+        [16, 9],
       ]);
       // 100 times the captures must not read more rows.
       const [small, large] = reads.map((read) => read.rows);
