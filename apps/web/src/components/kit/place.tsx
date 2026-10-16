@@ -28,6 +28,11 @@ export interface PlaceLinkProps extends Omit<ComponentProps<"a">, "href">, Place
    * UI primitive does.
    */
   render?: ReactElement<{ render?: ReactElement }>;
+  /**
+   * Selects the place in the page for a plain click, in the place of the
+   * router navigation. The page then records how the place was selected.
+   */
+  onSelect?(): void;
 }
 
 /**
@@ -44,7 +49,14 @@ export interface PlaceLinkProps extends Omit<ComponentProps<"a">, "href">, Place
  *   …
  * </Button>
  */
-export function PlaceLink({ itemKey, variantKey, render, onClick, ...props }: PlaceLinkProps) {
+export function PlaceLink({
+  itemKey,
+  variantKey,
+  render,
+  onClick,
+  onSelect,
+  ...props
+}: PlaceLinkProps) {
   const router = useRouter();
   const location = {
     to: ".",
@@ -63,6 +75,10 @@ export function PlaceLink({ itemKey, variantKey, render, onClick, ...props }: Pl
         // The browser opens a click with a modifier key in a new tab.
         if (!isPlainClick(event)) return;
         event.preventDefault();
+        if (onSelect) {
+          onSelect();
+          return;
+        }
         // A new place must not scroll the page to its top.
         void router.navigate({ ...location, replace: true, resetScroll: false });
       }}

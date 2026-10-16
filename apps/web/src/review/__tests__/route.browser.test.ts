@@ -567,8 +567,8 @@ test("item and variant links open a direct selection without reloading the run",
     return route.fulfill({ json: compactReviewModel(model) });
   });
   await page.goto(url);
-  const variants = page.getByRole("navigation", { name: "Variants" });
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/Menu-dark/);
+  const variants = page.getByRole("group", { name: "Variants" });
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
   await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
   const items = page.getByRole("navigation", { name: "Review items" });
   await expect(items.getByRole("link", { name: /Open menu/ })).toHaveAttribute(
@@ -577,19 +577,19 @@ test("item and variant links open a direct selection without reloading the run",
   );
   await items.getByRole("link", { name: /Success dialog/ }).click();
   await items.getByRole("link", { name: /Open menu/ }).click();
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/Menu-dark/);
-  await variants.getByRole("link", { name: /Menu · Chromium/ }).click();
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/Menu · Chromium/);
-  await variants.getByRole("link", { name: /Menu · Chromium/ }).focus();
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
+  await variants.getByRole("link", { name: /^Menu\./ }).click();
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/^Menu\./);
+  await variants.getByRole("link", { name: /^Menu\./ }).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/Menu-dark/);
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
   await items.getByRole("link", { name: /Success dialog/ }).click();
   await expect(page.getByRole("heading", { name: "Success dialog" })).toBeVisible();
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/React/);
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/React/);
   await items.getByRole("link", { name: /Success dialog/ }).focus();
   await page.keyboard.press("ArrowDown");
   await expect(items.getByRole("link", { name: /Open menu/ })).toBeFocused();
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/Menu-dark/);
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
   expect(modelLoads).toBe(1);
 });
 
@@ -606,15 +606,15 @@ test("item links return to the first variant needing review after selecting an u
   await page.goto(
     `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(selectedEntry)}`,
   );
-  const variants = page.getByRole("navigation", { name: "Variants" });
-  await variants.getByRole("link", { name: /Menu · Chromium/ }).click();
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/Menu · Chromium/);
+  const variants = page.getByRole("group", { name: "Variants" });
+  await variants.getByRole("link", { name: /^Menu\./ }).click();
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/^Menu\./);
   const items = page.getByRole("navigation", { name: "Review items" });
   await items.getByRole("link", { name: /Success dialog/ }).click();
   const menuLink = items.getByRole("link", { name: /Open menu/ });
   await expect(menuLink).toHaveAttribute("href", /variant=Menu-dark/);
   await menuLink.click();
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/Menu-dark/);
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
 });
 
 test("a stale variant link keeps its valid item selected", async ({ page }) => {
@@ -627,8 +627,8 @@ test("a stale variant link keeps its valid item selected", async ({ page }) => {
   );
   await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
   await expect(
-    page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]'),
-  ).toHaveAccessibleName(/Menu · Chromium/);
+    page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]'),
+  ).toHaveAccessibleName(/^Menu\./);
   await expect
     .poll(() =>
       page.evaluate(async () => {
@@ -720,26 +720,26 @@ test("variant links preserve native new-tab activation and keyboard routes", asy
     route.fulfill({ json: compactReviewModel(fixtureModel()) }),
   );
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2Fruns%2Frun-42");
-  const variants = page.getByRole("navigation", { name: "Variants" });
+  const variants = page.getByRole("group", { name: "Variants" });
   const solid = variants.getByRole("link", { name: /Solid/ });
   await expect(solid).toHaveAttribute("href", /item=dialog%2Fopen.*variant=Solid/);
   const popup = page.context().waitForEvent("page");
   await solid.click({ button: "middle" });
   const newTab = await popup;
   await newTab.close();
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/React/);
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/React/);
   const modifiedTab = page.context().waitForEvent("page");
   await solid.click({ modifiers: [process.platform === "darwin" ? "Meta" : "Control"] });
   await (await modifiedTab).close();
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/React/);
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/React/);
   await variants.getByRole("link", { name: /React/ }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(solid).toBeFocused();
-  await expect(solid).toHaveAttribute("aria-current", "page");
+  await expect(solid).toHaveAttribute("aria-current", "true");
   await page.getByLabel("Review workspace", { exact: true }).focus();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowUp");
-  await expect(variants.locator('a[aria-current="page"]')).toHaveAccessibleName(/Solid/);
+  await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/^Solid\./);
 });
 
 test("the work list shows an old PR title while recent history stays separate", async ({
@@ -887,13 +887,10 @@ test("a preview review has image fixtures and no live actions or login", async (
   await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Recompare stored run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Sign (in|out)/ })).toHaveCount(0);
-  await page
-    .getByRole("navigation", { name: "Variants" })
-    .locator('a[aria-current="page"]')
-    .focus();
+  await page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]').focus();
   await page.keyboard.press("ArrowRight");
   await expect(
-    page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]'),
+    page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]'),
   ).toHaveAccessibleName(/Dark/);
   expect(requests).toEqual([`/api/runs/${previewRunId}`]);
 });
@@ -1184,7 +1181,9 @@ test("the changed screenshots show first, and the unchanged group loads one page
   const items = page.getByRole("navigation", { name: "Review items" });
   await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
   await expect(items.getByRole("link", { name: /New item/ })).toBeVisible();
-  await expect(page.getByText("2 of 7 need review")).toBeVisible();
+  await expect(
+    page.locator(".review-run-progress").getByText("2 left", { exact: true }),
+  ).toBeVisible();
   // A request at the load of the page would start before the network is idle.
   await page.waitForLoadState("networkidle");
   expect(requests).toEqual([]);
@@ -1200,9 +1199,11 @@ test("the changed screenshots show first, and the unchanged group loads one page
   await expect(items.getByRole("button", { name: /Load more/ })).toHaveCount(0);
   // The unchanged variant of an item of the first response is in its variants.
   await items.getByRole("link", { name: /Open menu/ }).click();
-  const variants = page.getByRole("navigation", { name: "Variants" });
+  const variants = page.getByRole("group", { name: "Variants" });
   await expect(variants.getByRole("link", { name: /Menu-wide/ })).toBeVisible();
-  await expect(page.getByText("2 of 7 need review")).toBeVisible();
+  await expect(
+    page.locator(".review-run-progress").getByText("2 left", { exact: true }),
+  ).toBeVisible();
 });
 
 test("a direct link to an unchanged variant loads its page and opens the variant", async ({
@@ -1211,9 +1212,8 @@ test("a direct link to an unchanged variant loads its page and opens the variant
   const requests = await unchangedRun(page);
   await page.goto(runUrl("/runs/run-42?item=zeta%2Funchanged&variant=Light"));
   await expect(page.getByRole("heading", { name: "Zeta" })).toBeVisible();
-  await expect(
-    page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]'),
-  ).toHaveAccessibleName(/Light · Chromium/);
+  // The screenshot has one variant, so the variant row names it as text.
+  await expect(page.getByRole("combobox", { name: /^Variant: / })).toHaveCount(0);
   expect(requests).toEqual(["item=zeta%2Funchanged&variant=Light"]);
   expect(
     await page.evaluate(async () => {
@@ -1416,7 +1416,7 @@ test("a decision for the whole item saves when the selected variant is an unchan
   );
   await page.goto(runUrl("/runs/run-42?item=menu%2Fopen&variant=Menu-wide"));
   await expect(
-    page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]'),
+    page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]'),
   ).toHaveAccessibleName(/Menu-wide/);
   await page.getByRole("button", { name: /^All 2 changed views/ }).click();
   await page.getByRole("button", { name: /Approve whole item/ }).click();
@@ -1430,4 +1430,66 @@ test("a decision for the whole item saves when the selected variant is an unchan
     ],
     selection: { itemKey: "menu/open", variantKey: "Menu-wide" },
   });
+});
+
+test("Up and Down open the variant that the reviewer selected last, and a row click opens the first variant that needs review", async ({
+  page,
+}) => {
+  await page.route("**/api/runs/run-42*", (route) =>
+    route.fulfill({ json: compactReviewModel(fixtureModel()) }),
+  );
+  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2Fruns%2Frun-42");
+  // The first screenshot has seven variants, and each one needs review.
+  const variant = page.getByRole("combobox", { name: /^Variant: / });
+  await expect(variant).toHaveAccessibleName(/^Variant: React\. .* 1 of 7$/);
+  await page.getByLabel("Review workspace", { exact: true }).focus();
+  await page.keyboard.press("3");
+  await expect(variant).toHaveAccessibleName(/^Variant: Dark\. .* 3 of 7$/);
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("heading", { name: /Open menu/ })).toBeVisible();
+  await expect(variant).toHaveAccessibleName(/^Variant: Menu\. .* 1 of 2$/);
+  await page.keyboard.press("ArrowUp");
+  await expect(variant).toHaveAccessibleName(/^Variant: Dark\. .* 3 of 7$/);
+  await expect
+    .poll(() => page.evaluate(() => window.fixtureRouter.state.location.search))
+    .toMatchObject({ item: "dialog/open", variant: "Dark" });
+  // A row click has no memory: it opens the first variant that needs review.
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await items.getByRole("link", { name: /Success dialog/ }).click();
+  await expect(variant).toHaveAccessibleName(/^Variant: React\. .* 1 of 7$/);
+});
+
+test("the run header says why a run closed and counts the loose comparison settings", async ({
+  page,
+}) => {
+  let model = fixtureModel();
+  await page.route("**/api/runs/run-42*", (route) =>
+    route.fulfill({ json: compactReviewModel(model) }),
+  );
+  const header = page.getByRole("banner");
+  const open = async () => {
+    await page.goto("/src/review/__tests__/route-fixture.html?entry=%2Fruns%2Frun-42");
+    await expect(page.locator("[data-evidence]")).toBeVisible();
+  };
+  model = { ...model, run: { ...model.run, comparisonSettings: { changed: 3, loose: 2 } } };
+  await open();
+  await expect(header.getByText("2 captures with loose settings", { exact: true })).toBeVisible();
+  model = { ...model, run: { ...model.run, comparisonSettings: { changed: 3, loose: 0 } } };
+  await open();
+  await expect(header.getByText(/loose settings/)).toHaveCount(0);
+  await expect(header.locator(".review-run-closed")).toHaveCount(0);
+  const closed = {
+    ...model,
+    archived: true,
+    reviewReady: false,
+    run: { ...model.run, status: "superseded" },
+  };
+  model = { ...closed, run: { ...closed.run, closedReason: "pull-request-closed" } };
+  await open();
+  await expect(header.locator(".review-run-closed")).toHaveText("Closed");
+  // A run that closed before the stored reason: the words name no cause.
+  model = closed;
+  await open();
+  await expect(header.locator(".review-run-closed")).toHaveText("No longer active");
+  await expect(page.getByText(/A newer attempt replaced this comparison/)).toHaveCount(0);
 });

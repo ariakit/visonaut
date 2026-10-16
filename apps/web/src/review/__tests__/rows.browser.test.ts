@@ -112,18 +112,32 @@ for (const scheme of ["light", "dark"] as const) {
   });
 }
 
-test("the variant strip uses a bar glider, not a pill", async ({ page }) => {
+// The stepper of #272 replaced the variant strip. Its row of marks has the
+// selected glider of the kit pager: it covers the selected mark, and it is a
+// rounded square, not a pill.
+test("the variant marks show the selected one with a glider, not a pill", async ({ page }) => {
   await page.goto("/src/review/__tests__/index.html");
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-  const glider = page.getByRole("navigation", { name: "Variants" }).locator(":scope > .glider-bar");
+  const marks = page.getByRole("group", { name: "Variants" });
+  // The selected glider comes first, before the hover and the focus gliders.
+  const glider = marks.locator(":scope > .glider").first();
+  const covers = async (name: RegExp) => {
+    const mark = await marks.getByRole("link", { name }).boundingBox();
+    const box = await glider.boundingBox();
+    if (!mark || !box) return false;
+    return Math.abs(box.x - mark.x) < 2 && Math.abs(box.width - mark.width) < 2;
+  };
   await expect(glider).toBeVisible();
-  // The glider moves with a transition, so wait for its final bar size.
-  await expect
-    .poll(async () => {
-      const box = await glider.boundingBox();
-      return box ? box.height <= 4 && box.width > 40 : false;
-    })
-    .toBe(true);
+  // The glider moves with a transition, so wait for its final place.
+  await expect.poll(() => covers(/^React\./)).toBe(true);
+  const { height, radius } = await glider.evaluate((element) => ({
+    height: element.getBoundingClientRect().height,
+    radius: Number.parseFloat(getComputedStyle(element).borderTopLeftRadius),
+  }));
+  expect(height).toBeGreaterThan(4);
+  expect(radius).toBeLessThan(height / 2);
+  await marks.getByRole("link", { name: /^Dark\./ }).click();
+  await expect.poll(() => covers(/^Dark\./)).toBe(true);
 });
 
 async function expectPill(locator: Locator) {
@@ -136,15 +150,17 @@ async function expectPill(locator: Locator) {
 }
 
 // A guard, not a regression proof: the unforced radius of these badges is also
-// large, so this test passes without `$forceRounded` today.
+// large, so this test passes without `$forceRounded` today. The run header has
+// no alert count, so the count is checked on the Queue.
 test("the status badge and the alert count stay fully rounded", async ({ page }) => {
   await page.goto("/src/review/__tests__/index.html");
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-  await expectPill(
-    page
-      .getByRole("heading", { name: "Success dialog", exact: true })
-      .locator("xpath=following-sibling::*[1]"),
-  );
+  // The run page shows the status badge in the dialog of a decision for the
+  // whole screenshot. The heading of the screenshot has no badge since #272.
+  await page.getByRole("button", { name: /^All 7 changed views/ }).click();
+  const dialog = page.getByRole("dialog", { name: "Review all changed views" });
+  await expectPill(dialog.getByRole("listitem").first().locator(":scope > :last-child"));
+  await page.keyboard.press("Escape");
   await page.route("**/api/runs", (route) =>
     route.fulfill({
       json: {

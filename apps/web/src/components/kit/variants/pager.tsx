@@ -22,6 +22,11 @@ export interface VariantPagerProps {
   item: SessionItem;
   /** The variant on the stage. */
   variant: SessionVariant;
+  /**
+   * Selects a variant for a plain click on a mark, in the place of the link.
+   * Without it, a mark changes the URL.
+   */
+  onSelect?(variantKey: string): void;
   className?: string;
 }
 
@@ -32,7 +37,7 @@ export interface VariantPagerProps {
  * 8 variants shows one counted mark for each state, and each one is a link
  * to the next variant in that state.
  */
-export function VariantPager({ item, variant: selected, className }: VariantPagerProps) {
+export function VariantPager({ item, variant: selected, onSelect, className }: VariantPagerProps) {
   const counted = item.variants.length > longestPager;
   return (
     <ButtonGroup
@@ -47,7 +52,13 @@ export function VariantPager({ item, variant: selected, className }: VariantPage
           <Hint key={mark.status} label={mark.label}>
             <Button
               aria-label={`${mark.label}: ${mark.count}`}
-              render={<PlaceLink itemKey={item.key} variantKey={mark.target.key} />}
+              render={
+                <PlaceLink
+                  itemKey={item.key}
+                  variantKey={mark.target.key}
+                  onSelect={onSelect && (() => onSelect(mark.target.key))}
+                />
+              }
             >
               <ButtonSlot>
                 <StatusGlyph status={mark.status} decorative />
@@ -64,7 +75,13 @@ export function VariantPager({ item, variant: selected, className }: VariantPage
             <Button
               aria-label={getVariantName(variant)}
               aria-current={variant.key === selected.key ? "true" : undefined}
-              render={<PlaceLink itemKey={item.key} variantKey={variant.key} />}
+              render={
+                <PlaceLink
+                  itemKey={item.key}
+                  variantKey={variant.key}
+                  onSelect={onSelect && (() => onSelect(variant.key))}
+                />
+              }
             >
               <ButtonSlot>
                 <StatusGlyph status={getStripStatusName(variant)} decorative />

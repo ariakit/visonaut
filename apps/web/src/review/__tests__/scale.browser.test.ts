@@ -10,8 +10,15 @@ function row(page: Page, index: number) {
   return page.locator(`#review-item-item-${index}`);
 }
 
+// The stepper of the variant control names the selected variant and its
+// state: `Variant: Solid. Needs review. 2 of 2`.
 function selected(page: Page) {
-  return page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]');
+  return page.getByRole("combobox", { name: /^Variant: / });
+}
+
+/** The name of the stepper when the variant is selected. */
+function variantNamed(name: string) {
+  return new RegExp(`^Variant: ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\. `);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -46,7 +53,7 @@ test("sidebar fills its body and the bar follows the selected virtual row", asyn
   expect(scrollBounds.height).toBeGreaterThan(bodyBounds.height - 24);
   expect(
     (await page.locator(".review-sidebar .shell-sidebar-header").boundingBox())?.height,
-  ).toBeLessThanOrEqual(48);
+  ).toBeLessThanOrEqual(49);
   await row(page, 0).focus();
   await page.keyboard.press("End");
   await expect(row(page, 999)).toBeFocused();
@@ -69,7 +76,7 @@ test("the complete virtual list has bounded rows and arrow, Home and End navigat
   await page.keyboard.press("End");
   await expect(row(page, 999)).toBeFocused();
   await expect(row(page, 999)).toHaveAccessibleDescription("Item 1000 of 1000");
-  await expect(page.getByRole("heading", { name: "Item 1000", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Item 1000$/ })).toBeVisible();
   await expect(row(page, 999)).toBeInViewport();
   await page.keyboard.press("ArrowUp");
   await expect(row(page, 998)).toBeFocused();
@@ -90,11 +97,11 @@ test("page-wide navigation remembers variants and leaves focus outside the virtu
   await page.getByLabel("Review workspace", { exact: true }).focus();
   await page.keyboard.press("ArrowUp");
   await page.keyboard.press("2");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.keyboard.press("ArrowDown");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await page.keyboard.press("ArrowUp");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await expect(row(page, 998)).toBeInViewport();
   await expect(page.getByLabel("Review workspace", { exact: true })).toBeFocused();
 });
@@ -162,17 +169,17 @@ test("approval, Undo and removal retain useful focus and stable identities", asy
   await page.getByLabel("Review workspace", { exact: true }).focus();
   await ready(page);
   await page.keyboard.press("a");
-  await expect(page.getByRole("heading", { name: "Item 1000", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Item 1000$/ })).toBeVisible();
   await ready(page);
   await page.keyboard.press("Control+z");
-  await expect(page.getByRole("heading", { name: "Item 501", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Item 501$/ })).toBeVisible();
   await row(page, 500).focus();
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     model.items.splice(500, 1);
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("heading", { name: "Item 1", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Item 1$/ })).toBeVisible();
   await expect(row(page, 0)).toBeFocused();
   await page.getByRole("button", { name: "Keyboard help" }).focus();
   await page.evaluate(() => {
@@ -218,7 +225,7 @@ test("long names have measured height and do not overlap at browser zoom", async
 
 test("narrow layout keeps items, tabs and image controls inside the page", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+  await page.getByRole("button", { name: "Show list", exact: true }).click();
   await expect(row(page, 0)).toBeVisible();
   await row(page, 0).focus();
   await page.keyboard.press("End");

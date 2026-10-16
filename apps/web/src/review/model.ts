@@ -1,3 +1,4 @@
+import type { RunClosedReason } from "@visonaut/protocol";
 import { ClientError } from "../client-error.ts";
 import type { ClientErrorFacts } from "../client-error.ts";
 
@@ -111,6 +112,8 @@ export interface ReviewModel {
      * 0.2 and 0 pixels). A run from before the counts does not have the field.
      */
     comparisonSettings?: { changed: number; loose: number };
+    /** Why the run closed. A run that closed before the stored reason has none. */
+    closedReason?: RunClosedReason;
   };
   comparisonId: string;
   comparisonRevision: number;

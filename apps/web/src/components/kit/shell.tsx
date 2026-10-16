@@ -211,7 +211,7 @@ export interface AppShellProps extends ShellProps {
  * The shell of a page: the root with the one base text size, the header on
  * the desk, and the parts of the page. The layout route renders it for each
  * list page, so the header stays between two pages. A page that needs its own
- * root (the review workspace) renders `Shell` and `AppHeader` itself.
+ * root (the review workspace) renders `Shell` and its own header.
  * @example
  * <AppShell>
  *   <ShellMain>…</ShellMain>

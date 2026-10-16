@@ -23,7 +23,7 @@ export interface VariantNavProps {
   onCoverChange?(cover: boolean): void;
   /** The previous or the next variant of the screenshot. */
   onStep(step: 1 | -1): void;
-  /** A variant of the list of the stepper. */
+  /** A variant of the list of the stepper, or a plain click on a mark. */
   onSelect(variantKey: string): void;
   className?: string;
 }
@@ -91,7 +91,7 @@ export function VariantNav({
             document, so the row still knows its width. A control is
             positioned by its recipe, so a wrapper takes it out of the flow. */}
         <span className={cx("flex flex-none", !fits && "invisible absolute")}>
-          <VariantPager item={item} variant={variant} />
+          <VariantPager item={item} variant={variant} onSelect={onSelect} />
         </span>
         {hasCover && (
           <Button
