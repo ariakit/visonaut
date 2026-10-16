@@ -55,6 +55,11 @@ export function reviewTargets(item: ReviewItem) {
   );
 }
 
+/** The targets of a run approval: each change of the run with no decision. */
+export function runApprovalTargets(items: ReviewItem[]) {
+  return items.flatMap(reviewTargets).filter((variant) => variant.verdict === null);
+}
+
 export function applyPendingReviews(model: ReviewModel, commands: ReviewCommand[]): ReviewModel {
   const changes = new Map<string, { revision: number; verdict: ReviewCommand["verdict"] }>();
   for (const command of commands) {

@@ -16,6 +16,7 @@ import { StatusLine } from "./message-row.tsx";
 import type { BarMessage } from "./message.ts";
 import { MoreMenu } from "./more-menu.tsx";
 import type { WholeItemCommand } from "./more-menu.tsx";
+import type { RunApprovalCommand } from "./run-approval.tsx";
 import { MaskToggle, ModeButtons } from "./view-controls.tsx";
 import { ZoomControl } from "./zoom.tsx";
 
@@ -39,6 +40,8 @@ export interface ReviewBarProps {
   approve: BarControl;
   /** The decisions for the whole screenshot, in the `⋯` menu. */
   wholeItem: WholeItemCommand | null;
+  /** The approval of each change of the run, in the `⋯` menu. */
+  runApproval: RunApprovalCommand | null;
   /** Runs after a recovery button, so the focus goes back to the page. */
   onActionDone?(): void;
   className?: string;
@@ -129,6 +132,7 @@ function BarFrame({ id, tint, children }: BarFrameProps) {
  *   reject={{ disabled: false, onClick: reject }}
  *   approve={{ disabled: false, onClick: approve }}
  *   wholeItem={null}
+ *   runApproval={null}
  * />
  */
 export function ReviewBar({
@@ -139,6 +143,7 @@ export function ReviewBar({
   reject,
   approve,
   wholeItem,
+  runApproval,
   onActionDone,
   className,
 }: ReviewBarProps) {
@@ -209,7 +214,7 @@ export function ReviewBar({
           <div className="ms-auto flex flex-none items-center gap-1">
             <DecisionButton action="reject" control={reject} />
             <DecisionButton action="approve" control={approve} />
-            <MoreMenu wholeItem={wholeItem} />
+            <MoreMenu wholeItem={wholeItem} runApproval={runApproval} />
           </div>
         )}
       </BarFrame>
