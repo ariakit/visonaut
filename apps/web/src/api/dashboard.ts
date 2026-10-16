@@ -8,7 +8,7 @@ import {
   type Database,
 } from "@visonaut/service";
 import { integer, string } from "./input.js";
-import { unresolvedAlertsSql } from "./operations.js";
+import { alertCountSql } from "./operations.js";
 
 export interface DashboardRun {
   id: string;
@@ -145,9 +145,7 @@ export async function dashboard(context: DashboardContext): Promise<Omit<RunsAns
         "SELECT repository_id,baseline_revision,snapshot_id,promotion_id FROM visonaut_projects WHERE id=?",
       )
       .bind(context.configuration.projectId),
-    context.database.prepare(
-      `SELECT count(*) AS alertCount FROM operations_events WHERE ${unresolvedAlertsSql}`,
-    ),
+    context.database.prepare(alertCountSql),
   ]);
   const project = queries[2]?.results?.[0];
   if (!project) throw new IncompleteError("The requested record does not exist.");

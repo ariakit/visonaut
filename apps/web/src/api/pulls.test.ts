@@ -244,3 +244,17 @@ it("returns the newest title of the pull request", async () => {
   }
   expect(await test.answer(check)).toMatchObject({ title: "Add the dialog animation" });
 });
+
+it("counts the open alerts for the header, and not the closed ones", async () => {
+  using database = new TestDatabase();
+  const test = fixture(database);
+  const check = test.insertCheck({ testedSha, attempt: 1, createdAt: 1 });
+  expect(await test.answer(check)).toMatchObject({ alertCount: 0 });
+  const insertEvent = database.connection.prepare(
+    "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at,resolved_at) VALUES(?,'backup',?,'backup-failed',1,2,?)",
+  );
+  insertEvent.run("open-1", "open-1", null);
+  insertEvent.run("open-2", "open-2", null);
+  insertEvent.run("closed", "closed", 3);
+  expect(await test.answer(check)).toMatchObject({ alertCount: 2 });
+});

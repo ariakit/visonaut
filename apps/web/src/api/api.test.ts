@@ -2706,6 +2706,44 @@ describe("the facts of the header in the answers of a page", () => {
     expect(costs.totals().rows_written).toBe(0);
   });
 
+  it("gives the login of the viewer and the open alert count in the pull request answer, with no round trip of its own", async () => {
+    const test = await fixture();
+    const headers = { authorization: `Bearer ${test.token}` };
+    const sha = crypto.randomUUID().replaceAll("-", "").padEnd(40, "0");
+    await database
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,created_at,updated_at) VALUES (?,0,?,?,?,'pull_request','refs/pull/42/merge',42,0,?,'active',1,1)",
+      )
+      .bind(
+        sha,
+        test.bindings.configuration.github.repositoryId,
+        "c".repeat(40),
+        "a".repeat(40),
+        `visonaut:pre:${sha}`,
+      )
+      .run();
+    await addEvent("pull-open", null);
+    await addEvent("pull-resolved", 3);
+    const batches: string[][] = [];
+    const costs = measureD1(database, {
+      async beforeBatch(sql) {
+        batches.push(sql);
+      },
+    });
+    test.bindings.database = costs.database;
+    const model = await objectResponse(await test.send("/api/pulls/42", { headers }));
+    test.bindings.database = database;
+    // The tests of this file share one database, so the count is the open rows.
+    const open = await database
+      .prepare("SELECT count(*) AS count FROM operations_events WHERE resolved_at IS NULL")
+      .first<{ count: number }>();
+    expect(open?.count).toBeGreaterThanOrEqual(1);
+    expect(model).toMatchObject({ viewerLogin: "maintainer", alertCount: open?.count });
+    // The count is a statement of the batch that already reads the pull request.
+    const batch = batches.find((sql) => sql.some((entry) => entry.includes("AS externalId")));
+    expect(batch?.filter((entry) => entry.includes("FROM operations_events"))).toHaveLength(1);
+  });
+
   it("gives the login of the viewer in the status answer", async () => {
     const test = await fixture();
     const headers = { authorization: `Bearer ${test.token}` };

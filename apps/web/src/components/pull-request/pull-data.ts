@@ -14,6 +14,10 @@ export interface PullRead extends Pick<PullAnswer, "repository" | "runId" | "sta
   attempt?: number;
   /** The page of the attempt on GitHub. */
   workflowUrl?: string;
+  /** The GitHub login of the viewer, for the header. */
+  viewerLogin?: string;
+  /** The open alerts, for the Status link of the header. */
+  alertCount?: number;
 }
 
 // The sentence of the page for an answer that it cannot read.
@@ -51,6 +55,7 @@ export function getWorkflowsUrl(repository: string) {
 export function readPullAnswer(value: unknown): PullRead {
   if (!isRecord(value)) throw new ClientError(unknownAnswer);
   const { repository, runId, state, title, headSha, check, attempt, workflowUrl } = value;
+  const { viewerLogin, alertCount } = value;
   if (typeof repository !== "string") throw new ClientError(unknownAnswer);
   if (runId !== null && typeof runId !== "string") throw new ClientError(unknownAnswer);
   if (!isState(state)) throw new ClientError(unknownAnswer);
@@ -66,6 +71,12 @@ export function readPullAnswer(value: unknown): PullRead {
   }
   if (typeof attempt === "number" && Number.isSafeInteger(attempt) && attempt > 0) {
     pull.attempt = attempt;
+  }
+  if (typeof viewerLogin === "string" && viewerLogin) {
+    pull.viewerLogin = viewerLogin;
+  }
+  if (typeof alertCount === "number" && Number.isSafeInteger(alertCount) && alertCount >= 0) {
+    pull.alertCount = alertCount;
   }
   // The link leaves the app, so it keeps only an address on GitHub.
   if (typeof workflowUrl === "string" && workflowUrl.startsWith("https://github.com/")) {

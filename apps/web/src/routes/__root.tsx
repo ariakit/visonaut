@@ -8,11 +8,13 @@ import { pageTitle } from "../page-title.ts";
 import "../styles.css";
 
 export const Route = createRootRoute({
-  head: () => ({
+  head: ({ match }) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Visonaut" },
+      // A URL that no route matches renders the not found page of this route.
+      // The one head gives its title, so the document has one title element.
+      { title: match._notFound ? pageTitle("Page not found") : "Visonaut" },
       { name: "robots", content: "noindex, nofollow" },
     ],
     links: [{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
@@ -23,11 +25,8 @@ export const Route = createRootRoute({
 
 /** The page of a URL that the app does not have: the shell and a way to the Queue. */
 function NotFound() {
-  const title = pageTitle("Page not found");
   return (
     <AppShell>
-      {/* React moves a title element to the head of the document. */}
-      <title>{title}</title>
       <ShellMain $maxWidth="70rem" $p="clamp(1rem, 3vw, 2.5rem)">
         <ShellMainBody className="mx-auto grid w-full max-w-xl justify-items-start gap-4 py-8 sm:py-16">
           <Text render={<h1 />} className="text-2xl font-semibold tracking-tight">

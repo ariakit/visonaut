@@ -1,4 +1,4 @@
-import { createLink, Link, useRouterState } from "@tanstack/react-router";
+import { createLink, useLinkProps, useRouterState } from "@tanstack/react-router";
 import { cx } from "clava";
 import { Aperture, ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -38,10 +38,18 @@ export interface WordmarkProps {
   compact?: boolean;
 }
 
-/** The mark and the word `visonaut`: a link to the Queue. */
+/**
+ * The mark and the word `visonaut`: a link to the Queue. It is a shortcut and
+ * not a place of the nav, so it is never the current page. The Queue link of
+ * the nav says that.
+ */
 export function Wordmark({ compact = true }: WordmarkProps) {
+  // The router sets `aria-current` on a link to the current path, and an
+  // option of `Link` cannot remove it. The empty `activeProps` also drops the
+  // class `active`.
+  const linkProps = useLinkProps({ to: "/", activeProps: {}, "aria-label": "Visonaut queue" });
   return (
-    <Button $px="sm" render={<Link to="/" aria-label="Visonaut queue" />}>
+    <Button $px="sm" render={<a {...linkProps} aria-current={undefined} data-status={undefined} />}>
       <ButtonSlot $size="xl">
         <Text $text="brand" render={<Aperture strokeWidth={1.75} />} />
       </ButtonSlot>

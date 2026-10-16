@@ -57,8 +57,19 @@ export interface PullRequestPageProps {
   /** The repository, when an earlier page of the app already knows it. */
   knownRepository?: string;
   onAccessDenied: (status: 401 | 403, message?: string) => void;
-  /** Called when the service answers with the repository of the pull request. */
-  onRepository?: (repository: string) => void;
+  /**
+   * Called when the service answers. The answer has the repository of the
+   * pull request. A found check also has the login of the viewer and the
+   * alerts, which are the facts of the header.
+   */
+  onFacts?: (facts: PullFacts) => void;
+}
+
+/** The facts of an answer that the header shows. */
+export interface PullFacts {
+  repository: string;
+  login?: string;
+  alertCount?: number;
 }
 
 /**
@@ -72,7 +83,7 @@ export function PullRequestPage({
   check,
   knownRepository,
   onAccessDenied,
-  onRepository,
+  onFacts,
 }: PullRequestPageProps) {
   const router = useRouter();
   const navigate = useNavigate();
@@ -122,7 +133,7 @@ export function PullRequestPage({
         if (failed.status === 404) {
           const notFoundRepository = readNotFoundRepository(failed.body);
           if (notFoundRepository) {
-            onRepository?.(notFoundRepository);
+            onFacts?.({ repository: notFoundRepository });
           }
           // A check that is gone needs a lookup, and the next read has no check.
           polled.current = undefined;
@@ -138,7 +149,11 @@ export function PullRequestPage({
       }
       const next = readPullAnswer(await readSuccess(response));
       if (signal.aborted) return;
-      onRepository?.(next.repository);
+      onFacts?.({
+        repository: next.repository,
+        login: next.viewerLogin,
+        alertCount: next.alertCount,
+      });
       if (poll && next.state !== "pending") {
         // The named check is over, and the newest head commit can have a newer
         // check. Look up again before the page shows a state or opens a run.

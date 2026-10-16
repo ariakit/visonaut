@@ -235,8 +235,28 @@ test("a capacity sample that is 20 minutes old shows the warning of a late sched
   await expect(page.getByText("Database and captures sampled")).toContainText("20 min ago");
   await alertButton(page, "The scheduled pass is late").click();
   await expect(page.getByRole("main")).toContainText(
-    "The scheduler can be stopped, or a pass could not measure the database.",
+    "no pass reported that it could not measure the database. The scheduler can be stopped.",
   );
+});
+
+test("a pass that could not measure the database is not a late scheduler", async ({ page }) => {
+  // The failed pass renews its alert each time, so the alert is newer than the sample.
+  const failure = { ...alert("database-capacity", "measurement-unavailable", "database") };
+  failure.lastSeenAt = now - 3 * minute;
+  await serve(page, status([failure], { capacity: capacity(40) }));
+  await page.goto(path);
+  await expect(page.getByRole("heading", { name: "1 alert", level: 1 })).toBeVisible();
+  await expect(alertHeading(page, "Database capacity needs attention")).toBeVisible();
+  await expect(alertHeading(page, "The scheduled pass is late")).toHaveCount(0);
+});
+
+test("an old failure of a measurement does not hide a late scheduler", async ({ page }) => {
+  const failure = { ...alert("database-capacity", "measurement-unavailable", "database") };
+  failure.lastSeenAt = now - 30 * minute;
+  await serve(page, status([failure], { capacity: capacity(40) }));
+  await page.goto(path);
+  await expect(alertHeading(page, "The scheduled pass is late")).toBeVisible();
+  await expect(alertHeading(page, "Database capacity needs attention")).toBeVisible();
 });
 
 test("a capacity sample that is 10 minutes old shows no warning", async ({ page }) => {
@@ -344,6 +364,66 @@ test("the page says its state one time, and each change of a refresh one time", 
   await page.clock.fastForward(minute);
   await expect(region).toHaveText("Status: all systems normal.");
   await expect(page.getByRole("heading", { name: "All systems normal", level: 1 })).toBeVisible();
+});
+
+test("a number that changes in the title of an alert that stays is said", async ({ page }) => {
+  // A second alert closes in the same read, so the sentence has the state.
+  const server = await serve(
+    page,
+    status([alert("comparison-finalization", "finalization-failed")], {
+      deadReviewTasks: { count: 1, newestAt: now - 3 * minute },
+    }),
+  );
+  await page.goto(path);
+  const region = liveRegion(page);
+  await expect(region).toHaveText("Status: 2 alerts.");
+  server.answer({
+    json: status([], { deadReviewTasks: { count: 2, newestAt: now - minute } }),
+  });
+  await page.clock.fastForward(minute);
+  await expect(region).toHaveText("Status: 2 review decisions failed. Now 1 alert.");
+});
+
+test("an old alert that enters a cut list is not said as a new alert", async ({ page }) => {
+  const cut = (subjects: string[], fields: Partial<Alert> = {}) =>
+    status(
+      subjects.map((subject) => ({
+        ...alert("check-delivery", "exhausted", subject),
+        ...fields,
+      })),
+      { hasMore: true },
+    );
+  const subjects = Array.from({ length: 50 }, (_, index) => `check-${index}`);
+  const server = await serve(page, cut(subjects));
+  await page.goto(path);
+  const region = liveRegion(page);
+  await expect(region).toHaveText("Status: at least 50 alerts.");
+  // A newer alert closed, so an older alert that was cut enters the list. It
+  // opened before the last read.
+  const firstRead = await readTime(page).getAttribute("datetime");
+  server.answer({ json: cut([...subjects.slice(1), "check-old"]) });
+  await page.clock.fastForward(minute);
+  await readCompleted(page, firstRead);
+  // The page says a change in an effect after the render. Cross one frame
+  // before the check of what it did not say.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+  await expect(region).toHaveText("Status: at least 50 alerts.");
+  // An alert that opened again after the last read is new, also in a cut list.
+  // It keeps the first time of its first opening.
+  server.answer({
+    json: status(
+      [
+        { ...alert("check-delivery", "exhausted", "check-new"), lastSeenAt: now },
+        ...subjects.slice(2).map((subject) => alert("check-delivery", "exhausted", subject)),
+        alert("check-delivery", "exhausted", "check-old"),
+      ],
+      { hasMore: true },
+    ),
+  });
+  await page.clock.fastForward(minute);
+  await expect(region).toHaveText(
+    "Status: 1 new alert. A GitHub check needs attention. Now at least 50 alerts.",
+  );
 });
 
 test("a refresh keeps the focus and the open state of an alert that stays", async ({ page }) => {

@@ -137,6 +137,7 @@ export function previewFixtureResponse(request: Request): Response | null {
       state: "ready",
       title: "Dialog review example",
       headSha: previewSha,
+      alertCount: 0,
     };
     return Response.json(answer);
   }

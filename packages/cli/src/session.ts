@@ -112,7 +112,7 @@ async function reserveWhenAdmitted(params: ReserveParams, report: (line: string)
       }
       if (attempt === CAPACITY_MAX_TRIES) {
         throw new CliError(
-          `Visonaut stayed at its capacity limit for ${attempt} tries. Check Service attention. Rerun this job after admission resumes. No visual approval was granted.`,
+          `Visonaut stayed at its capacity limit for ${attempt} tries. Check the Status page. Rerun this job after admission resumes. No visual approval was granted.`,
         );
       }
       report(

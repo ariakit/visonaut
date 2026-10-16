@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useAppSession, useSessionFacts } from "../../app-session.tsx";
+import type { SessionFacts } from "../../app-session.tsx";
 import { PullRequestPage } from "../../components/pull-request/index.tsx";
+import type { PullFacts } from "../../components/pull-request/index.tsx";
 import { pageTitle } from "../../page-title.ts";
 
 export const Route = createFileRoute("/_app/pulls/$pullNumber")({
@@ -13,22 +15,24 @@ export const Route = createFileRoute("/_app/pulls/$pullNumber")({
 });
 
 // The page asks only for the pull request. It reads no run list, so the
-// header has the repository of the answer and nothing else.
+// header has the facts that the answer carries: the repository, the viewer,
+// and the alert count.
 function PullRequest() {
   const { pullNumber } = Route.useParams();
   const { check } = Route.useSearch();
-  const { deny, facts } = useAppSession();
-  const [repository, setRepository] = useState<string>();
-  useSessionFacts(repository ? { signedIn: true, repository } : undefined);
+  const { deny, facts: known } = useAppSession();
+  const [facts, setFacts] = useState<SessionFacts>();
+  const onFacts = useCallback((answer: PullFacts) => setFacts({ signedIn: true, ...answer }), []);
+  useSessionFacts(facts);
   return (
     // Another pull request or another check starts a new lookup and a new state.
     <PullRequestPage
       key={`${pullNumber}:${check ?? ""}`}
       pullNumber={pullNumber}
       check={check}
-      knownRepository={facts.repository}
+      knownRepository={known.repository}
       onAccessDenied={deny}
-      onRepository={setRepository}
+      onFacts={onFacts}
     />
   );
 }

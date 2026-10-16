@@ -200,19 +200,42 @@ function listWords(words: string[]) {
 }
 
 /**
+ * A pass that cannot measure the database stores no sample, but it renews the
+ * alert `database-capacity` with the code `measurement-unavailable`. A renewal
+ * after the last sample, within the age of a late pass, shows that the
+ * scheduler runs. That alert gives the cause, and the pass is not late.
+ */
+function hasRecentMeasurementFailure(
+  { events, checkedAt }: OperationsStatus,
+  capacity: CapacitySnapshot,
+) {
+  return events.some(
+    (event) =>
+      event.kind === "database-capacity" &&
+      event.code === "measurement-unavailable" &&
+      event.lastSeenAt > capacity.observedAt &&
+      checkedAt - event.lastSeenAt <= staleSampleAge,
+  );
+}
+
+/**
  * The alerts that this page finds in the other parts of the answer. The
  * service stores no alert for them, because that write would repeat.
  */
 function getReadAlerts(status: OperationsStatus): StatusAlert[] {
   const alerts: StatusAlert[] = [];
   const { capacity, deadReviewTasks, captures, unreadable, checkedAt } = status;
-  // Both times are from the clock of the service.
-  if (capacity && checkedAt - capacity.observedAt > staleSampleAge) {
+  // The times are from the clock of the service.
+  if (
+    capacity &&
+    checkedAt - capacity.observedAt > staleSampleAge &&
+    !hasRecentMeasurementFailure(status, capacity)
+  ) {
     alerts.push({
       id: "read:scheduler",
       title: "The scheduled pass is late",
       action:
-        "A scheduled pass starts each 5 minutes and stores a capacity sample. The last sample is older than 15 minutes. The scheduler can be stopped, or a pass could not measure the database. While no pass runs, the alerts and the capacity numbers of this page are out of date.",
+        "A scheduled pass starts each 5 minutes and stores a capacity sample. The last sample is older than 15 minutes, and no pass reported that it could not measure the database. The scheduler can be stopped. While no pass runs, the alerts and the capacity numbers of this page are out of date.",
       subject: "scheduler",
       seenAt: capacity.observedAt,
     });
