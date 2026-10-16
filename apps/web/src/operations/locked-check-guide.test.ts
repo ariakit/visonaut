@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
+import { operationsStatus } from "../api/operations.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { context, reserve, TestDatabase } from "./test-fixtures.ts";
 
@@ -147,7 +148,7 @@ it("makes the held update obsolete and sends the newer one after a new decision"
   expect(readLock(database)).toMatchObject({ ambiguous: 0, state: "complete" });
 });
 
-it("sends no update and leaves the alert open when the run of the check is closed", async () => {
+it("sends no update and closes the alert after the unlock when the run of the check is closed", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
@@ -155,18 +156,34 @@ it("sends no update and leaves the alert open when the run of the check is close
   await deliverGitHubStatuses(fixture.context);
   fixture.state.losePatch = false;
   database.connection.exec("UPDATE visonaut_runs SET active = 0, state = 'superseded'");
+  const readAlert = () =>
+    database.connection
+      .prepare("SELECT code, resolved_at FROM operations_events WHERE kind='check-delivery'")
+      .all();
 
-  runGuide(database, "UPDATE");
+  const listedAlerts = async () =>
+    (
+      await operationsStatus({
+        database,
+        projectId: "project",
+        repositoryId: "123",
+        captureLimit: 40_000,
+      })
+    ).events.length;
+
+  // The check on GitHub can show an old result while it is locked.
   const patches = fixture.state.patches;
   await deliverGitHubStatuses(fixture.context);
+  expect(readAlert()).toEqual([{ code: "ambiguous", resolved_at: null }]);
+  expect(await listedAlerts()).toBe(1);
+
+  runGuide(database, "UPDATE");
+  // The Status page hides the alert before the next pass closes it.
+  expect(await listedAlerts()).toBe(0);
+  fixture.state.time += 1;
+  await deliverGitHubStatuses(fixture.context);
   expect(fixture.state.patches).toBe(patches);
-  expect(
-    database.connection
-      .prepare(
-        "SELECT resolved_at IS NULL AS open FROM operations_events WHERE kind='check-delivery'",
-      )
-      .all(),
-  ).toEqual([{ open: 1 }]);
+  expect(readAlert()).toEqual([{ code: "ambiguous", resolved_at: fixture.state.time }]);
 });
 
 it("can run the unlock commands again with no other effect", async () => {

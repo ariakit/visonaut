@@ -595,6 +595,10 @@ it("does not settle a restored delivery ID that GitHub lists as received", async
     },
   });
   addExhaustedRecovery(test, guid);
+  // GitHub still lists the delivery, so a pass saw the alert less than 3 days ago.
+  test.database.connection
+    .prepare("UPDATE operations_events SET last_seen_at=?")
+    .run(restoredAt - 1000);
   await sanitizeRestoredDatabase(test.database, restoredAt);
   test.operations.now = () => restoredAt + 2000;
   await test.recover();
@@ -858,4 +862,69 @@ it("waits one day at most before the next request", async () => {
   expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
   test.operations.now = () => 24 * 60 * minute;
   expect(await test.recover()).toEqual({ checked: 1, requested: 1 });
+});
+
+it("closes an exhausted alert 3 days after a pass saw it, when GitHub no longer lists the delivery", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  test.operations.budget.maxAttempts = 1;
+  const opened = Date.UTC(2026, 8, 29, 13);
+  test.operations.now = () => opened - minute;
+  await test.recover();
+  // The delivery has no attempt left. This pass opens its alert.
+  test.operations.now = () => opened;
+  await test.recover();
+  expect(openAlerts(test)).toEqual([{ subject_id: guid }]);
+  const changes = () => test.database.connection.prepare("SELECT total_changes() AS n").get();
+  const recovery = test.database.connection.prepare("SELECT * FROM github_webhook_recovery").all();
+  // GitHub lists a delivery for 3 days, so the alert stays open until then.
+  test.pages[""] = { deliveries: [] };
+  test.operations.now = () => opened + 3 * 24 * 60 * minute - 1;
+  const before = changes();
+  await test.recover();
+  expect(changes()).toEqual(before);
+  expect(openAlerts(test)).toEqual([{ subject_id: guid }]);
+  test.operations.now = () => opened + 3 * 24 * 60 * minute;
+  await test.recover();
+  expect(openAlerts(test)).toEqual([]);
+  expect(
+    test.database.connection
+      .prepare("SELECT code,last_seen_at,resolved_at FROM operations_events")
+      .all(),
+  ).toEqual([
+    {
+      code: "redelivery-exhausted",
+      last_seen_at: opened,
+      resolved_at: opened + 3 * 24 * 60 * minute,
+    },
+  ]);
+  expect(test.database.connection.prepare("SELECT * FROM github_webhook_recovery").all()).toEqual(
+    recovery,
+  );
+  expect(test.posts).toHaveLength(1);
+});
+
+it("closes the receiver alert in the pass after the webhook URL is correct again", async () => {
+  const test = fixture();
+  const recover = () =>
+    recoverGitHubDeliveries({
+      context: test.operations,
+      configuration: test.configuration,
+      fetcher: test.fetcher,
+    });
+  const alerts = () =>
+    test.database.connection.prepare("SELECT id,resolved_at FROM operations_events").all();
+  test.setReceiver("https://router.example/v1/webhooks");
+  expect(await recover()).toEqual({ checked: 0, requested: 0 });
+  expect(alerts()).toEqual([
+    { id: "upstream-webhook:receiver:production-receiver-mismatch", resolved_at: null },
+  ]);
+  test.setReceiver(`${test.operations.origin}/v1/webhooks`);
+  test.setStatus(200);
+  await recover();
+  expect(alerts()).toEqual([
+    {
+      id: "upstream-webhook:receiver:production-receiver-mismatch",
+      resolved_at: test.operations.now(),
+    },
+  ]);
 });
