@@ -89,14 +89,19 @@ export interface CapturePageImages {
   maskImageId?: string;
 }
 
-export interface CapturePagesInput extends Omit<CapturePagesIndex, "schemaVersion" | "pages"> {
-  pages: { page: CapturePage; images: CapturePageImages[] }[];
+/** One page of a run for the writer: the page of the client, and the kept image of each row. */
+export interface CapturePageInput {
+  page: CapturePage;
+  images: CapturePageImages[];
 }
 
-interface StoredObject {
-  key: string;
-  text: string;
-  digest: string;
+export interface CapturePagesInput extends Omit<CapturePagesIndex, "schemaVersion" | "pages"> {
+  pages: CapturePageInput[];
+}
+
+/** The input of the writer, where the pages can come one at a time. */
+export interface CapturePagesStream extends Omit<CapturePagesInput, "pages"> {
+  pages: Iterable<CapturePageInput> | AsyncIterable<CapturePageInput>;
 }
 
 export const capturePagesVersion = "capture-pages-v1";
@@ -460,8 +465,13 @@ async function rowCapture({
 }
 
 interface PageCapturesParams {
-  index: CapturePagesIndex;
-  pageAt: number;
+  runId: string;
+  /** The row count of the page in the index. */
+  rows: number;
+  /** False for each page but the last one, which needs `CAPTURE_PAGE_ROWS` rows. */
+  last: boolean;
+  /** The entry of the page in the index of the Submit job, when a job sent the run. */
+  sent: CapturePageIndex["pages"][number] | undefined;
   stored: StoredCapturePage;
   check: InventoryCheck;
   digests: SharedDigests;
@@ -478,8 +488,10 @@ interface PageCapturesParams {
  * permits. The result has the identity of the last row.
  */
 async function pageCaptures({
-  index,
-  pageAt,
+  runId,
+  rows,
+  last,
+  sent,
   stored,
   check,
   digests,
@@ -487,11 +499,10 @@ async function pageCaptures({
   firstOrdinal,
   previous,
 }: PageCapturesParams) {
-  const entry = index.pages[pageAt];
-  if (entry?.rows !== stored.rows.length) {
+  if (rows !== stored.rows.length) {
     fail("a page has another row count.");
   }
-  if (pageAt < index.pages.length - 1 && stored.rows.length !== CAPTURE_PAGE_ROWS) {
+  if (!last && stored.rows.length !== CAPTURE_PAGE_ROWS) {
     fail(`each page but the last one needs ${CAPTURE_PAGE_ROWS} rows.`);
   }
   const captures: InventoryCapture[] = [];
@@ -509,7 +520,7 @@ async function pageCaptures({
     profiles.set(view.profileDigest, { digest: view.profileDigest, profile: view.profile });
     captures.push(
       await rowCapture({
-        runId: index.runId,
+        runId,
         digests,
         view,
         stored: stored.stored,
@@ -518,7 +529,6 @@ async function pageCaptures({
       }),
     );
   }
-  const sent = index.receipt?.pages[pageAt];
   // The digest of a page of the client is a second hash of the content.
   if (!sent || check === "bytes") {
     return { captures, last: previous };
@@ -535,71 +545,97 @@ async function pageCaptures({
   return { captures, last: previous };
 }
 
+/** The captures of one page of a run, and the profiles that its rows use. */
+export interface CapturesPage {
+  captures: InventoryCapture[];
+  profiles: ProfileRecord[];
+}
+
+type PagesHeader = Pick<CapturePagesIndex, "runId" | "referenceSnapshotId" | "receipt">;
+
 /**
- * Build the capture list of a run from all its stored pages, and check the
- * rules that only a reader of all pages can check. The caller validates the
- * list.
+ * The builder of the captures of a run from its stored pages, one page after
+ * the other. It checks the rules across the pages: the order of the rows, the
+ * ordinals, and the index of the Submit job. It keeps only the identity of the
+ * last row and the count of the rows, so a reader holds one page at a time.
  */
-async function capturePagesFacts(
-  index: CapturePagesIndex,
-  pages: StoredCapturePage[],
-  check: InventoryCheck = "complete",
-): Promise<CaptureInventory> {
-  const { receipt } = index;
-  if (pages.length !== index.pages.length) {
-    fail("the index and the pages differ.");
-  }
-  if (receipt && receipt.pages.length !== pages.length) {
-    fail("the index of the Submit job has another page count.");
-  }
-  if (receipt && receipt.reference.snapshotId !== index.referenceSnapshotId) {
+function pagesBuilder(header: PagesHeader, check: InventoryCheck) {
+  const { receipt } = header;
+  if (receipt && receipt.reference.snapshotId !== header.referenceSnapshotId) {
     fail("the index of the Submit job has another reference.");
   }
-  const captures: InventoryCapture[] = [];
-  const profiles = new Map<string, ProfileRecord>();
-  const digests: SharedDigests = { profiles: new Map(), comparisons: new Map() };
+  let pageAt = 0;
+  let ordinal = 0;
   let previous: [string, string] | undefined;
-  for (const [pageAt, stored] of pages.entries()) {
+  // `rows` is the row count of the page in the index. A reader gives the
+  // count of the index, and the writer gives the count of the page it encodes.
+  return async (stored: StoredCapturePage, rows: number, last: boolean): Promise<CapturesPage> => {
+    if (pageAt >= maximumPages) {
+      fail("the page list is invalid.");
+    }
+    if (
+      receipt &&
+      (pageAt >= receipt.pages.length || (last && pageAt !== receipt.pages.length - 1))
+    ) {
+      fail("the index of the Submit job has another page count.");
+    }
+    // The digests of the profiles stay with the page: almost each capture has
+    // its own clip rectangle, and so its own profile.
+    const profiles = new Map<string, ProfileRecord>();
     const page = await pageCaptures({
-      index,
-      pageAt,
+      runId: header.runId,
+      rows,
+      last,
+      sent: receipt?.pages[pageAt],
       stored,
       check,
-      digests,
+      digests: { profiles: new Map(), comparisons: new Map() },
       profiles,
-      firstOrdinal: captures.length,
+      firstOrdinal: ordinal,
       previous,
     });
     previous = page.last;
-    for (const capture of page.captures) {
-      captures.push(capture);
-    }
-  }
-  return {
-    schemaVersion: "baseline-delta-v1",
-    projectId: index.projectId,
-    runId: index.runId,
-    testedSha: index.testedSha,
-    referenceSnapshotId: index.referenceSnapshotId,
-    captures,
-    profiles: [...profiles.values()],
+    ordinal += page.captures.length;
+    pageAt++;
+    return { captures: page.captures, profiles: [...profiles.values()] };
   };
 }
 
+/** One object of a run in pages, ready to put. */
+export interface StoredObject {
+  key: string;
+  text: string;
+  digest: string;
+}
+
+interface EncodeCapturePagesOptions {
+  /** Validate the captures of each page before its object goes to `put`. */
+  check?: (page: CapturesPage) => unknown;
+  /** Store one object. The index is the last one, so a pointer never names a missing page. */
+  put?: (object: StoredObject) => Promise<unknown>;
+}
+
 /**
- * Encode the pages and the index of one run, with no write. The result has the
- * objects to put, the pointer for D1, and the capture list for the validation.
+ * Encode the pages and the index of one run, one page at a time. Each page is
+ * checked, then given to `put`, and then released, so the function holds one
+ * page. With no `put`, the function stores nothing: the pointer then proves
+ * the content of an earlier write. The result is the pointer for D1.
  */
-export async function encodeCapturePages(input: CapturePagesInput) {
+export async function encodeCapturePages(
+  input: CapturePagesStream,
+  { check, put }: EncodeCapturePagesOptions = {},
+): Promise<CaptureInventoryPointer> {
   const { pages: inputs, ...header } = input;
-  const objects: StoredObject[] = [];
+  const build = pagesBuilder(header, "complete");
   const entries: StoredPageEntry[] = [];
-  const pages: StoredCapturePage[] = [];
-  for (const { page, images } of inputs) {
-    if (Object.hasOwn(page, "stored")) {
-      fail("a page of a client cannot have the stored field.");
-    }
-    const stored = parseStoredPage({ ...page, stored: await storedFacts(page, images) });
+  let captureCount = 0;
+  // A page is encoded when the next one arrives, so that the builder knows
+  // which page is the last one.
+  let pending: StoredCapturePage | undefined;
+  const flush = async (last: boolean) => {
+    if (!pending) return;
+    const stored = pending;
+    pending = undefined;
     const text = canonicalJson(stored);
     const bytes = new TextEncoder().encode(text);
     if (bytes.byteLength > maximumStoredPageBytes) {
@@ -608,12 +644,22 @@ export async function encodeCapturePages(input: CapturePagesInput) {
     const digest = await sha256(bytes);
     const key = pageKey(header.runId, digest);
     validateKey(key);
-    objects.push({ key, text, digest });
+    const page = await build(stored, stored.rows.length, last);
+    await check?.(page);
+    captureCount += page.captures.length;
+    await put?.({ key, text, digest });
     entries.push({ digest, bytes: bytes.byteLength, rows: stored.rows.length });
-    pages.push(stored);
+  };
+  for await (const { page, images } of inputs) {
+    if (Object.hasOwn(page, "stored")) {
+      fail("a page of a client cannot have the stored field.");
+    }
+    const stored = parseStoredPage({ ...page, stored: await storedFacts(page, images) });
+    await flush(false);
+    pending = stored;
   }
+  await flush(true);
   const index = parseIndex({ schemaVersion: capturePagesVersion, ...header, pages: entries });
-  const inventory = await capturePagesFacts(index, pages);
   const text = canonicalJson(index);
   const bytes = new TextEncoder().encode(text);
   const digest = await sha256(bytes);
@@ -622,14 +668,8 @@ export async function encodeCapturePages(input: CapturePagesInput) {
     fail("the run identity cannot be in an object key.");
   }
   validateKey(key);
-  objects.push({ key, text, digest });
-  const pointer: CaptureInventoryPointer = {
-    objectKey: key,
-    digest,
-    bytes: bytes.byteLength,
-    captureCount: inventory.captures.length,
-  };
-  return { objects, pointer, inventory };
+  await put?.({ key, text, digest });
+  return { objectKey: key, digest, bytes: bytes.byteLength, captureCount };
 }
 
 interface StoredObjectPointer {
@@ -748,6 +788,20 @@ async function readStoredPage({ store, index, pageAt, check }: ReadCapturePagePa
   return decodePage(text, check);
 }
 
+/** The facts of the index that the builder of one page needs. */
+function pageOfIndex(index: CapturePagesIndex, pageAt: number) {
+  const entry = index.pages[pageAt];
+  if (!entry) {
+    fail("the index has no such page.");
+  }
+  return {
+    runId: index.runId,
+    rows: entry.rows,
+    last: pageAt === index.pages.length - 1,
+    sent: index.receipt?.pages[pageAt],
+  };
+}
+
 /**
  * Read one stored page of a run, and build its captures. The function reads
  * one object, and it checks the rules that one page permits. It cannot check
@@ -768,8 +822,7 @@ export async function readCapturePage({
     }
   }
   const { captures } = await pageCaptures({
-    index,
-    pageAt,
+    ...pageOfIndex(index, pageAt),
     stored: await readStoredPage({ store, index, pageAt, check }),
     check,
     digests: { profiles: new Map(), comparisons: new Map() },
@@ -796,8 +849,7 @@ export async function readReferencePage({
   const check = "complete";
   const { stored: facts, ...page } = await readStoredPage({ store, index, pageAt, check });
   const { captures } = await pageCaptures({
-    index,
-    pageAt,
+    ...pageOfIndex(index, pageAt),
     stored: { ...page, stored: facts },
     check,
     digests: { profiles: new Map(), comparisons: new Map() },
@@ -862,11 +914,31 @@ export async function readKeptImageIds({
 }
 
 /**
- * Read the index and all pages of one run. With the complete check, it
- * validates the stored form, and the caller validates the capture list that
- * this returns. With the check of the bytes, it does not parse the content
- * with the two parsers and does not compare the canonical text. The builder of
- * the list still checks the order and the counts of the rows that it reads.
+ * Read each stored page of a run in the order of its index, and build its
+ * captures. The reader holds one page: it checks the rules across the pages as
+ * it reads them. With the complete check, it validates the stored form, and
+ * the caller validates the captures of each page.
+ */
+export async function* eachCapturePage(
+  store: Pick<InventoryStore, "get">,
+  index: CapturePagesIndex,
+  check: InventoryCheck = "complete",
+): AsyncGenerator<CapturesPage> {
+  const build = pagesBuilder(index, check);
+  for (const pageAt of index.pages.keys()) {
+    const stored = await readStoredPage({ store, index, pageAt, check });
+    const { rows, last } = pageOfIndex(index, pageAt);
+    yield await build(stored, rows, last);
+  }
+}
+
+/**
+ * Read the index and all pages of one run, and build the complete capture
+ * list. With the complete check, it validates the stored form, and the caller
+ * validates the capture list that this returns. With the check of the bytes,
+ * it does not parse the content with the two parsers and does not compare the
+ * canonical text. The builder of the list still checks the order and the
+ * counts of the rows that it reads.
  */
 export async function readCapturePages(
   store: Pick<InventoryStore, "get">,
@@ -874,9 +946,24 @@ export async function readCapturePages(
   check: InventoryCheck = "complete",
 ) {
   const index = await readCapturePagesIndex(store, pointer, check);
-  const pages: StoredCapturePage[] = [];
-  for (const pageAt of index.pages.keys()) {
-    pages.push(await readStoredPage({ store, index, pageAt, check }));
+  const captures: InventoryCapture[] = [];
+  const profiles = new Map<string, ProfileRecord>();
+  for await (const page of eachCapturePage(store, index, check)) {
+    for (const capture of page.captures) {
+      captures.push(capture);
+    }
+    for (const profile of page.profiles) {
+      profiles.set(profile.digest, profile);
+    }
   }
-  return { inventory: await capturePagesFacts(index, pages, check), document: index };
+  const inventory: CaptureInventory = {
+    schemaVersion: "baseline-delta-v1",
+    projectId: index.projectId,
+    runId: index.runId,
+    testedSha: index.testedSha,
+    referenceSnapshotId: index.referenceSnapshotId,
+    captures,
+    profiles: [...profiles.values()],
+  };
+  return { inventory, document: index };
 }

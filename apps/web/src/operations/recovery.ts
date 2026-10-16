@@ -1,5 +1,6 @@
 import { digestStream } from "./common.ts";
-import { readCaptureInventory } from "../capture-inventory.ts";
+import type { ValidatedImage } from "@visonaut/service";
+import { openCaptureInventory } from "../capture-inventory.ts";
 import type { OperationsContext } from "./types.ts";
 import type { Database } from "@visonaut/service";
 
@@ -192,7 +193,7 @@ export async function inspectRecoveryInventories(
   let checkedImages = 0;
   let nextCursor: RecoveryInventoryCursor = { afterId: row.id, imageIndex: 0 };
   try {
-    const inventory = await readCaptureInventory(context.images, {
+    const inventory = await openCaptureInventory(context.images, {
       objectKey: row.inventory_key,
       digest: row.inventory_digest,
       bytes: row.inventory_bytes,
@@ -205,12 +206,18 @@ export async function inspectRecoveryInventories(
     ) {
       throw new Error("Recovery inventory belongs to another run.");
     }
+    // The pass reads each page for its complete validation, and it keeps the
+    // facts that the check of the images needs: one entry for each object key.
+    const distinct = new Map<string, Pick<ValidatedImage, "objectKey" | "digest" | "bytes">>();
+    for await (const page of inventory.pages()) {
+      if (!row.verify_images) continue;
+      for (const { image } of page.captures) {
+        const { objectKey, digest, bytes } = image;
+        distinct.set(objectKey, { objectKey, digest, bytes });
+      }
+    }
     if (row.verify_images) {
-      const images = [
-        ...new Map(
-          inventory.captures.map((capture) => [capture.image.objectKey, capture.image]),
-        ).values(),
-      ].sort((left, right) =>
+      const images = [...distinct.values()].sort((left, right) =>
         left.objectKey < right.objectKey ? -1 : left.objectKey > right.objectKey ? 1 : 0,
       );
       if (cursor.imageIndex > images.length) {

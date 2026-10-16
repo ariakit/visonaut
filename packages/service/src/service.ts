@@ -20,6 +20,7 @@ import type {
   ValidatedImage,
   CaptureInventoryPointer,
   ReferenceCaptureInput,
+  CheckedComparison,
   ComparisonSettingsCounts,
 } from "./types.ts";
 import {
@@ -185,6 +186,7 @@ export class Service {
     localComparison: LocalComparisonReceipt;
     referenceCaptures?: ReferenceCaptureInput[];
     settings?: ComparisonSettingsCounts;
+    checked?: CheckedComparison;
   }) {
     return createLocalComparison(this, input);
   }

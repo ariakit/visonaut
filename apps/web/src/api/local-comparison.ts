@@ -39,11 +39,13 @@ import { publicImage } from "./images.ts";
 import {
   readStoredCaptureInventory,
   type CaptureInventory,
+  type CaptureInventoryPages,
   type InventoryCapture,
 } from "../capture-inventory.ts";
-import { readKeptImageIds, readReferencePage } from "../capture-pages.ts";
+import { readKeptImageIds, readReferencePage, type CapturesPage } from "../capture-pages.ts";
 import {
   inventoryPointer,
+  openInventory,
   readInventoryIndex,
   readSnapshotInventoryBody,
   readSnapshotInventoryHeader,
@@ -143,32 +145,9 @@ async function referenceBody(context: ApiContext, header: SnapshotInventoryHeade
   return inventory;
 }
 
-/** Accepted inventories are complete; their images never require a parent read. */
-export async function referenceInventory(
-  context: ApiContext,
-  snapshotId: string | null,
-): Promise<CaptureInventory | null> {
-  if (snapshotId === null) return null;
-  const header = await referenceHeader(context, snapshotId);
-  if (!header) return null;
-  return referenceBody(context, header);
-}
-
-/**
- * The captures of a reference, from its complete capture list. A reference
- * with no capture list is from before the capture lists, and a run cannot use
- * it: a main run must make a new baseline first.
- */
-export async function referenceCaptureInputs(
-  context: ApiContext,
-  snapshotId: string | null,
-): Promise<ReferenceCaptureInput[]> {
-  if (snapshotId === null) return [];
-  const inventory = await referenceInventory(context, snapshotId);
-  if (!inventory) {
-    throw new IncompleteError("The accepted reference has no capture list.");
-  }
-  return inventory.captures.map((capture) => ({
+/** A capture of a reference, in the form of the service. */
+function referenceInput(capture: InventoryCapture): ReferenceCaptureInput {
+  return {
     id: capture.id,
     itemKey: capture.itemKey,
     variantKey: capture.variantKey,
@@ -176,7 +155,142 @@ export async function referenceCaptureInputs(
     renderingProfileDigest: capture.renderingProfileDigest,
     image: capture.image,
     metadata: capture.metadata,
-  }));
+  };
+}
+
+/**
+ * The captures of an accepted reference, for a reader of the rows of a run in
+ * the order of the format. The reader holds one page of the reference.
+ */
+export interface ReferenceReader {
+  /** The count of the captures of the reference. */
+  captureCount: number;
+  /** The run of each image that the reference keeps. It is complete after `finish`. */
+  imageRunIds: Set<string>;
+  /**
+   * The reference capture of one identity, or `undefined` when the reference
+   * has no capture of it. Give the identities in increasing order.
+   */
+  take(identity: readonly [string, string]): Promise<ReferenceCaptureInput | undefined>;
+  /**
+   * Read the rest of the reference. The result is each capture that no call
+   * of `take` got, in the order of the reference: the removed captures.
+   */
+  finish(): Promise<ReferenceCaptureInput[]>;
+}
+
+function emptyReference(): ReferenceReader {
+  return {
+    captureCount: 0,
+    imageRunIds: new Set(),
+    take: async () => undefined,
+    finish: async () => [],
+  };
+}
+
+/**
+ * The reference of a list form is one object, so a map has its captures. The
+ * removed captures keep the order of the list.
+ */
+function listReference(captures: readonly InventoryCapture[]): ReferenceReader {
+  const references = new Map(captures.map((capture) => [identityKey(capture), capture]));
+  if (references.size !== captures.length) {
+    throw new IncompleteError("The accepted reference has one identity two times.");
+  }
+  const taken = new Set<string>();
+  return {
+    captureCount: captures.length,
+    imageRunIds: new Set(captures.map((capture) => capture.image.runId)),
+    async take([itemKey, variantKey]) {
+      const key = identityKey({ itemKey, variantKey });
+      const capture = references.get(key);
+      if (!capture) return undefined;
+      taken.add(key);
+      return referenceInput(capture);
+    },
+    async finish() {
+      return captures
+        .filter((capture) => !taken.has(identityKey(capture)))
+        .map((capture) => referenceInput(capture));
+    },
+  };
+}
+
+/**
+ * The reference of a page form has its rows in the order of the format, as
+ * the rows of a run. So the reader reads the next page of the reference only
+ * when the rows of the run pass the page before.
+ */
+function pagesReference(inventory: CaptureInventoryPages): ReferenceReader {
+  const pages = inventory.pages();
+  const imageRunIds = new Set<string>();
+  const removed: ReferenceCaptureInput[] = [];
+  let page: InventoryCapture[] = [];
+  let at = 0;
+  let previous: readonly [string, string] | undefined;
+  const current = async () => {
+    while (at >= page.length) {
+      const next = await pages.next();
+      if (next.done) return undefined;
+      page = next.value.captures;
+      at = 0;
+      for (const capture of page) {
+        imageRunIds.add(capture.image.runId);
+      }
+    }
+    return page[at];
+  };
+  return {
+    captureCount: inventory.captureCount,
+    imageRunIds,
+    async take(identity) {
+      if (previous && compareCaptureIdentity(previous, identity) >= 0) {
+        throw new IncompleteError("The rows of a run must increase from one page to the next.");
+      }
+      previous = identity;
+      while (true) {
+        const capture = await current();
+        if (!capture) return undefined;
+        const order = compareCaptureIdentity([capture.itemKey, capture.variantKey], identity);
+        if (order > 0) return undefined;
+        at++;
+        if (order === 0) return referenceInput(capture);
+        removed.push(referenceInput(capture));
+      }
+    },
+    async finish() {
+      while (true) {
+        const capture = await current();
+        if (!capture) return removed;
+        at++;
+        removed.push(referenceInput(capture));
+      }
+    },
+  };
+}
+
+/**
+ * Open the captures of an accepted reference for a reader of the rows of a
+ * run. A reference with no capture list is from before the capture lists, and
+ * a run cannot use it: a main run must make a new baseline first.
+ */
+export async function referenceReader(
+  context: ApiContext,
+  snapshotId: string | null,
+): Promise<ReferenceReader> {
+  if (snapshotId === null) return emptyReference();
+  const header = await referenceHeader(context, snapshotId);
+  if (!header) {
+    throw new IncompleteError("The accepted reference has no capture list.");
+  }
+  assertProjectReference(context, header);
+  const inventory = await openInventory(context, header);
+  if (inventory.index) return pagesReference(inventory);
+  // The list form is one page.
+  for await (const list of inventory.pages()) {
+    return listReference(list.captures);
+  }
+  return listReference([]);
 }
 
 /**
@@ -194,28 +308,35 @@ export function comparisonSettingsCounts(
   captures: readonly InventoryCapture[],
   references: readonly ReferenceCaptureInput[],
 ): ComparisonSettingsCounts {
-  const baselineDigests = new Map(
-    references.map((capture) => [identityKey(capture), capture.metadata?.comparisonDigest]),
-  );
+  const baselines = new Map(references.map((capture) => [identityKey(capture), capture]));
   const counts = { changed: 0, loose: 0 };
   for (const capture of captures) {
-    const settings = capture.metadata.comparison;
-    if (settings == null) continue;
-    validateCaptureComparison(settings);
-    if (
-      settings.threshold > 0.2 ||
-      (settings.maxDiffPixels ?? 0) > 0 ||
-      (settings.maxDiffPixelRatio ?? 0) > 0
-    ) {
-      counts.loose += 1;
-    }
-    const baselineDigest = baselineDigests.get(identityKey(capture));
-    if (typeof baselineDigest !== "string") continue;
-    if (capture.metadata.comparisonDigest !== baselineDigest) {
-      counts.changed += 1;
-    }
+    countSettings(counts, capture, baselines.get(identityKey(capture)));
   }
   return counts;
+}
+
+/** Add one capture to the counts of `comparisonSettingsCounts`. */
+function countSettings(
+  counts: ComparisonSettingsCounts,
+  capture: InventoryCapture,
+  baseline: ReferenceCaptureInput | undefined,
+) {
+  const settings = capture.metadata.comparison;
+  if (settings == null) return;
+  validateCaptureComparison(settings);
+  if (
+    settings.threshold > 0.2 ||
+    (settings.maxDiffPixels ?? 0) > 0 ||
+    (settings.maxDiffPixelRatio ?? 0) > 0
+  ) {
+    counts.loose += 1;
+  }
+  const baselineDigest = baseline?.metadata?.comparisonDigest;
+  if (typeof baselineDigest !== "string") return;
+  if (capture.metadata.comparisonDigest !== baselineDigest) {
+    counts.changed += 1;
+  }
 }
 
 function parseRunReference(value: unknown): RunReference {
@@ -300,7 +421,8 @@ export async function validateAdmittedMainReference(context: ApiContext, runId: 
 /**
  * Select the reference of a run, pin it, and store it in the staged run row.
  * Only the first reserve call of a run comes here. It reads the complete
- * reference one time, because the pins need the owner run of each image.
+ * reference one time, one page at a time, because the pins need the owner run
+ * of each image.
  */
 export async function selectReference(
   context: ApiContext,
@@ -343,12 +465,19 @@ export async function selectReference(
         "The accepted reference has no capture list. Update the branch, or capture current main to make a new baseline.",
       );
     }
-    const inventory = await referenceBody(context, {
+    const header = {
       ...pointer,
       runId: selected.run_id,
       projectId: selected.project_id,
       testedSha: selected.tested_sha,
-    });
+    };
+    assertProjectReference(context, header);
+    const owners = new Set<string>();
+    for await (const page of (await openInventory(context, header)).pages()) {
+      for (const capture of page.captures) {
+        owners.add(capture.image.runId);
+      }
+    }
     // The digest of the capture list is the identity of the reference.
     reference = {
       snapshotId: selected.id,
@@ -357,7 +486,7 @@ export async function selectReference(
       pages: Math.ceil(pointer.captureCount / CAPTURE_PAGE_ROWS),
       captureCount: pointer.captureCount,
     };
-    imageRunIds = [...new Set(inventory.captures.map((capture) => capture.image.runId))];
+    imageRunIds = [...owners];
   }
   try {
     await atomic(context.database, [
@@ -612,29 +741,18 @@ function keepsReference(view: CaptureRowView, original: ReferenceCaptureInput | 
 }
 
 /**
- * Check each row of the pages of a run against the complete reference. The
- * caller has checked the order of the rows across the pages, so each identity
- * occurs one time. The result has, for each row of each page, the reference
- * capture whose image the row keeps, or `undefined` when the row keeps its
- * own image.
+ * Check each row of one page of a run against its reference capture. The
+ * caller gives the pages in their order, and it has checked the order of the
+ * rows across the pages, so each identity occurs one time. The result has,
+ * for each row, the reference capture whose image the row keeps, or
+ * `undefined` when the row keeps its own image.
  */
-export async function validateRunPages(
-  pages: readonly CapturePage[],
-  references: readonly ReferenceCaptureInput[],
-) {
-  const originals = new Map(references.map((capture) => [identityKey(capture), capture]));
-  if (originals.size !== references.length) {
-    throw new IncompleteError("The accepted reference has one identity two times.");
-  }
-  const kept: (ReferenceCaptureInput | undefined)[][] = [];
-  for (const page of pages) {
-    const keptOfPage: (ReferenceCaptureInput | undefined)[] = [];
-    for (const row of page.rows) {
-      const view = await captureRowView(page, row);
-      const original = originals.get(identityKey(view));
-      keptOfPage.push(keepsReference(view, original) ? original : undefined);
-    }
-    kept.push(keptOfPage);
+export async function validateRunPage(page: CapturePage, references: ReferenceReader) {
+  const kept: (ReferenceCaptureInput | undefined)[] = [];
+  for (const row of page.rows) {
+    const view = await captureRowView(page, row);
+    const original = await references.take([view.itemKey, view.variantKey]);
+    kept.push(keepsReference(view, original) ? original : undefined);
   }
   return kept;
 }
@@ -674,6 +792,34 @@ function localFacts(capture: InventoryCapture) {
   };
 }
 
+/** The result of one capture of the committed list against its reference capture. */
+function captureResult(
+  capture: InventoryCapture,
+  original: ReferenceCaptureInput | undefined,
+): LocalCaptureResult {
+  const { digest, width, height, outcome, changedPixels, ratio } = localFacts(capture);
+  return {
+    itemKey: capture.itemKey,
+    variantKey: capture.variantKey,
+    candidateDigest: digest,
+    referenceDigest: original?.image.digest ?? null,
+    outcome,
+    changedPixels,
+    ratio,
+    sizeChanged: !!original && (original.image.width !== width || original.image.height !== height),
+  };
+}
+
+function receiptReference(reference: CaptureReferenceIdentity, captureCount: number) {
+  return {
+    manifestDigest: FIXED_DIGEST,
+    snapshotId: reference.snapshotId,
+    baselineRevision: reference.baselineRevision,
+    inventoryDigest: reference.digest ?? FIXED_DIGEST,
+    captureCount,
+  };
+}
+
 /**
  * The comparison input of the service for a run in pages, from the committed
  * capture list and the reference. A page index holds no result list, so this
@@ -692,31 +838,72 @@ export function comparisonReceipt({
     const key = identityKey(capture);
     const original = originals.get(key);
     originals.delete(key);
-    const { digest, width, height, outcome, changedPixels, ratio } = localFacts(capture);
-    return {
-      itemKey: capture.itemKey,
-      variantKey: capture.variantKey,
-      candidateDigest: digest,
-      referenceDigest: original?.image.digest ?? null,
-      outcome,
-      changedPixels,
-      ratio,
-      sizeChanged:
-        !!original && (original.image.width !== width || original.image.height !== height),
-    };
+    return captureResult(capture, original);
   });
   return {
     mode: LOCAL_COMPARISON_MODE,
-    reference: {
-      manifestDigest: FIXED_DIGEST,
-      snapshotId: reference.snapshotId,
-      baselineRevision: reference.baselineRevision,
-      inventoryDigest: reference.digest ?? FIXED_DIGEST,
-      captureCount: references.length,
-    },
+    reference: receiptReference(reference, references.length),
     engineVersion: LOCAL_COMPARISON_ENGINE,
     codecVersion: LOCAL_COMPARISON_CODEC,
     captures: results,
     removals: [...originals.values()].map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
+  };
+}
+
+interface CheckedComparisonParams {
+  /** The pages of the committed capture list of the run, in their order. */
+  pages: AsyncIterable<CapturesPage>;
+  reference: CaptureReferenceIdentity;
+  references: ReferenceReader;
+}
+
+/**
+ * The comparison input of the service for a run in pages, built one page of
+ * the committed list at a time. The service writes a row only for a result
+ * that is not unchanged and for a removed reference capture, so the receipt
+ * lists only these, and `referenceCaptures` has only their references. The
+ * field `checked` has the counts that the service compares with D1.
+ */
+export async function checkedComparison({ pages, reference, references }: CheckedComparisonParams) {
+  const results: LocalCaptureResult[] = [];
+  const referenceCaptures: ReferenceCaptureInput[] = [];
+  const settings: ComparisonSettingsCounts = { changed: 0, loose: 0 };
+  let captureCount = 0;
+  for await (const page of pages) {
+    for (const capture of page.captures) {
+      captureCount++;
+      const original = await references.take([capture.itemKey, capture.variantKey]);
+      countSettings(settings, capture, original);
+      const result = captureResult(capture, original);
+      if (result.outcome === "unchanged") {
+        if (!original) {
+          throw new IncompleteError("A local result does not match its pinned reference.");
+        }
+        continue;
+      }
+      results.push(result);
+      if (original) {
+        referenceCaptures.push(original);
+      }
+    }
+  }
+  // The removed captures come last, in the order of the reference.
+  const removed = await references.finish();
+  for (const capture of removed) {
+    referenceCaptures.push(capture);
+  }
+  const localComparison: LocalComparisonReceipt = {
+    mode: LOCAL_COMPARISON_MODE,
+    reference: receiptReference(reference, references.captureCount),
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+    codecVersion: LOCAL_COMPARISON_CODEC,
+    captures: results,
+    removals: removed.map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
+  };
+  return {
+    localComparison,
+    referenceCaptures,
+    settings,
+    checked: { captureCount, referenceImageRunIds: [...references.imageRunIds] },
   };
 }

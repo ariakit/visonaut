@@ -16,10 +16,11 @@ import {
 } from "@visonaut/protocol";
 import { Service, type ValidatedImage } from "@visonaut/service";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { applyTestMigrations } from "../../../tooling/test-migrations.ts";
 import { measureD1 } from "./api/test-d1-costs.ts";
 import {
+  openCaptureInventory,
   readCaptureInventory,
   readStoredCaptureInventory,
   writeCaptureInventory,
@@ -620,6 +621,66 @@ describe("capture list of a run as pages of rows", () => {
         runInput("run", [{ itemKey: "a", image: image("seed", "a", "1".repeat(64)), result: 1 }]),
       ),
     ).rejects.toThrow("needs an image of its run");
+  });
+
+  it("writes and reads one page at a time", async () => {
+    const captures = await newCaptures("run", 4100);
+    const [first, second, third] = capturePages(captures);
+    if (!first || !second || !third) {
+      throw new Error("The run needs three pages.");
+    }
+    // The writer stores each page after its validation, and the index last.
+    const failed = new MemoryStore();
+    const pages = async function* () {
+      yield first;
+      yield second;
+      yield first;
+    };
+    await expect(
+      writeCapturePages(failed, { ...runInput("run", captures), pages: pages() }),
+    ).rejects.toThrow("must increase from one page to the next");
+    expect(pageKeys(failed)).toHaveLength(2);
+    expect([...failed.objects.keys()].filter(isCapturePagesKey)).toEqual([]);
+    // The reader gets the next page only when its caller asks for it.
+    const store = new MemoryStore();
+    const pointer = await writeCapturePages(store, runInput("run", captures));
+    const get = vi.spyOn(store, "get");
+    const inventory = await openCaptureInventory(store, pointer);
+    expect(get).toHaveBeenCalledTimes(1);
+    const read = inventory.pages();
+    const page = await read.next();
+    if (page.done) throw new Error("Expected the first page.");
+    expect(page.value.captures.map((capture) => capture.ordinal).slice(0, 2)).toEqual([0, 1]);
+    expect(get).toHaveBeenCalledTimes(2);
+    const rows: number[] = [];
+    for await (const rest of read) {
+      rows.push(rest.captures.length);
+    }
+    expect(rows).toEqual([2000, 100]);
+    expect(get).toHaveBeenCalledTimes(4);
+  });
+
+  it("refuses an index whose row count of a page differs from the stored page", async () => {
+    const store = new MemoryStore();
+    const written = await writeCapturePages(store, runInput("run", await newCaptures("run", 2001)));
+    // An index with the digest of its own bytes, where the last page has one more row.
+    const index = JSON.parse(storedText(store, written.objectKey));
+    index.pages[1].rows = 2;
+    const text = canonicalJson(index);
+    const digest = await sha256(new TextEncoder().encode(text));
+    const objectKey = `runs/run/inventory/index/${digest}.json`;
+    await store.put(objectKey, text);
+    const pointer = { objectKey, digest, bytes: text.length, captureCount: 2002 };
+    const inventory = await openCaptureInventory(store, pointer);
+    const readAll = async () => {
+      for await (const _page of inventory.pages()) {
+        continue;
+      }
+    };
+    await expect(readAll()).rejects.toThrow("a page has another row count");
+    await expect(readCaptureInventory(store, pointer)).rejects.toThrow(
+      "a page has another row count",
+    );
   });
 
   it("refuses a stored page or an index that changed, and a missing page", async () => {

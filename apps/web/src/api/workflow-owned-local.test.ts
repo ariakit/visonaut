@@ -32,6 +32,7 @@ import {
   type DeclaredPage,
   type Fixture,
   acceptedInventoryReference,
+  acceptedManifestPagesReference,
   acceptedPagesReference,
   acceptedReference,
   builtInComparison,
@@ -1211,6 +1212,51 @@ describe("trusted local Submit", () => {
       candidate: { digest: image.digest },
     });
   });
+
+  it("compares a run with a reference in pages, with a removed and an added capture on each page", async () => {
+    const test = await fixture();
+    test.context.configuration.limits.maximumCaptures = 2_100;
+    const source = test.manifest.captures[0];
+    if (!source) throw new Error("Expected a source capture.");
+    const name = (position: number) => `dialog/item-${String(position).padStart(4, "0")}`;
+    const capture = (itemKey: string) => ({ ...structuredClone(source), itemKey });
+    test.manifest.captures = Array.from({ length: 2_010 }, (_, position) =>
+      capture(name(position)),
+    );
+    for (const [ordinal, entry] of test.manifest.captures.entries()) {
+      entry.ordinal = ordinal;
+    }
+    // The reference has two pages, and the run reads each one as its rows pass it.
+    await acceptedManifestPagesReference(test);
+    const removed = [name(5), name(2_005)];
+    const added = [`${name(5)}a`, "dialog/new"];
+    test.manifest.captures = [
+      ...test.manifest.captures.filter((entry) => !removed.includes(entry.itemKey)),
+      ...added.map(capture),
+    ].map((entry, ordinal) => ({ ...entry, ordinal }));
+    await stageLocal(test, await localSession(test));
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    if (!run.comparison_id) throw new Error("Expected the completed comparison.");
+    const rows = await test.context.service.comparisonRows(run.comparison_id);
+    // An added capture has the ordinal of its row in the order of the format,
+    // and a removed capture comes after the captures of the run, in the order
+    // of the reference.
+    expect(
+      rows
+        .map((row) => ({
+          itemKey: row.item_key,
+          ordinal: row.ordinal,
+          candidate: row.candidate_capture_id !== null,
+          reference: JSON.parse(row.tuple_json).referenceDigest !== null,
+        }))
+        .sort((first, second) => first.ordinal - second.ordinal),
+    ).toEqual([
+      { itemKey: `${name(5)}a`, ordinal: 5, candidate: true, reference: false },
+      { itemKey: "dialog/new", ordinal: 2_009, candidate: true, reference: false },
+      { itemKey: name(5), ordinal: 2_010, candidate: false, reference: true },
+      { itemKey: name(2_005), ordinal: 2_011, candidate: false, reference: true },
+    ]);
+  }, 60_000);
 
   it("retains a changed local original and review mask without enqueueing image work", async () => {
     const prepare = async () => {

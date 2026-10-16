@@ -16,12 +16,10 @@ import {
 } from "@visonaut/protocol";
 import {
   currentReference,
-  referenceCaptureInputs,
   referenceImage,
   referencePage,
   runReference,
   selectReference,
-  validateRunPages,
 } from "./local-comparison.ts";
 import {
   bearerToken,
@@ -56,8 +54,7 @@ import {
   imageDescriptorPages,
   listStagedPages,
   parseStagedIndex,
-  readStagedPages,
-  runPageImages,
+  checkStagedPages,
   stagedIndexKey,
   stagedPageKey,
   type StagedManifestEvidence,
@@ -1043,9 +1040,13 @@ export async function stageIndex(request: Request, context: ApiContext, runId: s
     );
   }
   await currentReference(context, reference, pullRequest);
-  const pages = await readStagedPages({ context, runId: run.id, jobId: job.job_id, index });
-  await validateRunPages(pages, await referenceCaptureInputs(context, reference.snapshotId));
-  const { uploads, declaredBytes, captureCount } = runPageImages(pages);
+  // Each staged page is checked against the reference and then released.
+  const { uploads, declaredBytes, captureCount } = await checkStagedPages({
+    context,
+    runId: run.id,
+    jobId: job.job_id,
+    index,
+  });
   await exactEvidenceImages(context, { runId: run.id, jobId: job.job_id }, uploads);
   const objectKey = stagedIndexKey(run.id, job.job_id, manifestDigest);
   await context.quarantine.put(objectKey, text, {

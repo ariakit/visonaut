@@ -1,5 +1,6 @@
 import { IncompleteError, type CaptureInventoryPointer, type Database } from "@visonaut/service";
 import {
+  openCaptureInventory,
   readCaptureInventory,
   readCaptureInventoryIndex,
   type CaptureInventory,
@@ -119,6 +120,25 @@ export async function readSnapshotInventoryBody(
     inventory.testedSha !== header.testedSha
   ) {
     throw new IncompleteError("The immutable inventory belongs to a different baseline.");
+  }
+  return inventory;
+}
+
+/**
+ * Open the capture list of a run or of a baseline for a reader of one page at
+ * a time, with the complete validation. The function reads no row from D1.
+ */
+export async function openInventory(
+  context: Pick<InventoryContext, "images">,
+  header: SnapshotInventoryHeader,
+) {
+  const inventory = await openCaptureInventory(context.images, header);
+  if (
+    inventory.runId !== header.runId ||
+    inventory.projectId !== header.projectId ||
+    inventory.testedSha !== header.testedSha
+  ) {
+    throw new IncompleteError("The immutable inventory belongs to a different run.");
   }
   return inventory;
 }
