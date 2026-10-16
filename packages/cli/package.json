@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@types/node": "24.19.2",
-    "@types/pixelmatch": "5.2.6",
+    "@types/pixelmatch": "7.1.0",
     "@types/pngjs": "6.0.5",
     "@visonaut/compare": "workspace:*",
     "@visonaut/protocol": "workspace:*",
