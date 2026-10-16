@@ -159,3 +159,40 @@ describe("refused requests print the error code and the reference", () => {
     expect(result.stdout + result.stderr).not.toContain("oidc-secret");
   });
 });
+
+describe("a refused GitHub OIDC token request", () => {
+  const body = { error: { code: "internal_error", reference, message: "github-message-secret" } };
+
+  async function beginWithTokenAnswer(status: number) {
+    let serviceRequests = 0;
+    vi.stubGlobal("fetch", async (input: URL | string) => {
+      if (new URL(input).hostname.endsWith(".actions.githubusercontent.com")) {
+        return Response.json(body, { status });
+      }
+      serviceRequests++;
+      return Response.json({});
+    });
+    const result = await begin();
+    return { ...result, serviceRequests };
+  }
+
+  it("names GitHub Actions and prints no code and no reference", async () => {
+    const result = await beginWithTokenAnswer(500);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe(
+      "visonaut: GitHub Actions refused the OIDC token request (HTTP 500). Check that the job has the id-token: write permission, then run the job again.\n",
+    );
+    expect(result.stdout + result.stderr).not.toContain("internal_error");
+    expect(result.stdout + result.stderr).not.toContain(reference);
+    expect(result.stdout + result.stderr).not.toContain("github-message-secret");
+    expect(result.serviceRequests).toBe(0);
+  });
+
+  it.each([401, 403])("keeps the trust exit code for %i", async (status) => {
+    const result = await beginWithTokenAnswer(status);
+    expect(result.code).toBe(4);
+    expect(result.stderr).toBe(
+      `visonaut: GitHub Actions refused the OIDC token request (HTTP ${status}). Check that the job has the id-token: write permission, then run the job again.\n`,
+    );
+  });
+});
