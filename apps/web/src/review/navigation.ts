@@ -132,9 +132,6 @@ export function applySavedReview(
   const { runRevision, reviewer, runStatus, counts } = result;
   if (result.noop) return null;
   if (runRevision === undefined) return null;
-  // A receipt has no name for a person with no stored name. A new model then
-  // gives the state.
-  if (reviewer === undefined) return null;
   if (runStatus === undefined) return null;
   if (counts === undefined) return null;
   // Each other status also changes values of the model that a receipt does not have.
@@ -161,6 +158,8 @@ export function applySavedReview(
         revision,
         verdict: command.verdict,
         source: "human" as const,
+        // A person with no stored name has no name in the receipt, as in the
+        // run model.
         reviewer,
         ownDecision: true,
       };

@@ -1,20 +1,19 @@
-// The decision bar of the review page. It hosts the decision controls of
-// today with the texts and the states of #268. The frame gives it the review
+// The decision bar of the review page. It gives the kit bar
+// (`components/kit/bar/`) the review session: the decisions, the one text of
+// the status line, and its recovery buttons. The frame gives it the review
 // session and the selection, and it reads the keys of the decisions from
-// `useBarHost`. The bar of #275 replaces this file only.
+// `useBarHost`.
 
 import * as ak from "@ariakit/react";
-import { Check, ChevronDown, Undo2, X } from "lucide-react";
-import { useState } from "react";
-import {
-  ButtonGroup,
-  ButtonLabel,
-  ButtonSlot,
-} from "../components/ariakit/components/button.ariakit.react.tsx";
+import { useRef, useState } from "react";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
+import { ButtonLabel } from "../components/ariakit/components/button.ariakit.react.tsx";
 import { ShellMainFull } from "../components/ariakit/components/shell.ariakit.react.tsx";
-import { useShortcuts } from "../components/kit/keys.tsx";
+import { ReviewBar } from "../components/kit/bar/bar.tsx";
+import type { BarView } from "../components/kit/bar/bar.tsx";
+import { getBarMessage } from "../components/kit/bar/message.ts";
+import type { BarAction, BarMessage } from "../components/kit/bar/message.ts";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import type {
   ReviewItem,
@@ -49,6 +48,10 @@ export interface UseBarHostParams {
    * screen. A decision waits for it.
    */
   ready: boolean;
+  /** Moves the focus to the review page, after a recovery button. */
+  onFocusPage(): void;
+  /** The view controls of the stage. Null for a stage with no images. */
+  view: BarView | null;
 }
 
 export interface BarHostState extends UseBarHostParams {
@@ -66,17 +69,58 @@ export interface BarHostState extends UseBarHostParams {
   undo(): void;
 }
 
+interface Refusal {
+  text: string;
+  waitsForImages?: boolean;
+}
+
+/**
+ * The reason that a decision waits, as the text of the status line, or
+ * undefined when the decision can save.
+ */
+function getRefusal({ session, model, ready }: UseBarHostParams): Refusal | undefined {
+  // A failed save is the first reason: the session says to resolve it.
+  if (session.saveState.status === "error") return undefined;
+  if (model.archived) return { text: "Nothing changed. This run is read-only." };
+  if (!ready && (session.terminalComparison || !model.reviewReady)) {
+    return { text: "Nothing changed. Review is unavailable for this run now." };
+  }
+  if (!ready) {
+    return { text: "Nothing changed. The images are not on screen yet.", waitsForImages: true };
+  }
+  if (session.reviewBlocked) {
+    return { text: "Nothing changed. Wait for the current command to finish." };
+  }
+  return undefined;
+}
+
 /**
  * The state of the bar: the decisions and the confirmation of a decision for
  * the whole screenshot. The frame calls it once, gives the result to
  * `BarHost`, and sends the keys of `keys`.
  * @example
- * const bar = useBarHost({ session, model, item, variant, selection, ready });
+ * const bar = useBarHost({ session, model, item, variant, selection, ready, onFocusPage });
  * <BarHost bar={bar} />
  */
+function isSelection(selection: ReviewSelection, other: ReviewSelection | undefined) {
+  if (!other) return false;
+  return selection.itemKey === other.itemKey && selection.variantKey === other.variantKey;
+}
+
 export function useBarHost(params: UseBarHostParams): BarHostState {
   const { session, model, item, selection, ready } = params;
   const [batchScope, setBatchScope] = useState<BatchReviewScope | null>(null);
+  // A notice for one selection ends when the page leaves that selection, so
+  // it does not come back after a return. A notice can name the next
+  // selection before the page shows it (the remembered variant of a routed
+  // page), so only a move away from its own selection ends it.
+  const [previousSelection, setPreviousSelection] = useState(selection);
+  if (!isSelection(selection, previousSelection)) {
+    setPreviousSelection(selection);
+    if (isSelection(previousSelection, session.notice?.selection)) {
+      session.clearNotice();
+    }
+  }
   const targets = item ? reviewTargets(item) : [];
   const batchValid =
     batchScope !== null &&
@@ -87,8 +131,15 @@ export function useBarHost(params: UseBarHostParams): BarHostState {
     targets.every((target, index) => target.id === batchScope.targetIds[index]);
   if (batchScope && !batchValid) setBatchScope(null);
   const review = (verdict: ReviewVerdict, wholeItem = false) => {
-    if (!ready) return;
-    if (session.reviewBlocked) return;
+    // A refused key prints its reason in the status line.
+    const refusal = getRefusal(params);
+    if (refusal) {
+      session.announce(refusal.text, "warning", {
+        selection,
+        waitsForImages: refusal.waitsForImages,
+      });
+      return;
+    }
     session.review(verdict, selection, wholeItem);
   };
   const reviewBatch = (verdict: ReviewVerdict) => {
@@ -117,142 +168,136 @@ export function useBarHost(params: UseBarHostParams): BarHostState {
   };
 }
 
+/** The recovery buttons of the save state. */
+function getRecoveryActions(session: ReviewSession, model: ReviewModel): BarAction[] {
+  const { saveState, save, undo, refresh } = session;
+  const actions: BarAction[] = [];
+  const { failed, failedUndo } = saveState;
+  if (!model.archived && saveState.status === "error" && failed) {
+    actions.push({ label: "Retry same command", primary: true, onClick: () => void save(failed) });
+  }
+  if (!model.archived && saveState.status === "error" && failedUndo) {
+    actions.push({ label: "Retry Undo", primary: true, onClick: () => void undo(failedUndo) });
+  }
+  if (saveState.link === "sign-in") {
+    // The sign-in opens in a new tab: this page holds the decision, and a
+    // sign-in in this tab loads a new document.
+    actions.push({ label: "Sign in again", href: "/", newTab: true });
+  }
+  if (saveState.link === "queue") {
+    actions.push({ label: "Go to the Queue", href: "/" });
+  }
+  if (saveState.status === "conflict" || saveState.status === "error") {
+    actions.push({ label: "Refresh current state", onClick: () => void refresh() });
+  }
+  return actions;
+}
+
+/**
+ * The notice while it is true: a notice for a selection hides after a move to
+ * another variant, and a notice about images hides when they are on screen.
+ */
+function getShownNotice({ session, selection, ready }: BarHostState) {
+  const { notice } = session;
+  if (!notice) return null;
+  if (notice.selection && !isSelection(selection, notice.selection)) return null;
+  if (notice.waitsForImages && ready) return null;
+  return notice;
+}
+
+/**
+ * The one text of the status line: the newest of the notice of the page and
+ * the save state. A save state replaces the notice. A save state with
+ * recovery buttons waits for the reviewer, so a notice comes after its text
+ * and does not hide it.
+ */
+function getStatusMessage(bar: BarHostState): BarMessage | null {
+  const { session, model } = bar;
+  const { saveState } = session;
+  const notice = getShownNotice(bar);
+  const actions = getRecoveryActions(session, model);
+  if (notice && !actions.length) return getBarMessage({ ...notice, actions });
+  const { status } = saveState;
+  const tone =
+    status === "error"
+      ? "danger"
+      : status === "conflict"
+        ? "warning"
+        : status === "saving"
+          ? "saving"
+          : saveState.saved
+            ? "success"
+            : "neutral";
+  return getBarMessage({
+    text: notice ? `${saveState.message} ${notice.text}` : saveState.message,
+    tone,
+    urgent: status === "error" || status === "conflict",
+    actions,
+  });
+}
+
 export interface BarHostProps {
   bar: BarHostState;
 }
 
-/**
- * The decision controls of today: Undo, the decision for all changed views,
- * Reject, Approve, and the save state with its links. The confirmation of a
- * decision for the whole screenshot is a modal dialog.
- */
 /** The id of the decision bar, the target of the skip link of the page. */
 export const reviewActionsId = "review-actions";
 
+/**
+ * The decision bar: Undo, the view controls of the stage, the status line,
+ * Reject, Approve, and the `⋯` menu with the decision for the whole
+ * screenshot. Its confirmation is a modal dialog.
+ */
 export function BarHost({ bar }: BarHostProps) {
   const { session, model, item, variant, ready, targets, batchValid } = bar;
-  const { saveState, busy, reviewBlocked, canUndo, save, undo, refresh } = session;
+  const { saveState, busy, reviewBlocked, canUndo } = session;
+  const menuButton = useRef<HTMLButtonElement>(null);
   const blocked = !ready || reviewBlocked || saveState.status === "error";
   const selectedTarget = targets.some((entry) => entry.id === variant?.id);
-  // The key hints hide while the keyboard switch is off.
-  const { enabled: shortcuts } = useShortcuts();
+  // A screenshot with one change has no decision for the whole screenshot.
+  const wholeItem =
+    targets.length > 1 && !model.archived
+      ? { count: targets.length, disabled: blocked, onSelect: bar.openBatch }
+      : null;
   return (
     <>
-      <ShellMainFull className="sticky bottom-0 z-20">
-        <Frame
-          $cover
-          $layer="canvas"
-          $lighten={2}
-          $border
-          $borderType="border"
-          $rounded="none"
-          $p={2}
+      <ShellMainFull className="sticky bottom-0 z-20 pointer-events-none">
+        <ReviewBar
           id={reviewActionsId}
-          // The skip link of the page moves the focus here.
-          tabIndex={-1}
-          role="region"
-          aria-label="Review actions"
-          className="review-actions flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
-        >
-          <div className="flex items-center gap-2">
-            <Button
-              $p={1.5}
-              disabled={model.archived || !canUndo || busy || saveState.status === "error"}
-              onClick={() => void undo()}
-            >
-              <ButtonSlot>
-                <Undo2 />
-              </ButtonSlot>
-              <ButtonLabel>Undo</ButtonLabel>
-            </Button>
-            <div className="h-5 w-px bg-current/10" />
-            <Button $p={1.5} disabled={blocked || !targets.length} onClick={bar.openBatch}>
-              <ButtonLabel>All {targets.length} changed views…</ButtonLabel>
-              <ButtonSlot>
-                <ChevronDown />
-              </ButtonSlot>
-            </Button>
-          </div>
-          <ButtonGroup $gap="sm">
-            <Button
-              $border
-              disabled={blocked || !selectedTarget || !!variant?.rejectDisabledReason}
-              title={variant?.rejectDisabledReason}
-              onClick={() => bar.review("rejected")}
-            >
-              <ButtonSlot>
-                <X />
-              </ButtonSlot>
-              <ButtonLabel>Reject view</ButtonLabel>
-              {shortcuts && <ButtonSlot $kind="shortcut">X</ButtonSlot>}
-            </Button>
-            <Button
-              $layer="brand"
-              disabled={blocked || !selectedTarget || !!variant?.approveDisabledReason}
-              title={variant?.approveDisabledReason}
-              onClick={() => bar.review("approved")}
-            >
-              <ButtonSlot>
-                <Check />
-              </ButtonSlot>
-              <ButtonLabel>Approve &amp; next</ButtonLabel>
-              {shortcuts && <ButtonSlot $kind="shortcut">A</ButtonSlot>}
-            </Button>
-          </ButtonGroup>
-          {(saveState.message ||
-            busy ||
-            saveState.status === "error" ||
-            saveState.status === "conflict") && (
-            <div className="basis-full px-1.5">
-              <div
-                className="review-save-state flex flex-wrap items-center gap-2 text-xs ak-ink-60 empty:hidden"
-                role={
-                  saveState.status === "error" || saveState.status === "conflict"
-                    ? "alert"
-                    : "status"
-                }
-              >
-                {saveState.message}
-                {!model.archived && saveState.status === "error" && saveState.failed && (
-                  <Button
-                    onClick={() => {
-                      if (saveState.failed) void save(saveState.failed);
-                    }}
-                  >
-                    <ButtonLabel>Retry same command</ButtonLabel>
-                  </Button>
-                )}
-                {!model.archived && saveState.status === "error" && saveState.failedUndo && (
-                  <Button onClick={() => void undo(saveState.failedUndo)}>
-                    <ButtonLabel>Retry Undo</ButtonLabel>
-                  </Button>
-                )}
-                {saveState.link === "sign-in" && (
-                  // The sign-in opens in a new tab: this page holds the
-                  // decision, and a sign-in in this tab loads a new document.
-                  <Button render={<a href="/" target="_blank" rel="noopener" />}>
-                    <ButtonLabel>Sign in again</ButtonLabel>
-                  </Button>
-                )}
-                {saveState.link === "queue" && (
-                  <Button render={<a href="/" />}>
-                    <ButtonLabel>Go to the Queue</ButtonLabel>
-                  </Button>
-                )}
-                {(saveState.status === "conflict" || saveState.status === "error") && (
-                  <Button onClick={() => void refresh()}>
-                    <ButtonLabel>Refresh current state</ButtonLabel>
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </Frame>
+          message={getStatusMessage(bar)}
+          view={bar.view}
+          undo={{
+            disabled: model.archived || !canUndo || busy || saveState.status === "error",
+            onClick: () => void session.undo(),
+          }}
+          reject={{
+            disabled: blocked || !selectedTarget || !!variant?.rejectDisabledReason,
+            reason: variant?.rejectDisabledReason,
+            onClick: () => bar.review("rejected"),
+          }}
+          approve={{
+            disabled: blocked || !selectedTarget || !!variant?.approveDisabledReason,
+            reason: variant?.approveDisabledReason,
+            onClick: () => bar.review("approved"),
+          }}
+          wholeItem={wholeItem}
+          menuButtonRef={menuButton}
+          onActionDone={bar.onFocusPage}
+        />
       </ShellMainFull>
       <ak.Dialog
         open={batchValid}
         onClose={bar.closeBatch}
         unmountOnHide
+        // The menu item of the dialog is gone when the dialog closes.
+        finalFocus={menuButton}
+        // A failed save takes the bar over and removes the More button too:
+        // the page then takes the focus.
+        autoFocusOnHide={(element) => {
+          if (element?.isConnected) return true;
+          bar.onFocusPage();
+          return false;
+        }}
         render={<Frame $layer="canvas" $border $p={6} $rounded="2xl" />}
         className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(30rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-auto text-sm"
         backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}

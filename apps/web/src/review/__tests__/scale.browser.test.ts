@@ -159,7 +159,7 @@ test("narrow layout keeps the list, the variants, and the image controls inside 
   await expect(row(page, 1)).toBeFocused();
   await expect(row(page, 1)).toBeInViewport();
   await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 });
 

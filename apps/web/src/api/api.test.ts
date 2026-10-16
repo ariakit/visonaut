@@ -1100,10 +1100,11 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       reviewReady: true,
       archived: false,
     });
-    // The access check makes 3 of the round trips. The run and its comparison
-    // are read one time each: the status reader gets the rows of this read.
-    expect(costs.roundTrips()).toBe(7);
-    expect(costs.costs).toHaveLength(7);
+    // The access check makes 3 of the round trips. The run, its comparison,
+    // and the project are read one time each: the status reader gets the rows
+    // of this read and the project row of the access check.
+    expect(costs.roundTrips()).toBe(6);
+    expect(costs.costs).toHaveLength(6);
     expect(costs.totals().rows_written).toBe(0);
   });
   it("ends review polling when an accepted main run becomes history", async () => {

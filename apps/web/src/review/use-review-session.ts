@@ -1,6 +1,8 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { RunClosedReason } from "@visonaut/protocol";
 import { useAppSession } from "../app-session.tsx";
 import { ReviewCommandError } from "./model.ts";
+import { getClosedWords } from "./run-words.ts";
 import type {
   ReviewCommand,
   ReviewCommands,
@@ -25,7 +27,6 @@ interface UseReviewSessionParams {
   commands: ReviewCommands;
   onSelect(selection: ReviewSelection): void;
   onFocus(): void;
-  onAnnounce(message: string): void;
   onRefresh(): void;
   /**
    * The keys of the screenshots that the list shows, in its order. The
@@ -55,6 +56,11 @@ interface CommandSession {
   endedCommands: Set<string>;
   /** The saves, the Undos, and the manual reads that the session started. */
   started: number;
+  /**
+   * True from a failed save or a conflict until the next save state, also
+   * before React commits that state. A return read must not start then.
+   */
+  failed: boolean;
 }
 
 function newCommandSession(): CommandSession {
@@ -64,12 +70,15 @@ function newCommandSession(): CommandSession {
     durableCommands: new Set(),
     endedCommands: new Set(),
     started: 0,
+    failed: false,
   };
 }
 
 interface SaveState {
   status: "idle" | "saving" | "error" | "conflict";
   message: string;
+  /** A final receipt: the message is a success. */
+  saved?: boolean;
   failed?: ReviewCommand;
   failedUndo?: UndoCommand;
   /** The link of the decision bar: the sign-in in a new tab, or the review queue. */
@@ -106,8 +115,40 @@ function runStatusLabel(status: string) {
   }
 }
 
-/** The text of the decision bar for a run that a newer run replaced. */
-const replacedRunMessage = "A newer run replaced this run.";
+/**
+ * A text of the status line that is not a save state: a refusal, the
+ * remembered variant that a screenshot no longer has, or the end of a review.
+ * The next save state replaces it.
+ */
+export interface ReviewNotice {
+  text: string;
+  tone: "neutral" | "success" | "warning";
+  /** The notice is true only for this selection, and the bar hides it after. */
+  selection?: ReviewSelection;
+  /**
+   * The notice is about images that are not on screen: the bar hides it when
+   * they are.
+   */
+  waitsForImages?: boolean;
+}
+
+const closedRunMessages: Record<RunClosedReason, string> = {
+  replaced: "A newer run replaced this run.",
+  "pull-request-closed": "The pull request of this run closed.",
+  "merge-group-destroyed": "The merge queue removed this run.",
+  "baseline-retired": "The baseline of this run was retired.",
+  expired: "This run expired.",
+};
+
+/**
+ * The text of the decision bar for a closed run: the stored reason, or a
+ * sentence with no cause for a run that closed before the service stored one.
+ */
+function closedRunMessage(run: ReviewModel["run"]) {
+  if (run.closedReason) return closedRunMessages[run.closedReason];
+  return "This run is no longer active.";
+}
+
 const signedOutMessage = "Your session ended. Sign in again, and then retry.";
 
 /** The state of the decision bar for a run that stopped, with no save. */
@@ -118,7 +159,7 @@ function stoppedRunState(model: ReviewModel): SaveState {
   if (model.run.status !== "superseded") {
     return { status: "idle", message: runStatusLabel(model.run.status) };
   }
-  return { status: "idle", message: replacedRunMessage, link: "queue" };
+  return { status: "idle", message: closedRunMessage(model.run), link: "queue" };
 }
 
 /**
@@ -172,7 +213,6 @@ export function useReviewSession({
   commands,
   onSelect,
   onFocus,
-  onAnnounce,
   onRefresh,
   getOrder,
 }: UseReviewSessionParams) {
@@ -181,9 +221,26 @@ export function useReviewSession({
   const [pendingReviews, setPendingReviews] = useState<ReviewCommand[]>([]);
   // The oldest decision with no receipt, when it waited 30 seconds.
   const [stillQueued, setStillQueued] = useState<string>();
-  const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
+  const [saveState, storeSaveState] = useState<SaveState>({ status: "idle", message: "" });
+  const [notice, setNotice] = useState<ReviewNotice | null>(null);
   const [history, setHistory] = useState<SavedCommand[]>([]);
   const commandSession = useRef(newCommandSession());
+  // Each save state replaces the notice: the status line shows the newest text.
+  const setSaveState = (next: SaveState | ((state: SaveState) => SaveState)) => {
+    // An update function keeps the status: it changes the text only.
+    if (typeof next !== "function") {
+      commandSession.current.failed = next.status === "error" || next.status === "conflict";
+    }
+    setNotice(null);
+    storeSaveState(next);
+  };
+  const announce = (
+    text: string,
+    tone: ReviewNotice["tone"] = "neutral",
+    scope?: Pick<ReviewNotice, "selection" | "waitsForImages">,
+  ) => {
+    setNotice({ text, tone, ...scope });
+  };
   const model = useMemo(
     () => pendingReviewModel(savedModel, pendingReviews),
     [savedModel, pendingReviews],
@@ -204,7 +261,9 @@ export function useReviewSession({
       setModel(suppliedModel);
       setPendingReviews([]);
       setHistory([]);
-      setSaveState({ status: "idle", message: "" });
+      // The layout effect below starts a new command session with no failure.
+      setNotice(null);
+      storeSaveState({ status: "idle", message: "" });
     } else {
       setModel(latestReviewModel(savedModel, suppliedModel));
     }
@@ -322,8 +381,11 @@ export function useReviewSession({
     // The receipt of a decision brings the newer state of the run.
     if (session.saving) return;
     // A command that waits for a retry keeps the page with its buttons. Its
-    // retry shows the state of the service.
-    if (saveState.status === "error") return;
+    // retry shows the state of the service. A conflict keeps its text and its
+    // buttons too, so a 401 of this read does not replace them with the
+    // sign-in page. The command session has a failure that React did not
+    // commit yet.
+    if (session.failed) return;
     if (returnReadInFlight.current) return;
     returnReadInFlight.current = true;
     // True when a save, an Undo, or a manual read started during this read.
@@ -388,7 +450,7 @@ export function useReviewSession({
     if (conflict && currentModel?.run.status === "superseded") {
       setSaveState({
         status: "conflict",
-        message: `Not saved. ${replacedRunMessage}`,
+        message: `Not saved. ${closedRunMessage(currentModel.run)}`,
         link: "queue",
       });
       return;
@@ -503,14 +565,17 @@ export function useReviewSession({
           }
           const remaining = session.queue.map((entry) => entry.command);
           setPendingReviews(remaining);
-          setSaveState({
-            status: remaining.length ? "saving" : "idle",
-            message: remaining.length
-              ? savingMessage
-              : `${currentCommand.targets.length} variant${currentCommand.targets.length === 1 ? "" : "s"} ${currentCommand.verdict}. Saved.`,
-          });
+          setSaveState(
+            remaining.length
+              ? { status: "saving", message: savingMessage }
+              : {
+                  status: "idle",
+                  saved: true,
+                  message: `Saved. ${currentCommand.targets.length} variant${currentCommand.targets.length === 1 ? "" : "s"} ${currentCommand.verdict}.`,
+                },
+          );
           if (!remaining.length && !nextPending(currentModel.items, currentCommand.selection)) {
-            onAnnounce("Review complete. No variants need review.");
+            announce("Review complete. No variants need review.", "success");
           }
         } catch (error) {
           if (session.queue[0] !== entry) return;
@@ -561,19 +626,33 @@ export function useReviewSession({
     const item = model.items.find((entry) => entry.key === selection.itemKey);
     const variant = item?.variants.find((entry) => entry.key === selection.variantKey);
     if (!item) return;
+    const refuseUnchanged = () =>
+      announce(
+        wholeItem
+          ? "Nothing changed. This screenshot has no change to review."
+          : "Nothing changed. This variant has no change to review.",
+        "warning",
+        { selection },
+      );
     // The selected variant can be an unchanged one, which this model does not
     // have. A decision for the whole item does not need it.
-    if (!variant && !wholeItem) return;
+    if (!variant && !wholeItem) {
+      refuseUnchanged();
+      return;
+    }
     if (reviewBlocked) return;
     const targets = reviewTargets(item);
     if (saveState.status === "error") {
-      onAnnounce("Resolve the unsaved command before saving another review.");
+      announce("Resolve the unsaved command before saving another review.", "warning");
       return;
     }
     const selectedTargets = wholeItem
       ? targets
       : targets.filter((entry) => entry.id === variant?.id);
-    if (!selectedTargets.length) return;
+    if (!selectedTargets.length) {
+      refuseUnchanged();
+      return;
+    }
     const protectedTarget = selectedTargets.find((entry) =>
       verdict === "approved" ? entry.approveDisabledReason : entry.rejectDisabledReason,
     );
@@ -582,8 +661,10 @@ export function useReviewSession({
         verdict === "approved"
           ? protectedTarget.approveDisabledReason
           : protectedTarget.rejectDisabledReason;
-      onAnnounce(
+      announce(
         `${reason} No variants were changed.${wholeItem ? " Select an eligible variant and review it individually." : ""}`,
+        "warning",
+        { selection },
       );
       return;
     }
@@ -626,6 +707,7 @@ export function useReviewSession({
       onSelect(result.selection);
       setSaveState({
         status: "idle",
+        saved: true,
         message: "Undo saved. The original selection and verdicts were restored.",
       });
       onFocus();
@@ -695,7 +777,11 @@ export function useReviewSession({
     awaitingComparison,
     terminalComparison,
     unsentDecisions,
-    runStatus: runStatusLabel(model.run.status),
+    // A closed run has the words of the header: its stored cause, or no cause.
+    runStatus: getClosedWords(model.run) ?? runStatusLabel(model.run.status),
+    notice,
+    announce,
+    clearNotice: () => setNotice(null),
     save,
     review,
     undo,

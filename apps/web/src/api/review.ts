@@ -159,7 +159,7 @@ export async function reviewPollState(
         ? "failed"
         : "comparing"
     : // The status is of the run row that gives the revision below.
-      (await context.service.status(run.id, { run, comparison })).status;
+      (await context.service.status(run.id, { run, comparison, project: context.project })).status;
   return {
     run: {
       status,
