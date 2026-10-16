@@ -1,4 +1,5 @@
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "./database.ts";
+import { identityHistoryStatement } from "./identity-history.ts";
 import { eligibleAcceptanceSql } from "./review-status.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
 import type { Database, SqlValue, Statement } from "./database.ts";
@@ -477,11 +478,13 @@ export async function promote(
     ),
   );
   statements.push(
-    statement(
-      service.database,
-      "INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, 'main', item_key, variant_key FROM visonaut_captures WHERE run_id = ? AND (?=0 OR EXISTS(SELECT 1 FROM visonaut_comparison_rows row WHERE row.candidate_capture_id=visonaut_captures.id AND row.comparison_id=? AND json_extract(row.tuple_json,'$.referenceDigest') IS NULL))",
-      [project.id, run.id, run.inventory_key ? 1 : 0, comparison.id],
-    ),
+    identityHistoryStatement({
+      database: service.database,
+      projectId: project.id,
+      lineageKey: "main",
+      run,
+      comparisonId: comparison.id,
+    }),
   );
   statements.push(
     statement(

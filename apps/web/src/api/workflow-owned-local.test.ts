@@ -1060,6 +1060,46 @@ describe("trusted local Submit", () => {
     expect((await test.context.service.comparisonRows(comparison.id))[0]?.outcome).toBe("changed");
   });
 
+  it("reads the identity history of a mass change in proportion to the changed captures", async () => {
+    const captureCount = 200;
+    const test = await fixture();
+    const source = test.manifest.captures[0];
+    if (!source) throw new Error("Expected a source capture.");
+    test.context.configuration.limits.maximumCaptures = captureCount;
+    // With no reference, each capture is new and has a changed row.
+    test.manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
+      ...structuredClone(source),
+      itemKey: `dialog/new-${ordinal}`,
+      name: `New dialog ${ordinal}`,
+      ordinal,
+    }));
+    const session = await localSession(test);
+    expect(session.reference.snapshotId).toBeNull();
+    await stageLocal(test, session);
+    const costs = measureD1(nativeDatabase);
+    const run = await materializeWorkflowRun(
+      { ...test.context, database: costs.database, service: new Service(costs.database) },
+      test.runId,
+    );
+    expect(run.inventory_key).toBeTruthy();
+    const history = costs.costs.filter((cost) =>
+      cost.sql.startsWith("INSERT OR IGNORE INTO visonaut_identity_history"),
+    );
+    expect(history).toHaveLength(1);
+    // Each row has no reference, so D1 counts each comparison row and its
+    // capture, and one more row when the seek reads past the last row. A search
+    // of the rows for each capture read 20,300 rows here.
+    expect(history[0]?.rows_read).toBeLessThanOrEqual(2 * captureCount + 1);
+    expect(
+      await database
+        .prepare(
+          "SELECT count(*) AS count FROM visonaut_identity_history WHERE project_id=? AND lineage_key=?",
+        )
+        .bind(test.context.configuration.projectId, run.lineage_key)
+        .first(),
+    ).toEqual({ count: captureCount });
+  });
+
   it("refuses a row that keeps a reference image when the capture has no reference", async () => {
     const test = await fixture();
     const session = await localSession(test);
