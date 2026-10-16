@@ -2842,6 +2842,81 @@ describe("pre-run App checks", () => {
     expect(fixture.state.posts).toBe(0);
   });
 
+  /**
+   * The shape of ariakit/ariakit run 37372288454: attempt 2 owns the main
+   * check, which passed, and a canceled rerun (attempt 3) never bound a check.
+   */
+  async function mainRerunFixture() {
+    const fixture = await boundMainWorkflowFixture();
+    await database.prepare("UPDATE pre_run_checks SET workflow_attempt=2").run();
+    const check = fixture.state.checks.get("1");
+    if (!check) throw new Error("Missing main check");
+    Object.assign(check, {
+      status: "completed",
+      conclusion: "success",
+      output: { title: "Visual review passed" },
+    });
+    fixture.state.run.run_attempt = 3;
+    return fixture;
+  }
+
+  it.each(["in_progress", "completed"])(
+    "ends a main rerun whose earlier attempt owns the check after main moved, and the next pass reads GitHub 0 times and writes 0 rows: %s",
+    async (action) => {
+      const fixture = await mainRerunFixture();
+      fixture.state.mainSha = "e".repeat(40);
+      const check = structuredClone(fixture.state.checks.get("1"));
+      const before = await database.prepare("SELECT * FROM pre_run_checks").all();
+      const webhook = fixture.workflowWebhook();
+      webhook.payload.action = action;
+      if (action !== "completed") {
+        object(webhook.payload.workflow_run).status = action;
+        object(webhook.payload.workflow_run).conclusion = null;
+      }
+      const passes = await reconcileTwice(fixture, webhook);
+      expect(passes.first).toEqual({ checked: 1, pending: [] });
+      expect(passes.patches).toBe(0);
+      expect(fixture.state.checks.get("1")).toEqual(check);
+      expect((await database.prepare("SELECT * FROM pre_run_checks").all()).results).toEqual(
+        before.results,
+      );
+      expect(passes.second).toEqual({ checked: 0, pending: [] });
+      expect(passes.requests).toBe(0);
+      expect(passes.rowsWritten).toBe(0);
+    },
+  );
+
+  it.each(["other-run", "stage", "run"])(
+    "keeps a main rerun retryable after main moved with %s",
+    async (condition) => {
+      const fixture = await mainRerunFixture();
+      fixture.state.mainSha = "e".repeat(40);
+      if (condition === "other-run") {
+        await database.prepare("UPDATE pre_run_checks SET workflow_run_id='76'").run();
+      } else if (condition === "stage") {
+        await database
+          .prepare(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,
+            workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,
+            capture_job_prefix,submit_job_name,verified_json,submitted_at,created_at)
+            VALUES('stage','100','77',3,?,'digest','path','ref','capture','submit','{}',1,1)`)
+          .bind(mergeSha)
+          .run();
+      } else if (condition === "run") {
+        await database
+          .prepare(`INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,
+            kind,tested_sha,lineage_key,plan_digest,plan_json,state,created_at)
+            VALUES('owned','project','77',3,'main',?,'main','plan','{}','failed',1)`)
+          .bind(mergeSha)
+          .run();
+      }
+      await expect(
+        settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+      ).rejects.toMatchObject({ code: "workflow_candidate" });
+      // Only the check of attempt 2 exists.
+      expect(fixture.state.posts).toBe(1);
+    },
+  );
+
   it("names a delivery with an unreadable payload, with no payload text and no message", async () => {
     const deliveryId = crypto.randomUUID();
     await database
@@ -3023,6 +3098,67 @@ describe("pre-run App checks", () => {
         settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook),
       ).rejects.toMatchObject({ code: "workflow_candidate" });
       expect(fixture.state.checks.get("1")).toEqual(check);
+    },
+  );
+
+  it.each(["in_progress", "requested"])(
+    "ends progress of a bound PR run whose Plan passed its check after its head moved, and the next pass reads GitHub 0 times and writes 0 rows: %s",
+    async (action) => {
+      // The shape of ariakit/ariakit run 38885744953: a release PR run that a
+      // new push canceled after its Plan selected no visual capture.
+      const fixture = preRunFixture();
+      fixture.state.pullHeadRef = "changeset-release/main";
+      fixture.state.run.head_branch = "changeset-release/main";
+      const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+      if (!candidate) throw new Error("Missing PR candidate");
+      await ensurePreRunCheck(
+        apiContext(preRunBindings),
+        fixture.github,
+        candidate,
+        fixture.webhook,
+      );
+      await findPreRunCheck(apiContext(preRunBindings), fixture.github, {
+        testedSha: mergeSha,
+        workflowRunId: "77",
+        workflowAttempt: 1,
+      });
+      const check = fixture.state.checks.get("1");
+      if (!check) throw new Error("Missing PR check");
+      Object.assign(check, {
+        status: "completed",
+        conclusion: "success",
+        output: { title: "Visual capture is not required" },
+      });
+      await database
+        .prepare(
+          "UPDATE pre_run_checks SET plan_visual_required=0,plan_reported_at=1,plan_job_id='101',state='docs_complete' WHERE check_id='1'",
+        )
+        .run();
+      fixture.state.pullHeadSha = "d".repeat(40);
+      fixture.state.run.conclusion = "cancelled";
+      expect(
+        await settlePreRunWorkflow(
+          apiContext(preRunBindings),
+          fixture.github,
+          fixture.workflowWebhook(),
+        ),
+      ).toBe("historical");
+      const settledCheck = structuredClone(check);
+      const before = await database.prepare("SELECT * FROM pre_run_checks").all();
+      const webhook = fixture.workflowWebhook();
+      webhook.payload.action = action;
+      object(webhook.payload.workflow_run).status = action === "requested" ? "queued" : action;
+      object(webhook.payload.workflow_run).conclusion = null;
+      const passes = await reconcileTwice(fixture, webhook);
+      expect(passes.first).toEqual({ checked: 1, pending: [] });
+      expect(passes.patches).toBe(0);
+      expect(fixture.state.checks.get("1")).toEqual(settledCheck);
+      expect((await database.prepare("SELECT * FROM pre_run_checks").all()).results).toEqual(
+        before.results,
+      );
+      expect(passes.second).toEqual({ checked: 0, pending: [] });
+      expect(passes.requests).toBe(0);
+      expect(passes.rowsWritten).toBe(0);
     },
   );
 
