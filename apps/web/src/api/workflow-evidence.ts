@@ -29,7 +29,6 @@ export interface StagedManifestEvidence {
   declared_bytes: number;
   capture_count: number;
   complete: number;
-  evidence_version: number;
   evidence_bytes: number | null;
 }
 
