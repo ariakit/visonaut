@@ -1,5 +1,6 @@
 import { SecurityError } from "@visonaut/security";
-import type { Database } from "@visonaut/service";
+import type { Database, Result } from "@visonaut/service";
+import { alertCountSql } from "./operations.js";
 
 /**
  * A check that does not belong to the pull request has no answer. The error
@@ -31,6 +32,11 @@ export interface PullAnswer {
    * not the table.
    */
   check?: string;
+  /**
+   * The open alerts, for the Status link of the header. The answer has it only
+   * when the request asked for the header facts.
+   */
+  alertCount?: number;
   /** The attempt of the workflow run, when the check has one. */
   attempt?: number;
   /** The page of that attempt on GitHub, when the check has one. */
@@ -54,6 +60,11 @@ interface PullParams {
    * workflow attempt, or its newest check when none is bound.
    */
   check: string | null;
+  /**
+   * Reads the count of the open alerts. The count has no index and scans the
+   * alert table, so only the first read of a page asks for it, and not each poll.
+   */
+  withAlertCount?: boolean;
 }
 
 interface PullRow {
@@ -77,6 +88,12 @@ const newestHeadSql = `pre.source_sha=(SELECT newest.source_sha FROM pre_run_che
   WHERE newest.repository_id=? AND newest.kind='pull_request' AND newest.pull_request_number=?
   ORDER BY newest.created_at DESC, newest.generation DESC LIMIT 1)`;
 
+/** SQL column aliases define the row shape, as in the D1 API. */
+function batchRows<T>(result: Result | undefined) {
+  if (!result) throw new Error("The pull request query batch is incomplete.");
+  return (result.results ?? []) as T[];
+}
+
 function captureState(row: PullRow): PullCaptureState {
   // A check for documents only, or a Plan that selected no visual capture, has
   // no run to wait for.
@@ -92,7 +109,12 @@ function captureState(row: PullRow): PullCaptureState {
 }
 
 /** Throws `PullNotFoundError` when no check of the pull request matches. */
-export async function pullAnswer({ context, pullNumber, check }: PullParams): Promise<PullAnswer> {
+export async function pullAnswer({
+  context,
+  pullNumber,
+  check,
+  withAlertCount = false,
+}: PullParams): Promise<PullAnswer> {
   const { projectId, github } = context.configuration;
   // One statement finds the check, the run of its workflow attempt, and the title.
   // Among the checks of one head commit, a check that is bound to a workflow
@@ -100,7 +122,7 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
   // attempt that actually ran.
   // The title lookup compares with `+0`: a bare integer column there hides the
   // pull request number from the index `github_webhook_delivery_pr_title`.
-  const row = await context.database
+  const pullStatement = context.database
     .prepare(`SELECT pre.external_id AS externalId, pre.source_sha AS sourceSha, pre.docs_only AS docsOnly,
       pre.plan_visual_required AS visualRequired, pre.state AS checkState,
       pre.workflow_run_id AS workflowRunId, pre.workflow_attempt AS workflowAttempt,
@@ -123,8 +145,12 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
       github.repositoryId,
       pullNumber,
       ...(check === null ? [github.repositoryId, pullNumber] : [check]),
-    )
-    .first<PullRow>();
+    );
+  // The count is a second statement of the same batch, so it adds no round trip.
+  const [rowResult, countResult] = withAlertCount
+    ? await context.database.batch([pullStatement, context.database.prepare(alertCountSql)])
+    : [await pullStatement.all(), undefined];
+  const row = batchRows<PullRow>(rowResult)[0];
   if (!row) {
     throw new PullNotFoundError(github.repository);
   }
@@ -137,6 +163,9 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
     headSha: row.sourceSha,
     check: row.externalId,
   };
+  if (countResult) {
+    answer.alertCount = batchRows<{ alertCount: number }>(countResult)[0]?.alertCount ?? 0;
+  }
   if (row.title) {
     answer.title = row.title;
   }

@@ -44,6 +44,26 @@ test("a click on a header link changes the page with no new document and keeps t
   expect(documents).toEqual([]);
 });
 
+test("the wordmark link is never the current page, and the Queue link is on the Queue", async ({
+  page,
+}) => {
+  await page.route("**/api/runs", (route) => route.fulfill({ json: runList() }));
+  await page.goto(entry("/"));
+  const header = page.getByRole("banner");
+  const wordmark = header.getByRole("link", { name: "Visonaut queue" });
+  await expect(header.getByRole("link", { name: "Queue", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(wordmark).toHaveAttribute("href", "/");
+  await expect(wordmark).not.toHaveAttribute("aria-current");
+  await expect(wordmark).not.toHaveAttribute("data-status");
+  await expect(wordmark).not.toHaveClass(/(^|\s)active(\s|$)/);
+  await header.getByRole("link", { name: "History", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
+  await expect(wordmark).not.toHaveAttribute("aria-current");
+});
+
 test("the header says a change of the alert count and shows the login of the viewer", async ({
   page,
 }) => {
@@ -291,6 +311,35 @@ test("the pull request page gives the header its repository", async ({ page }) =
   await expect(
     page.getByRole("banner").getByRole("link", { name: "ariakit/ariakit" }),
   ).toBeVisible();
+});
+
+test("a pull request page that opens by its URL names the viewer and links the alerts with their count", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requests.push(path);
+    return route.fulfill({
+      json: {
+        runId: null,
+        repository: "ariakit/ariakit",
+        state: "pending",
+        viewerLogin: "octo-maintainer",
+        alertCount: 3,
+      },
+    });
+  });
+  await page.goto(entry("/pulls/7"));
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("button", { name: "Account menu" })).toContainText(
+    "@octo-maintainer",
+  );
+  const alerts = header.getByRole("link", { name: "Status 3 open alerts" });
+  await expect(alerts).toHaveAttribute("href", "/status");
+  // The page reads no run list and no status for the header.
+  expect(requests).not.toContain("/api/runs");
+  expect(requests).not.toContain("/api/operations");
 });
 
 test("a sign-out from the Queue loads the same URL again and shows the sign-in page", async ({

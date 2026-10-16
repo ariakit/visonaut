@@ -248,6 +248,14 @@ it("answers an unknown URL with the not found page and a link to the Queue", asy
   expect(document.text).toContain("Open the Queue");
 });
 
+it("gives the not found page one title element, the title of the page", async () => {
+  const document = await readDocument("/no-such-page", { cookie });
+  // A reader that runs no script takes the first title of the markup.
+  expect(document.text.match(/<title>[^<]*<\/title>/gu)).toEqual([
+    "<title>Page not found · Visonaut</title>",
+  ]);
+});
+
 it("starts no run list read for a page that shows no run list", async () => {
   const document = await readDocument("/status", { cookie, "x-d1-wait": String(d1Wait) });
   expect(document.status).toBe(200);

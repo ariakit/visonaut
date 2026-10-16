@@ -22,6 +22,8 @@ const headsPerPull = 4;
 const checksPerHead = 5;
 const asked = 42;
 const tableRows = pullRequests * headsPerPull * checksPerHead;
+const eventRows = 200;
+const openEvents = 50;
 
 beforeAll(async () => {
   await applyTestMigrations(database);
@@ -59,11 +61,20 @@ beforeAll(async () => {
     }
   }
   await database.batch(statements);
+  // The alert table keeps its closed rows, and the count has no index.
+  const insertEvent = database.prepare(
+    "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at,resolved_at) VALUES(?,'backup',?,'backup-failed',1,2,?)",
+  );
+  await database.batch(
+    Array.from({ length: eventRows }, (_, index) =>
+      insertEvent.bind(`event-${index}`, `subject-${index}`, index < openEvents ? null : 3),
+    ),
+  );
 });
 
 afterAll(async () => runtime.dispose());
 
-async function measureAnswer(check: string | null) {
+async function measureAnswer(check: string | null, withAlertCount = false) {
   const measured = measureD1(database);
   const answer = await pullAnswer({
     context: {
@@ -72,6 +83,7 @@ async function measureAnswer(check: string | null) {
     },
     pullNumber: asked,
     check,
+    withAlertCount,
   });
   return { answer, measured };
 }
@@ -103,6 +115,26 @@ it("a request with a check ID reads one row, and a request with none reads each 
   expect(rows_written).toBe(0);
   expect(rows_read).toBeGreaterThanOrEqual(tableRows);
   expect(rows_read).toBeLessThan(tableRows * 1.1);
+});
+
+// The count of the open alerts is for the header. The table of the alerts has
+// no index for it, so the count reads each row of that table, closed rows too.
+// Only the first read of a page asks for it. A poll does not, so a poll reads
+// the one row of its check: this is the cost of the poll before the count (1
+// row) and after it was read on each poll (1 row + the rows of the table).
+it("the count of the open alerts is one more statement of the same round trip, and a read that does not ask for it reads none", async () => {
+  const check = `visonaut:pre:${headOf("e", asked)}`;
+  const first = await measureAnswer(check, true);
+  first.measured.report("pull answer with the alert count");
+  const count = first.measured.costs.filter((cost) => cost.sql.includes("FROM operations_events"));
+  expect(count).toHaveLength(1);
+  expect(count[0]?.rows_read).toBe(eventRows);
+  expect(first.answer.alertCount).toBe(openEvents);
+  expect(first.measured.totals()).toEqual({ rows_read: 1 + eventRows, rows_written: 0 });
+  expect(first.measured.roundTrips()).toBe(1);
+  const poll = await measureAnswer(check);
+  expect(poll.answer).not.toHaveProperty("alertCount");
+  expect(poll.measured.costs.some((cost) => cost.sql.includes("operations_events"))).toBe(false);
 });
 
 it("a poll with the check that the lookup named reads one row", async () => {

@@ -57,8 +57,19 @@ export interface PullRequestPageProps {
   /** The repository, when an earlier page of the app already knows it. */
   knownRepository?: string;
   onAccessDenied: (status: 401 | 403, message?: string) => void;
-  /** Called when the service answers with the repository of the pull request. */
-  onRepository?: (repository: string) => void;
+  /**
+   * Called when the service answers. The answer has the repository of the
+   * pull request. A found check also has the login of the viewer and the
+   * alerts, which are the facts of the header.
+   */
+  onFacts?: (facts: PullFacts) => void;
+}
+
+/** The facts of an answer that the header shows. */
+export interface PullFacts {
+  repository: string;
+  login?: string;
+  alertCount?: number;
 }
 
 /**
@@ -72,7 +83,7 @@ export function PullRequestPage({
   check,
   knownRepository,
   onAccessDenied,
-  onRepository,
+  onFacts,
 }: PullRequestPageProps) {
   const router = useRouter();
   const navigate = useNavigate();
@@ -87,6 +98,9 @@ export function PullRequestPage({
   const lastReadFailed = useRef(false);
   // The check that the last lookup named, and the reads since that lookup began.
   const polled = useRef<{ check: string; reads: number }>(undefined);
+  // The alert count of the header is read once. It has no index in the service,
+  // so a poll does not ask for it again.
+  const headerRead = useRef(false);
   const { content, noteFocus } = useKeepFocus(pull, failure);
   useEffect(() => {
     // The lookup stays in the page, and the code of the run page loads while
@@ -101,7 +115,11 @@ export function PullRequestPage({
       const pinned = check ? undefined : polled.current;
       const poll = pinned && pinned.reads < readsPerLookup ? pinned : undefined;
       const asked = check ?? poll?.check;
-      const query = asked ? `?check=${encodeURIComponent(asked)}` : "";
+      const params = new URLSearchParams();
+      if (asked) params.set("check", asked);
+      if (!headerRead.current) params.set("header", "1");
+      const search = params.toString();
+      const query = search ? `?${search}` : "";
       const response = await fetchOrFail(`/api/pulls/${encodeURIComponent(pullNumber)}${query}`, {
         credentials: "same-origin",
         cache: "no-store",
@@ -122,7 +140,7 @@ export function PullRequestPage({
         if (failed.status === 404) {
           const notFoundRepository = readNotFoundRepository(failed.body);
           if (notFoundRepository) {
-            onRepository?.(notFoundRepository);
+            onFacts?.({ repository: notFoundRepository });
           }
           // A check that is gone needs a lookup, and the next read has no check.
           polled.current = undefined;
@@ -138,7 +156,13 @@ export function PullRequestPage({
       }
       const next = readPullAnswer(await readSuccess(response));
       if (signal.aborted) return;
-      onRepository?.(next.repository);
+      headerRead.current = true;
+      // A poll has no alert count, and the header keeps the one that it has.
+      onFacts?.({
+        repository: next.repository,
+        login: next.viewerLogin,
+        ...(next.alertCount !== undefined && { alertCount: next.alertCount }),
+      });
       if (poll && next.state !== "pending") {
         // The named check is over, and the newest head commit can have a newer
         // check. Look up again before the page shows a state or opens a run.

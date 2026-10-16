@@ -60,7 +60,10 @@ async function serve(
   const json = (value: Answer) => (route: Route) => route.fulfill({ json: answer(value) });
   let reply = typeof first === "function" ? first : json(first);
   await page.route("**/api/pulls/7*", (route) => {
-    queries.push(new URL(route.request().url()).search);
+    // The flag of the header facts is not part of what these tests compare.
+    const search = new URL(route.request().url()).searchParams;
+    search.delete("header");
+    queries.push(search.size ? `?${search}` : "");
     return reply(route);
   });
   return {

@@ -45,18 +45,36 @@ function summary({ status, alerts }: StatusRead) {
 
 /**
  * The sentence for a screen reader after a read: the state of the first
- * read, and then each alert that opens or closes. A read with the same
- * alerts says nothing, also when a number in the title of one changes.
+ * read, and then each alert that opens or closes. An alert that stays says
+ * nothing, unless its title changes with a number (`2 review decisions failed`).
  */
 function getAnnouncement(before: StatusRead | undefined, read: StatusRead, recovered: boolean) {
   if (!before) {
     return `Status: ${summary(read)}.`;
   }
-  const known = new Set(before.alerts.map((alert) => alert.id));
-  const added = read.alerts.filter((alert) => !known.has(alert.id));
+  const known = new Map(before.alerts.map((alert) => [alert.id, alert]));
+  // A cut list holds the alerts seen last. An old alert enters it when a newer
+  // one closes, and it is not new: the service did not see it after the last
+  // read. An alert that opened again keeps its first time, so the last time
+  // decides. Both times are from the clock of the service.
+  const added = read.alerts.filter((alert) => {
+    if (known.has(alert.id)) return false;
+    if (!before.status.hasMore) return true;
+    // The alerts of the other parts of the answer are not in the cut list.
+    if (alert.record == null) return true;
+    return alert.seenAt == null || alert.seenAt >= before.status.checkedAt;
+  });
   const first = added[0];
   if (first) {
     return `Status: ${formatCount(added.length, "new alert")}. ${first.title}. Now ${summary(read)}.`;
+  }
+  const changed = read.alerts.find((alert) => {
+    const earlier = known.get(alert.id);
+    return earlier != null && earlier.title !== alert.title;
+  });
+  if (changed) {
+    // An alert can also close in the same read, so the sentence has the state.
+    return `Status: ${changed.title}. Now ${summary(read)}.`;
   }
   // The band of a failed refresh went away, so the page says its state again.
   if (recovered || read.alerts.length < before.alerts.length) {

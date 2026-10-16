@@ -196,7 +196,7 @@ describe("a reserve call that the service refuses at its capacity limit", () => 
     expect(result.stderr.match(/capacity limit \(try/g)).toHaveLength(19);
     expect(timeouts.mock.calls.map(([, delay]) => delay)).toEqual(Array(19).fill(WAIT_MS));
     expect(result.stderr).toContain(
-      "visonaut: Visonaut stayed at its capacity limit for 20 tries. Check Service attention. Rerun this job after admission resumes. No visual approval was granted.\n",
+      "visonaut: Visonaut stayed at its capacity limit for 20 tries. Check the Status page. Rerun this job after admission resumes. No visual approval was granted.\n",
     );
     expect(vi.getTimerCount()).toBe(0);
   });
