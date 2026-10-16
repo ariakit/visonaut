@@ -87,12 +87,7 @@
           "binding": "QUARANTINE",
         },
       ],
-      "services": [
-        {
-          "binding": "COMPARATOR",
-          "service": "visonaut-compare",
-        },
-      ],
+      "services": [],
       "queues": {
         "producers": [
           {

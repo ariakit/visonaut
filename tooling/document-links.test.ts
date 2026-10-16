@@ -20,7 +20,14 @@ const removedTargets = [
   "docs/history/evidence/diagnostic-check-rename-repair.md -> apps/web/tooling/check-rename-repair/README.md",
   "docs/history/evidence/issue-204-ci/README.md -> .github/workflows/scripts/packages.test.mjs",
   "docs/history/evidence/visonaut-hosted-topology.md -> apps/webhook/src/index.test.ts",
+  "docs/history/operations/issue-204-inventory.md -> apps/compare/wrangler.jsonc",
+  "docs/history/simplification-implementation.md -> .github/workflows/scripts/deploy-infrastructure.mjs",
+  "docs/history/simplification-implementation.md -> .github/workflows/scripts/deploy-infrastructure.mjs",
+  "docs/history/simplification-implementation.md -> .github/workflows/scripts/deploy-infrastructure.test.mjs",
+  "docs/history/simplification-implementation.md -> .github/workflows/scripts/deploy-infrastructure.test.mjs",
+  "docs/history/simplification-implementation.md -> apps/compare/test/container-probe.test.ts",
   "docs/history/simplification-implementation.md -> apps/compare/test/process.test.ts",
+  "docs/history/simplification-implementation.md -> apps/compare/wrangler.jsonc",
 ];
 
 // Each pattern captures one link target: a Markdown inline link, a Markdown

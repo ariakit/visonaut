@@ -94,7 +94,7 @@ test("the local environment has no remote resource", async () => {
 });
 
 const production = await readEnvironment("production");
-const service = { service: "visonaut-compare" };
+const service = { service: "visonaut-service" };
 
 for (const [change, rule, local] of [
   ["another Worker name", "Worker name", { name: "visonaut" }],
@@ -118,7 +118,7 @@ for (const [change, rule, local] of [
     "key queues",
     { queues: { consumers: [{ queue: "visonaut-local-operations" }] } },
   ],
-  ["a service", "key services", { services: [{ binding: "COMPARATOR", ...service }] }],
+  ["a service", "key services", { services: [{ binding: "SERVICE", ...service }] }],
   ["a tail consumer", "key tail_consumers", { tail_consumers: [service] }],
   [
     "a streaming tail consumer",

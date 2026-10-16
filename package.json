@@ -15,8 +15,6 @@
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only --ignore-scripts",
     "test:release-guards": "node --test .github/workflows/scripts/*.test.mjs",
-    "test:container": "npm test --prefix apps/compare/container",
-    "check:container-image": "docker build --platform linux/amd64 --build-arg NODE_VERSION=\"$(node -p \"require('./package.json').devEngines.runtime.version\")\" -f apps/compare/container/Dockerfile -t visonaut-compare-check:local .",
     "check:ariakit-ui": "node tooling/ariakit-ui-copy.ts --check",
     "check:packages": "node .github/workflows/scripts/packages.mjs"
   },

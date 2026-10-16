@@ -58,7 +58,6 @@ beforeAll(async () => {
       d1Databases: ["DB"],
       r2Buckets: ["IMAGES", "QUARANTINE"],
       queueProducers: ["OPERATIONS"],
-      serviceBindings: { COMPARATOR: async () => new Response(null, { status: 503 }) },
     }),
   );
   env = await runtime.getBindings<BackendEnv>();

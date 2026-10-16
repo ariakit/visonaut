@@ -761,7 +761,6 @@ it("imports and activates through native local D1 bindings", async () => {
       database: target,
       images,
       quarantine: images,
-      comparator: { fetch },
       operations: { async send() {} },
       configuration: {
         origin,
