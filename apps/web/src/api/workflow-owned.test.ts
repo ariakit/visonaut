@@ -986,9 +986,12 @@ describe("workflow-owned upload staging", () => {
     const [declared] = await declarePages(left, await pagesOf(left));
     expect(declared?.uploads).toHaveLength(1);
     const rightPages = await pagesOf(right);
+    // The text does not say the bytes of another run.
     await expect(declarePages(right, rightPages)).rejects.toMatchObject({
-      code: "upload_limit",
+      code: "staged_limit",
       status: 413,
+      message:
+        "This page takes the staged images of all runs above their byte limit. Run Submit again later.",
     });
     expect(
       await database
@@ -1000,6 +1003,88 @@ describe("workflow-owned upload staging", () => {
     right.context.configuration.limits.maximumStagedBytes = cap + png.byteLength;
     const [second] = await declarePages(right, rightPages);
     expect(second?.uploads).toHaveLength(1);
+  });
+
+  it("names the limit of the job when a page takes its images above the byte limit of the run", async () => {
+    const test = await fixture();
+    const { reference } = await localSession(test);
+    const { pages } = await runPages(test, reference);
+    const claims = await verifyIngestCapability(
+      test.context.configuration.capability,
+      test.capability,
+    );
+    const token = await issueIngestCapability(test.context.configuration.capability, {
+      ...claims,
+      maximumBytes: png.byteLength - 1,
+    });
+    const post = (body: unknown) =>
+      new Request("https://preview.example", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const refusal = await declareStagedPage(post(pages[0]), test.context, test.runId).catch(
+      (error: unknown) => error,
+    );
+    expect(refusal).toBeInstanceOf(SecurityError);
+    expect(refusal).toMatchObject({
+      code: "upload_limit",
+      status: 413,
+      message: `The page takes the images of the job above its limit of ${claims.maximumImages * 2} images or ${png.byteLength - 1} bytes.`,
+    });
+  });
+
+  it("names the staged image when a page declares an image that differs from it", async () => {
+    const test = await fixture();
+    const { reference } = await localSession(test);
+    const { pages } = await runPages(test, reference);
+    const [first] = pages;
+    if (!first) throw new Error("Expected a page.");
+    await declarePages(test, [first]);
+    // The same image digest with another width is another page of the same job.
+    const changed = structuredClone(first);
+    for (const row of changed.rows) {
+      if (row[11] !== 0) row[9] += 1;
+    }
+    const refusal = await declareStagedPage(test.post(changed), test.context, test.runId).catch(
+      (error: unknown) => error,
+    );
+    expect(refusal).toBeInstanceOf(SecurityError);
+    expect(refusal).toMatchObject({
+      code: "upload_limit",
+      status: 413,
+      message: "An image of the page differs from the staged image with the same digest.",
+    });
+  });
+
+  it("keeps a general text for a refusal of the batch that the reads cannot explain", async () => {
+    const test = await fixture();
+    const { reference } = await localSession(test);
+    const { pages } = await runPages(test, reference);
+    // Another request changed the staged data between the batch and the reads.
+    const originalDatabase = test.context.database;
+    // Only the batch of the page images has the assertions about the images.
+    test.context.database = new Proxy(originalDatabase, {
+      get(target, key) {
+        if (key !== "batch") return Reflect.get(target, key);
+        return async (statements: Parameters<typeof target.batch>[0]) => {
+          if (statements.length < 6) return target.batch(statements);
+          throw new ConflictError("State changed.");
+        };
+      },
+    });
+    try {
+      await expect(
+        declareStagedPage(test.post(pages[0]), test.context, test.runId),
+      ).rejects.toMatchObject({
+        code: "upload_limit",
+        status: 413,
+        message:
+          "The page exceeds a limit of the staged data, or an image differs from a staged image.",
+      });
+    } finally {
+      test.context.database = originalDatabase;
+    }
   });
 
   it("refuses the page that takes a run above the capture limit, before its first upload ticket", async () => {
@@ -2597,7 +2682,7 @@ describe("workflow-owned upload staging", () => {
     const contenderRun = await runPages(contender, (await localSession(contender)).reference);
     const declareContender = () =>
       declareStagedPage(contender.post(contenderRun.pages[0]), contender.context, contender.runId);
-    await expect(declareContender()).rejects.toMatchObject({ code: "upload_limit" });
+    await expect(declareContender()).rejects.toMatchObject({ code: "staged_limit" });
 
     await database
       .prepare("UPDATE ingest_staged_runs SET created_at = ? WHERE id = ?")

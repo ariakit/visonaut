@@ -111,6 +111,7 @@ export const errorCodes = [
   "reviewer_changed",
   "sign_in_required",
   "staged_job_conflict",
+  "staged_limit",
   "staged_run_conflict",
   "stale_candidate",
   "stale_plan",
