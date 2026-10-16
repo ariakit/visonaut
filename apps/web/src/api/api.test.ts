@@ -745,11 +745,20 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       runId: null,
       state: "pending",
       headSha: "f".repeat(40),
+      check,
     });
-    expect((await test.send("/api/pulls/42?check=invalid", { headers })).status).toBe(404);
-    expect(
-      (await test.send(`/api/pulls/43?check=${encodeURIComponent(check)}`, { headers })).status,
-    ).toBe(404);
+    // A check that is not found has no run, and its answer still names the repository.
+    const invalid = await test.send("/api/pulls/42?check=invalid", { headers });
+    expect(invalid.status).toBe(404);
+    expect(await objectResponse(invalid)).toMatchObject({
+      error: { code: "not_found" },
+      repository: "ariakit/ariakit",
+    });
+    const otherPull = await test.send(`/api/pulls/43?check=${encodeURIComponent(check)}`, {
+      headers,
+    });
+    expect(otherPull.status).toBe(404);
+    expect(await objectResponse(otherPull)).toMatchObject({ repository: "ariakit/ariakit" });
     expect(
       (await test.send(`/api/pulls/42?check=visonaut%3Apre%3A${"e".repeat(40)}`, { headers }))
         .status,

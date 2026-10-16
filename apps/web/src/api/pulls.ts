@@ -1,6 +1,17 @@
 import { SecurityError } from "@visonaut/security";
 import type { Database } from "@visonaut/service";
 
+/**
+ * A check that does not belong to the pull request has no answer. The error
+ * carries the repository, so that the page can still link to GitHub.
+ */
+export class PullNotFoundError extends SecurityError {
+  constructor(readonly repository: string) {
+    super("not_found", 404, "The pull-request check was not found.");
+    this.name = "PullNotFoundError";
+  }
+}
+
 export type PullCaptureState = "pending" | "ready" | "failed" | "not-required" | "replaced";
 
 /** The answer of `GET /api/pulls/:number`. */
@@ -14,6 +25,12 @@ export interface PullAnswer {
   title?: string;
   /** The head commit of the pull request that the check belongs to. */
   headSha: string;
+  /**
+   * The external ID of the check that the answer is for. A page that asked for
+   * the newest head commit can poll with it, and each poll reads one check and
+   * not the table.
+   */
+  check?: string;
   /** The attempt of the workflow run, when the check has one. */
   attempt?: number;
   /** The page of that attempt on GitHub, when the check has one. */
@@ -40,6 +57,7 @@ interface PullParams {
 }
 
 interface PullRow {
+  externalId: string;
   sourceSha: string;
   docsOnly: number;
   visualRequired: number | null;
@@ -73,7 +91,7 @@ function captureState(row: PullRow): PullCaptureState {
   return "pending";
 }
 
-/** A check that does not belong to the pull request has no answer. */
+/** Throws `PullNotFoundError` when no check of the pull request matches. */
 export async function pullAnswer({ context, pullNumber, check }: PullParams): Promise<PullAnswer> {
   const { projectId, github } = context.configuration;
   // One statement finds the check, the run of its workflow attempt, and the title.
@@ -83,7 +101,7 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
   // The title lookup compares with `+0`: a bare integer column there hides the
   // pull request number from the index `github_webhook_delivery_pr_title`.
   const row = await context.database
-    .prepare(`SELECT pre.source_sha AS sourceSha, pre.docs_only AS docsOnly,
+    .prepare(`SELECT pre.external_id AS externalId, pre.source_sha AS sourceSha, pre.docs_only AS docsOnly,
       pre.plan_visual_required AS visualRequired, pre.state AS checkState,
       pre.workflow_run_id AS workflowRunId, pre.workflow_attempt AS workflowAttempt,
       run.id AS runId, run.state AS runState, run.sealed_at AS runSealedAt,
@@ -108,7 +126,7 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
     )
     .first<PullRow>();
   if (!row) {
-    throw new SecurityError("not_found", 404, "The pull-request check was not found.");
+    throw new PullNotFoundError(github.repository);
   }
   const state = captureState(row);
   const answer: PullAnswer = {
@@ -117,6 +135,7 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
     runId: state === "ready" ? row.runId : null,
     state,
     headSha: row.sourceSha,
+    check: row.externalId,
   };
   if (row.title) {
     answer.title = row.title;

@@ -363,7 +363,8 @@ test("a check that is not found says so, and the page links to GitHub only when 
   await page.goto(entry);
   await expect(page.getByRole("main")).toContainText("This check was not found.");
   await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
-  // A direct load has no repository: the answer that has it is the one that failed.
+  // This 404 carries no repository, so a direct load has none and no link. A 404
+  // that carries it shows the link (see `pulls-poll.browser.test.ts`).
   await expect(page.getByRole("link", { name: "GitHub", exact: true })).toHaveCount(0);
   // A page that came from the Queue knows the repository.
   await page.goto(`${fixture}?entry=${encodeURIComponent("/")}`);
