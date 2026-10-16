@@ -220,6 +220,10 @@ export interface RunRow {
   detail_archived?: number;
   closed_at: number | null;
   closed_reason?: string | null;
+  /** The three `ReviewCounts` of a closed run. The closed summary stores them. */
+  review_pending?: number | null;
+  review_rejected?: number | null;
+  review_approved?: number | null;
   id: string;
   project_id: string;
   external_run_id: string;

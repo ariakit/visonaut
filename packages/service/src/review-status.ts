@@ -57,6 +57,13 @@ export const reviewCountsSql = `COALESCE(SUM(CASE WHEN row.outcome NOT IN ('chan
   COALESCE(SUM(CASE WHEN row.outcome = 'changed' AND ${eligibleAcceptanceSql}
   THEN 1 ELSE 0 END), 0) AS approved`;
 
+/** The three review counts of one comparison, as one row. */
+export function comparisonReviewCountsSql(comparisonId: string) {
+  return `SELECT ${reviewCountsSql} FROM visonaut_comparison_rows row
+  LEFT JOIN visonaut_decisions decision ON decision.id = row.decision_id
+  WHERE row.comparison_id = ${comparisonId}`;
+}
+
 export interface ReviewCounts {
   pending: number;
   rejected: number;
