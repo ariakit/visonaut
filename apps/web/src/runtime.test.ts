@@ -6,7 +6,6 @@ import { unstable_readConfig } from "wrangler";
 import * as api from "./api/index.ts";
 import { measureD1 } from "./api/test-d1-costs.ts";
 import * as capacity from "./capacity.ts";
-import * as preRun from "./api/pre-run.ts";
 import * as workflowRetention from "./api/workflow-retention.ts";
 import * as deliveries from "./operations/github-deliveries.ts";
 import * as operations from "./operations/index.ts";
@@ -73,7 +72,10 @@ beforeAll(async () => {
   if (!events) throw new Error("Operations event schema is missing.");
   await env.DB.prepare(events).run();
   await env.DB.prepare(
-    "CREATE TABLE visonaut_runs(id TEXT,project_id TEXT,external_run_id TEXT,attempt INTEGER,active INTEGER,state TEXT)",
+    "CREATE TABLE visonaut_runs(id TEXT,project_id TEXT,external_run_id TEXT,attempt INTEGER,active INTEGER,state TEXT,kind TEXT,tested_sha TEXT,lineage_key TEXT)",
+  ).run();
+  await env.DB.prepare(
+    "CREATE TABLE pre_run_checks(tested_sha TEXT,repository_id TEXT,source_sha TEXT,base_sha TEXT,kind TEXT,pull_request_number INTEGER,docs_only INTEGER,external_id TEXT,check_id TEXT,state TEXT,lease_until INTEGER,workflow_run_id TEXT,workflow_attempt INTEGER,created_at INTEGER,updated_at INTEGER)",
   ).run();
   await env.DB.prepare(
     "CREATE TABLE operations_backups(state TEXT,database_bytes INTEGER,created_at INTEGER)",
@@ -184,10 +186,6 @@ beforeEach(async () => {
     errors: [],
     progressed: 0,
   });
-  vi.spyOn(preRun, "reconcileEquivalentPullRequestChecks").mockResolvedValue({
-    checked: 0,
-    pending: [],
-  });
   vi.spyOn(workflowRetention, "expireStagedAttempts").mockResolvedValue({
     completed: [],
     deferred: [],
@@ -211,9 +209,8 @@ async function event(id: string) {
 describe("scheduler alert recovery", () => {
   const reconcilers = {
     webhooks: () => vi.mocked(api.reconcileWebhooks),
-    "check-aliases": () => vi.mocked(preRun.reconcileEquivalentPullRequestChecks),
   };
-  it.each(["webhooks", "check-aliases"] as const)(
+  it.each(["webhooks"] as const)(
     "records returned %s failures without requiring a thrown exception first",
     async (kind) => {
       reconcilers[kind]().mockResolvedValue({ checked: 1, pending: ["item"] });
@@ -225,7 +222,7 @@ describe("scheduler alert recovery", () => {
       expect(operations.runOperations).toHaveBeenCalled();
     },
   );
-  it.each(["webhooks", "check-aliases"] as const)(
+  it.each(["webhooks"] as const)(
     "resolves only %s reconciliation errors after a clean reconciliation",
     async (kind) => {
       await recordEvent(env.DB, { kind, subject: "scheduler", code: "another-failure", now });
@@ -315,7 +312,7 @@ describe("scheduler alert recovery", () => {
   });
 
   it("closes the alerts of each completed step with one statement for the pass", async () => {
-    for (const kind of ["upstream-webhook", "webhooks", "check-aliases", "staged"] as const) {
+    for (const kind of ["upstream-webhook", "webhooks", "staged"] as const) {
       await recordEvent(env.DB, {
         kind,
         subject: "scheduler",
@@ -336,7 +333,7 @@ describe("scheduler alert recovery", () => {
       {
         sql: "UPDATE operations_events SET resolved_at=? WHERE resolved_at IS NULL AND id IN (SELECT value FROM json_each(?))",
         rows_read: expect.any(Number),
-        rows_written: 6,
+        rows_written: 5,
       },
     ]);
     expect(
@@ -511,6 +508,54 @@ it("keeps existing work and cleanup running when capacity sampling fails", async
   });
 });
 
+// The recovery pass had a step that read GitHub and wrote D1 in each pass for
+// an unbound check of a regenerated merge until the bound result passed. The
+// row now waits for its own workflow run, and the pass does not touch it.
+it("does not read an unbound check of a regenerated merge in the recovery pass", async () => {
+  const [mergeSha, aliasSha, sourceSha, baseSha] = ["a", "f", "b", "c"].map((digit) =>
+    digit.repeat(40),
+  );
+  await env.DB.prepare(
+    `INSERT INTO pre_run_checks(tested_sha,repository_id,source_sha,base_sha,kind,
+      pull_request_number,docs_only,external_id,check_id,state,workflow_run_id,
+      workflow_attempt,created_at,updated_at)
+    VALUES (?,?,?,?,'pull_request',7,0,?,'1','active','77',1,?,?),
+      (?,?,?,?,'pull_request',7,0,?,'2','active',NULL,NULL,?,?)`,
+  )
+    .bind(
+      mergeSha,
+      env.GITHUB_REPOSITORY_ID,
+      sourceSha,
+      baseSha,
+      `visonaut:pre:${mergeSha}`,
+      now,
+      now,
+      aliasSha,
+      env.GITHUB_REPOSITORY_ID,
+      sourceSha,
+      baseSha,
+      `visonaut:pre:${aliasSha}`,
+      now,
+      now,
+    )
+    .run();
+  await env.DB.prepare(
+    "INSERT INTO visonaut_runs VALUES ('1234',?,'77',1,1,'reviewing','pull_request',?,'pr:7')",
+  )
+    .bind(env.VISONAUT_PROJECT_ID, mergeSha)
+    .run();
+  const github = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("No GitHub request."));
+  const measured = measureD1(await runtime.getD1Database("DB"));
+  try {
+    await runScheduledOperations({ ...env, DB: measured.database });
+    expect(measured.costs.filter((cost) => cost.sql.includes("pre_run_checks"))).toEqual([]);
+    expect(github).not.toHaveBeenCalled();
+  } finally {
+    await env.DB.prepare("DELETE FROM pre_run_checks").run();
+    await env.DB.prepare("DELETE FROM visonaut_runs WHERE id='1234'").run();
+  }
+});
+
 it.each([
   { kind: "status" },
   { kind: "maintenance", family: "history" },
@@ -521,7 +566,6 @@ it.each([
   expect(deliveries.recoverGitHubDeliveries).not.toHaveBeenCalled();
   expect(capacity.monitorDatabaseCapacity).not.toHaveBeenCalled();
   expect(api.reconcileWebhooks).not.toHaveBeenCalled();
-  expect(preRun.reconcileEquivalentPullRequestChecks).not.toHaveBeenCalled();
   expect(api.reconcileStagedWorkflows).toHaveBeenCalledTimes(message.kind === "ingest" ? 1 : 0);
   expect(workflowRetention.expireStagedAttempts).toHaveBeenCalledTimes(
     message.kind === "ingest" ? 1 : 0,
@@ -629,12 +673,6 @@ it.each([
     () => vi.mocked(api.reconcileWebhooks).mockRejectedValue(new HostileError()),
   ],
   [
-    "check-aliases",
-    "reconciliation-failed",
-    () =>
-      vi.mocked(preRun.reconcileEquivalentPullRequestChecks).mockRejectedValue(new HostileError()),
-  ],
-  [
     "staged",
     "reconciliation-failed",
     () => vi.mocked(api.reconcileStagedWorkflows).mockRejectedValue(new HostileError()),
@@ -679,13 +717,6 @@ it.each([
     () =>
       vi
         .mocked(api.reconcileWebhooks)
-        .mockResolvedValue({ checked: 1, pending: ["item"], causes: [hostileCount] }),
-  ],
-  [
-    "check-aliases",
-    () =>
-      vi
-        .mocked(preRun.reconcileEquivalentPullRequestChecks)
         .mockResolvedValue({ checked: 1, pending: ["item"], causes: [hostileCount] }),
   ],
   [
