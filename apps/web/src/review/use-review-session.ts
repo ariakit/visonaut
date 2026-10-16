@@ -183,7 +183,6 @@ export function useReviewSession({
   const [stillQueued, setStillQueued] = useState<string>();
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
   const [history, setHistory] = useState<SavedCommand[]>([]);
-  const [pendingComparison, setPendingComparison] = useState(false);
   const commandSession = useRef(newCommandSession());
   const model = useMemo(
     () => pendingReviewModel(savedModel, pendingReviews),
@@ -194,12 +193,10 @@ export function useReviewSession({
   const oldestPending = pendingReviews[0]?.commandId;
   const terminalComparison = comparisonFailed(model);
   const awaitingComparison =
-    pendingComparison ||
     model.comparisonState === "comparing" ||
     (!model.comparisonState &&
       !model.reviewReady &&
       ["incomplete", "comparing"].includes(model.run.status));
-  const recompareAllowed = !model.archived && (model.recompareAllowed ?? true);
 
   if (previousModel !== suppliedModel) {
     setPreviousModel(suppliedModel);
@@ -275,7 +272,6 @@ export function useReviewSession({
           if (comparisonReady(current) || comparisonFailed(current)) {
             finished = true;
             setModel(current);
-            setPendingComparison(false);
             setSaveState(
               comparisonReady(current)
                 ? { status: "idle", message: "The new comparison is ready." }
@@ -687,49 +683,6 @@ export function useReviewSession({
       session.saving = false;
     }
   };
-  const recompare = async () => {
-    const session = commandSession.current;
-    if (!recompareAllowed) return;
-    if (awaitingComparison) return;
-    if (!commands.recompare) return;
-    if (session.saving) return;
-    if (saveState.status === "error") return;
-    session.saving = true;
-    session.started += 1;
-    setSaveState({ status: "saving", message: "Creating a new comparison from stored captures…" });
-    try {
-      const next = await commands.recompare();
-      if (session !== commandSession.current) return;
-      if (next.reviewReady || (next.archived && next.comparisonState === "ready")) {
-        setModel(next);
-      } else if (next.comparisonState === "invalidated") {
-        setModel(next);
-      } else {
-        if (next.archived) {
-          setModel((previous) => ({
-            ...previous,
-            archived: true,
-            reviewReady: false,
-            readOnlyReason: next.readOnlyReason,
-          }));
-        }
-        setPendingComparison(true);
-      }
-      setSaveState({
-        status: "idle",
-        message:
-          next.comparisonState === "invalidated"
-            ? (next.run.error ?? "The new comparison failed.")
-            : "New comparison requested. Results will open when comparison completes.",
-      });
-    } catch (error) {
-      if (session !== commandSession.current) return;
-      reportError(error);
-    } finally {
-      session.saving = false;
-    }
-  };
-
   return {
     model,
     saveState:
@@ -739,7 +692,6 @@ export function useReviewSession({
     busy,
     reviewBlocked,
     canUndo: history.length > 0,
-    pendingComparison,
     awaitingComparison,
     terminalComparison,
     unsentDecisions,
@@ -748,6 +700,5 @@ export function useReviewSession({
     review,
     undo,
     refresh,
-    recompare,
   };
 }

@@ -150,7 +150,8 @@ export type RegionLookup = (variant: RegionSource) => readonly ChangedRegion[] |
  * The changed regions of variants: the regions of the API when it sends
  * them, else the regions that the browser reads from the mask. The result is
  * undefined until the mask is read, and for a variant without a mask. An
- * empty list means that the mask has no painted pixel, or cannot be read.
+ * empty list means that the mask has no painted pixel, cannot be read, or
+ * has expired.
  * @example
  * const getRegions = useRegionLookup(item.variants);
  * const regions = getRegions(variant);
@@ -159,7 +160,7 @@ export function useRegionLookup(variants: readonly RegionSource[]): RegionLookup
   // The version of the store renders the caller again when a mask is read.
   const seenVersion = useSyncExternalStore(subscribe, getVersion, getServerVersion);
   const urls = variants
-    .filter((variant) => !variant.regions && variant.diff)
+    .filter((variant) => !variant.regions && variant.diff && !variant.diff.expired)
     .map((variant) => variant.diff?.url ?? "")
     .join("\n");
   useEffect(() => {
@@ -171,6 +172,8 @@ export function useRegionLookup(variants: readonly RegionSource[]): RegionLookup
   return (variant) => {
     if (variant.regions) return variant.regions;
     if (!variant.diff) return undefined;
+    // The bytes of an expired mask are gone, so no request can read it.
+    if (variant.diff.expired) return [];
     // While the browser takes over the server markup, this render has the
     // version of the server. Another part of the document can have read the
     // mask by then, and the store must not show it to this render.

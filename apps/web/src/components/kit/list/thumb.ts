@@ -112,7 +112,7 @@ function getMainRegion(regions: readonly ChangedRegion[] | undefined): ChangedRe
 }
 
 function fitView(id: string, image: ReviewImage | null, faded?: boolean): ThumbView[] {
-  if (!image) return [];
+  if (!image || image.expired) return [];
   return [{ id, layers: [{ image, crop: getCrop(image) }], ...(faded ? { faded } : {}) }];
 }
 
@@ -120,7 +120,8 @@ function fitView(id: string, image: ReviewImage | null, faded?: boolean): ThumbV
  * The pictures of a variant, best first. A changed variant shows its current
  * image with the stored mask over it, as a crop around the largest changed
  * region. The baseline is the fallback when the current image does not load.
- * A failed comparison has no picture. `regions` are the regions of the API,
+ * A failed comparison has no picture, and an expired image sends no request:
+ * the row shows its mark instead. `regions` are the regions of the API,
  * or the regions that the browser read from the mask (`regions.ts`).
  *
  * The row never uses a faded copy of the screenshot under the mask: a crop of
@@ -144,14 +145,14 @@ export function getThumbViews(
   }
   const region = getMainRegion(regions);
   const views: ThumbView[] = [];
-  if (candidate) {
+  if (candidate && !candidate.expired) {
     const layers = [{ image: candidate, crop: getCrop(candidate, region) }];
-    if (diff) {
+    if (diff && !diff.expired) {
       layers.push({ image: diff, crop: getCrop(diff, region) });
     }
     views.push({ id: "current", layers });
   }
-  if (reference) {
+  if (reference && !reference.expired) {
     views.push({
       id: "baseline",
       layers: [{ image: reference, crop: getCrop(reference, region) }],

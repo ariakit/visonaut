@@ -222,8 +222,6 @@ export function parseReviewModel(value: unknown): ReviewModel {
       data.comparisonState == null
         ? undefined
         : oneOf(data.comparisonState, ["comparing", "ready", "invalidated"]),
-    recompareAllowed: data.recompareAllowed == null ? undefined : boolean(data.recompareAllowed),
-    recompareDisabledReason: optionalString(data.recompareDisabledReason),
     historicalComparisons:
       data.historicalComparisons == null
         ? undefined
@@ -453,7 +451,7 @@ export function createReviewCommands(
   reviewerId?: string,
 ): ReviewCommands {
   const runPath = `/api/runs/${encodeURIComponent(runId)}`;
-  let selectedComparisonId = comparisonId;
+  const selectedComparisonId = comparisonId;
   const selectedPath = (suffix = "") =>
     selectedComparisonId
       ? `${runPath}${suffix}?comparison=${encodeURIComponent(selectedComparisonId)}`
@@ -543,12 +541,6 @@ export function createReviewCommands(
     },
     async pollStatus() {
       return parseReviewPollState(await request(selectedPath("/state")));
-    },
-    async recompare() {
-      const model = parseReviewModel(await request(`${runPath}/recompare`, {}));
-      // Historical results have no active run pointer for subsequent refreshes.
-      selectedComparisonId = model.archived ? model.comparisonId : undefined;
-      return model;
     },
   };
 }

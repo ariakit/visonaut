@@ -85,8 +85,6 @@ export const errorCodes = [
   "invalid_webhook",
   "lineage_interval_limit",
   "lineage_limit",
-  "local_comparison_required",
-  "local_resubmit_required",
   "manifest_conflict",
   "manifest_provenance",
   "merge_not_ready",

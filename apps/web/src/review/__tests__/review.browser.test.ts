@@ -41,9 +41,6 @@ test("a locally matched capture does not show the reference as a new image", asy
   await page.getByRole("link", { name: /React/ }).click();
   await expect(page.getByText("Matched locally. The new image was not uploaded.")).toBeVisible();
   await ready(page);
-  await expect(
-    page.getByRole("button", { name: "Recompare stored run", exact: true }),
-  ).toBeDisabled();
   await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
   await expect(page.getByRole("img", { name: "New image", exact: true })).toHaveCount(0);
   await expect(page.getByText("Removed, no new image", { exact: true })).toHaveCount(0);
@@ -944,8 +941,42 @@ test("an expired reference shows that the image history expired and offers no re
   );
   await expect(page.getByText("Image evidence unavailable")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Recompare now" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+});
+
+test("an expired image sends no request, and the row and the stage show the expired state", async ({
+  page,
+}) => {
+  const requested: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/expired/")) requested.push(request.url());
+  });
+  // The image route answers 404 for an image with no bytes.
+  await page.route("**/expired/**", (route) => route.fulfill({ status: 404 }));
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const item = model.items.find((entry) => entry.key === "dialog/open");
+    if (!item) throw new Error("Missing review item.");
+    for (const variant of item.variants) {
+      for (const role of ["reference", "candidate", "diff"] as const) {
+        const image = variant[role];
+        if (!image) continue;
+        image.url = `/expired/${image.id}.svg`;
+        image.expired = true;
+      }
+    }
+    window.reviewFixture.update(model);
+  });
+  await expect(page.getByRole("status").filter({ hasText: "Image history expired" })).toBeVisible();
+  await expect(row(page, "dialog/open").locator("svg.lucide-image-off")).toBeVisible();
+  // No pane waits for an image that cannot load.
+  await expect(page.getByText("Loading image…")).toHaveCount(0);
+  await expect(page.locator('figure[aria-busy="true"]')).toHaveCount(0);
+  // The image of a row loads lazily, so the check waits two frames.
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  expect(requested).toEqual([]);
 });
 
 for (const status of ["failed", "superseded", "needs-recompare"] as const) {
@@ -958,7 +989,6 @@ for (const status of ["failed", "superseded", "needs-recompare"] as const) {
       model.run.error = "The comparison cannot use these stored images.";
       model.reviewReady = false;
       model.comparisonState = "invalidated";
-      model.recompareAllowed = true;
       const variant = model.items[0]?.variants[0];
       if (variant) variant.error = "Required comparison evidence is unavailable.";
       window.reviewFixture.update(model);
@@ -967,51 +997,21 @@ for (const status of ["failed", "superseded", "needs-recompare"] as const) {
     await expect(page.getByText("Required comparison evidence is unavailable.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Refresh comparison" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
     await expect(
       page.getByRole("button", { name: "Approve & next A", exact: true }),
     ).toBeDisabled();
     await expect(page.getByText(/Review is unavailable until the run is sealed/)).toHaveCount(0);
-    if (status === "failed") {
-      await page.getByRole("button", { name: "Recompare now" }).click();
-      await expect(page.getByText(/A new comparison is being prepared/)).toBeVisible();
-    }
   });
 }
 
-test("unavailable stored captures do not offer recompare for a failed comparison", async ({
-  page,
-}) => {
+test("stale pull request captures say that they are out of date", async ({ page }) => {
   await page.evaluate(() => {
-    const model = window.reviewFixture.model();
-    model.run.status = "failed";
-    model.reviewReady = false;
-    model.comparisonState = "invalidated";
-    model.recompareAllowed = false;
-    model.recompareDisabledReason = "The stored images have expired.";
-    window.reviewFixture.update(model);
-  });
-  await expect(page.locator('[data-evidence="terminal"]')).toBeVisible();
-  await expect(page.getByRole("button", { name: "Recompare now" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-  await expect(page.getByText("The stored images have expired.", { exact: true })).toBeVisible();
-});
-
-test("stale pull request captures explain how to get a new comparison", async ({ page }) => {
-  const reason =
-    "This pull request was captured under an older comparison policy. Refresh it against main and rerun CI to capture it again.";
-  await page.evaluate((reason) => {
     const model = window.reviewFixture.model();
     model.run.status = "needs-recompare";
     model.reviewReady = false;
     model.comparisonState = "invalidated";
-    model.recompareAllowed = false;
-    model.recompareDisabledReason = reason;
     window.reviewFixture.update(model);
-  }, reason);
-  await expect(page.getByRole("button", { name: "Recompare now" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
-  await expect(page.getByText(reason, { exact: true })).toBeVisible();
+  });
   await expect(page.getByText("Comparison needs fresh Submit", { exact: true })).toBeVisible();
   await expect(
     page.getByText(
@@ -1032,7 +1032,6 @@ test("a dimension mismatch cannot be fixed with image retry", async ({ page }) =
   await expect(page.getByText("Comparison evidence incomplete")).toBeVisible();
   await expect(page.getByText(/dimensions do not match this comparison/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
 });
 
@@ -1161,7 +1160,6 @@ for (const changedPixels of [120, undefined]) {
     await expect(page.getByText("Comparison evidence incomplete")).toBeVisible();
     await expect(page.getByText(/Required diff evidence is unavailable/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Recompare now" })).toBeEnabled();
     await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
     await expect(
       page.getByRole("button", { name: "Approve & next A", exact: true }),
@@ -1511,17 +1509,18 @@ test("failed Undo retries its original command identity", async ({ page }) => {
   expect(calls[1]).toEqual(calls[2]);
 });
 
-test("recompare keeps prior evidence visible and blocks review until the new comparison is ready", async ({
+test("a running comparison keeps prior evidence visible and blocks review until it is ready", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "Details", exact: true }).click();
-  await page.getByRole("button", { name: "Recompare stored run" }).click();
-  await expect(page.getByText("Comparison 2", { exact: true })).toBeVisible();
+  await startComparison(page);
   await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
-  await page.evaluate(() => window.reviewFixture.completeComparison());
-  await expect(page.getByText("Comparison 3", { exact: true })).toBeVisible();
+  await page.evaluate(() => {
+    window.reviewFixture.completeComparison();
+  });
+  await expect(page.getByText("The new comparison is ready.", { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
   await ready(page);
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
 });
@@ -1530,7 +1529,7 @@ test("pending comparisons poll only status and pause while the page is hidden", 
   page,
 }) => {
   await page.clock.install();
-  await page.getByRole("button", { name: "Recompare stored run" }).click();
+  await startComparison(page);
   await page.clock.runFor(4100);
   expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
     status: 2,
@@ -1558,6 +1557,19 @@ test("pending comparisons poll only status and pause while the page is hidden", 
     model: 1,
   });
 });
+
+// The comparison of the run starts again: the page polls its state.
+async function startComparison(page: Page) {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.comparisonId = "comparison-3";
+    model.comparisonRevision = 3;
+    model.reviewReady = false;
+    model.comparisonState = "comparing";
+    model.run.status = "comparing";
+    window.reviewFixture.update(model);
+  });
+}
 
 async function returnToTab(page: Page) {
   await page.evaluate(() => {
@@ -1697,13 +1709,14 @@ test("a superseded comparison stops status polling after one final model load", 
   page,
 }) => {
   await page.clock.install();
-  await page.getByRole("button", { name: "Recompare stored run" }).click();
+  await startComparison(page);
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     model.run.status = "superseded";
     model.archived = true;
     model.comparisonState = "ready";
-    window.reviewFixture.update(model);
+    // The service changes the state, and the page keeps its model.
+    window.reviewFixture.replaceServerModel(model);
   });
   await page.clock.runFor(2100);
   await expect(page.locator(".review-save-state")).toContainText("A newer run replaced this run.");
@@ -1718,7 +1731,7 @@ test("a superseded comparison stops status polling after one final model load", 
   });
 });
 
-test("archived history keeps navigation while blocking review, Undo, recompare, and new exports", async ({
+test("archived history keeps navigation while blocking review, Undo, and new exports", async ({
   page,
 }) => {
   await page.keyboard.press("a");
@@ -1727,7 +1740,6 @@ test("archived history keeps navigation while blocking review, Undo, recompare, 
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     model.archived = true;
-    model.recompareAllowed = true;
     model.readOnlyReason = "This closed run is read-only. Its review history remains available.";
     model.reviewReady = false;
     window.reviewFixture.update(model);
@@ -1739,7 +1751,6 @@ test("archived history keeps navigation while blocking review, Undo, recompare, 
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Reject view X", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Undo", exact: false })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
   await focusWorkspace(page);
   await page.keyboard.press("a");
   await page.keyboard.press("x");
@@ -1770,14 +1781,12 @@ test("existing historical work completes while closed history remains read-only"
     model.comparisonId = "comparison-3";
     model.comparisonRevision = 3;
     model.comparisonState = "comparing";
-    model.recompareAllowed = false;
     model.historicalComparisons = [
       { id: "comparison-3", ordinal: 3, state: "comparing", createdAt: 1_790_055_000_000 },
     ];
     model.run.status = "comparing";
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
   await expect(page.locator(".review-run-identity")).toContainText("Comparison 3");
   await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
   await page.clock.runFor(2100);
@@ -1812,23 +1821,6 @@ test("existing historical work completes while closed history remains read-only"
   await expect(page.getByText("The new comparison is ready.", { exact: true })).toBeVisible();
 });
 
-test("expired historical images show the server reason and do not permit recompare", async ({
-  page,
-}) => {
-  await page.evaluate(() => {
-    const model = window.reviewFixture.model();
-    model.archived = true;
-    model.reviewReady = false;
-    model.comparisonState = "ready";
-    model.recompareAllowed = false;
-    model.recompareDisabledReason = "The stored images have expired.";
-    window.reviewFixture.update(model);
-  });
-  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
-  await expect(page.getByText("The stored images have expired.", { exact: true })).toBeVisible();
-  await callCount(page, 0);
-});
-
 test("a failed historical comparison stops polling and shows its failure reason", async ({
   page,
 }) => {
@@ -1838,11 +1830,9 @@ test("a failed historical comparison stops polling and shows its failure reason"
     model.archived = true;
     model.reviewReady = false;
     model.comparisonState = "comparing";
-    model.recompareAllowed = false;
     model.run.status = "comparing";
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("button", { name: "Recompare stored run" })).toBeDisabled();
   await page.evaluate(() => {
     window.reviewFixture.setBehavior("comparison-failed");
     window.reviewFixture.completeComparison();
@@ -1861,29 +1851,6 @@ test("a failed historical comparison stops polling and shows its failure reason"
   await page.clock.runFor(4100);
   await expect(page.getByText("Waiting for the new comparison.", { exact: false })).toHaveCount(0);
   await callCount(page, 0);
-});
-
-test("a run that closes before recompare also disables the previous Undo while comparing", async ({
-  page,
-}) => {
-  await page.getByRole("button", { name: "Details", exact: true }).click();
-  await page.keyboard.press("a");
-  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
-  await expect(page.getByRole("button", { name: /Undo/ })).toBeEnabled();
-  const previousRevision = await page.evaluate(
-    () => window.reviewFixture.model().comparisonRevision,
-  );
-  await page.evaluate(() => window.reviewFixture.setBehavior("closed-before-recompare"));
-  await page.getByRole("button", { name: "Recompare stored run" }).click();
-  await expect(page.locator(".review-run-identity")).toContainText(
-    `Comparison ${previousRevision}`,
-  );
-  await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Reject view X", exact: true })).toBeDisabled();
-  await focusWorkspace(page);
-  await page.keyboard.press("Control+z");
-  await callCount(page, 1);
 });
 
 test("page-wide arrows work from body focus and the off switch preserves native keys", async ({

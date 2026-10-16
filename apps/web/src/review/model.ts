@@ -125,8 +125,6 @@ export interface ReviewModel {
   comparisonRevision: number;
   reviewReady: boolean;
   comparisonState?: ComparisonState;
-  recompareAllowed?: boolean;
-  recompareDisabledReason?: string;
   historicalComparisons?: HistoricalComparison[];
   archived?: boolean;
   readOnlyReason?: string;
@@ -229,7 +227,6 @@ export interface ReviewCommands {
   pollStatus(): Promise<ReviewPollState>;
   refresh(): Promise<ReviewModel>;
   capturePage(place: ReviewCapturePlace): Promise<ReviewCapturePage>;
-  recompare?(): Promise<ReviewModel>;
 }
 
 export class ReviewCommandError extends ClientError {

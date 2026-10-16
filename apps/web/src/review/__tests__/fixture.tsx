@@ -39,8 +39,6 @@ if (new URLSearchParams(window.location.search).has("localComparison")) {
     codec: "pngjs-7.0.0",
     threshold: "Color threshold 0.2; maximum 5 pixels",
   });
-  model.recompareAllowed = false;
-  model.recompareDisabledReason = "Rerun trusted Submit to compare locally again.";
 }
 if (new URLSearchParams(window.location.search).has("fifthVariantChanged")) {
   const item = model.items[0];
@@ -271,28 +269,6 @@ function content() {
           refresh: async () => {
             modelReads++;
             if (behavior === "offline") throw new Error("Connection lost.");
-            return model;
-          },
-          recompare: async () => {
-            if (behavior === "closed-before-recompare") model = { ...model, archived: true };
-            model = {
-              ...model,
-              comparisonId: "comparison-3",
-              comparisonRevision: 3,
-              reviewReady: false,
-              comparisonState: "comparing",
-              historicalComparisons: model.archived
-                ? [
-                    {
-                      id: "comparison-3",
-                      ordinal: 3,
-                      state: "comparing",
-                      createdAt: 1_790_055_000_000,
-                    },
-                  ]
-                : undefined,
-              run: { ...model.run, status: "comparing" },
-            };
             return model;
           },
         }}

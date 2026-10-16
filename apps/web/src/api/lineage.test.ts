@@ -393,7 +393,7 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
     expect(result.runIds).toEqual(["prior-queued-pr", "current-queued-pr"]);
     expect(result.proof.mergeGroupMembers.map((member) => member.number)).toEqual([1, 2]);
   });
-  it("recompares a frozen queue capture after its live ref and PR state change", async () => {
+  it("compares a frozen queue capture again after its live ref and PR state change", async () => {
     const test = fixture();
     const members = [
       { number: 1, sourceHead: firstHead, queueHead: queueOne, queueBase: base },

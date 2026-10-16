@@ -535,7 +535,6 @@ test("opening a historical link loads its selected comparison", async ({ page })
         reviewReady: false,
         comparisonState: "ready",
         comparisonId: "history/one",
-        recompareAllowed: true,
       }),
     });
   });
@@ -906,7 +905,6 @@ test("a preview review has image fixtures and no live actions or login", async (
     await expect(page.getByRole("button", { name, exact: true })).toBeDisabled();
   }
   await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Recompare stored run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Sign (in|out)/ })).toHaveCount(0);
   await page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]').focus();
   await page.keyboard.press("ArrowRight");

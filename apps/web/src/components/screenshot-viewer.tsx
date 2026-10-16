@@ -87,7 +87,7 @@ function ImagePane({
       render={<figure />}
       className="review-pane min-w-0 flex flex-col"
       hidden={hidden}
-      aria-busy={!!image && !ready && evidence?.status !== "error"}
+      aria-busy={!!image && !image.expired && !ready && evidence?.status !== "error"}
     >
       <Frame
         render={<figcaption />}
@@ -143,7 +143,7 @@ function ImagePane({
           };
         }}
       >
-        {image ? (
+        {image?.expired ? null : image ? (
           <img
             key={identity}
             src={image.url}
@@ -175,7 +175,11 @@ function ImagePane({
             render={<p />}
             className="review-empty-image absolute inset-0 grid min-h-70 place-items-center text-center ak-ink-60"
           >
-            {evidence?.status === "error" ? "Image could not be verified." : "Loading image…"}
+            {image.expired
+              ? "Image history expired"
+              : evidence?.status === "error"
+                ? "Image could not be verified."
+                : "Loading image…"}
           </Text>
         )}
       </Layer>

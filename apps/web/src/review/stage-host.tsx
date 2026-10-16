@@ -92,14 +92,6 @@ export function useStageHost({
   };
 }
 
-/** Server recomparison, until step 5 of #272 removes it. */
-export interface StageRecompare {
-  /** The comparison failed in a way that a new comparison can repair. */
-  offered: boolean;
-  disabled: boolean;
-  onRecompare(): void;
-}
-
 export interface StageHostProps {
   stage: StageHostState;
   model: ReviewModel;
@@ -109,7 +101,6 @@ export interface StageHostProps {
   /** A command is being saved. */
   busy: boolean;
   onRetryImages(): void;
-  recompare?: StageRecompare;
 }
 
 function terminalTitle(model: ReviewModel) {
@@ -173,15 +164,9 @@ export function StageHost({
   terminal,
   busy,
   onRetryImages,
-  recompare,
 }: StageHostProps) {
   const { evidence } = stage;
   const retryImages = !terminal && (evidence.failure === "load" || evidence.failure === "decode");
-  const recompareEvidence =
-    terminal ||
-    evidence.failure === "comparison" ||
-    evidence.failure === "missing" ||
-    evidence.failure === "dimensions";
   return (
     <Frame
       $cover
@@ -331,11 +316,6 @@ export function StageHost({
                 {retryImages && (
                   <Button $size="xs" disabled={busy} onClick={onRetryImages}>
                     Retry images
-                  </Button>
-                )}
-                {recompareEvidence && recompare?.offered && (
-                  <Button $size="xs" disabled={recompare.disabled} onClick={recompare.onRecompare}>
-                    Recompare now
                   </Button>
                 )}
               </div>

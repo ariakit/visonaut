@@ -195,7 +195,9 @@ describe("full-run declared capture order with native D1", () => {
     expect((await compare("run")).map((row) => row.variant_key)).toEqual(expected);
     await commit("run", "z-first", first);
     await service.sealRun({ runId: "run", now: operations.now() });
-    expect((await compare("run", "recompare-run")).map((row) => row.variant_key)).toEqual(expected);
+    expect((await compare("run", "second-comparison")).map((row) => row.variant_key)).toEqual(
+      expected,
+    );
   });
 
   it("recomputes offsets when discovery grows a rerun shard before inherited successful captures", async () => {

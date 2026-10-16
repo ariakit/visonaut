@@ -171,17 +171,7 @@ function ReviewSession({
     onRefresh: () => setRetry((value) => value + 1),
     getOrder: () => visibleOrder.current,
   });
-  const {
-    model: changedModel,
-    saveState,
-    busy,
-    pendingComparison,
-    awaitingComparison,
-    terminalComparison,
-    unsentDecisions,
-    runStatus,
-    recompare,
-  } = session;
+  const { model: changedModel, busy, terminalComparison, unsentDecisions, runStatus } = session;
   useEffect(() => {
     onUnsentDecisionsChange?.(unsentDecisions);
   }, [onUnsentDecisionsChange, unsentDecisions]);
@@ -212,17 +202,8 @@ function ReviewSession({
   const variant =
     item?.variants.find((entry) => entry.key === selection.variantKey) ?? item?.variants[0];
   const stage = useStageHost({ model, variant, retry, onAnnounce: setAnnouncement });
-  const ready =
-    !model.archived &&
-    !pendingComparison &&
-    !terminalComparison &&
-    model.reviewReady &&
-    stage.ready;
+  const ready = !model.archived && !terminalComparison && model.reviewReady && stage.ready;
   const bar = useBarHost({ session, model, item, variant, selection, ready });
-  const recompareAllowed = !model.archived && (model.recompareAllowed ?? true);
-  const recompareDisabledReason =
-    model.recompareDisabledReason ??
-    (model.archived ? "This closed review is read-only. Capture a new complete run." : undefined);
 
   if (
     !route &&
@@ -499,12 +480,6 @@ function ReviewSession({
                     Review is unavailable until the run is sealed and all comparisons are complete.
                   </Frame>
                 )}
-                {pendingComparison && (
-                  <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
-                    A new comparison is being prepared from stored captures. The previous comparison
-                    remains visible until the new evidence is ready.
-                  </Frame>
-                )}
                 {sessionItem && sessionVariant && variant && (
                   <div
                     ref={variantRow}
@@ -556,15 +531,6 @@ function ReviewSession({
                     terminal={terminalComparison}
                     busy={busy}
                     onRetryImages={() => setRetry((value) => value + 1)}
-                    recompare={
-                      commands.recompare && recompareAllowed
-                        ? {
-                            offered: true,
-                            disabled: busy || awaitingComparison || saveState.status === "error",
-                            onRecompare: () => void recompare(),
-                          }
-                        : undefined
-                    }
                   />
                 </ShellMainFull>
               ) : (
@@ -625,22 +591,7 @@ function ReviewSession({
             <Button $size="xs" aria-pressed={shortcuts} onClick={() => setShortcuts(!shortcuts)}>
               <ButtonLabel>Shortcuts {shortcuts ? "on" : "off"}</ButtonLabel>
             </Button>
-            {commands.recompare && !model.preview && (
-              <Button
-                $size="xs"
-                disabled={
-                  !recompareAllowed || busy || awaitingComparison || saveState.status === "error"
-                }
-                title={!recompareAllowed ? recompareDisabledReason : undefined}
-                onClick={() => void recompare()}
-              >
-                <ButtonLabel>Recompare stored run</ButtonLabel>
-              </Button>
-            )}
           </div>
-          {commands.recompare && !model.preview && !recompareAllowed && recompareDisabledReason && (
-            <p>{recompareDisabledReason}</p>
-          )}
           <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
             {announcement}
           </p>
