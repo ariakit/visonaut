@@ -403,17 +403,19 @@ it("puts no item key, no variant key, and no login into the check text", async (
   }
 });
 
-// The case exists only for an update from before the deploy of the review
-// columns that the service did not send yet.
-it("sends the text of the run status for a stored update that has no review state", async () => {
+// An update that the service stored before the review columns has no review
+// state, and no text to send. The sender must not read the status of its run
+// and send a text that the update does not own.
+it("sends no request for a stored update that has no review state", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context);
-  const patches = shownPatches(fixture);
+  const requests: string[] = [];
   const request = fixture.context.github.request.bind(fixture.context.github);
   let failedReads = 0;
   // One failed read keeps the update in the queue.
   fixture.context.github.request = async (path, init) => {
+    requests.push(`${init?.method ?? "GET"} ${path}`);
     if (path === checkPath && !init?.method && failedReads === 0) {
       failedReads += 1;
       throw new GitHubUnavailableError(502);
@@ -424,19 +426,23 @@ it("sends the text of the run status for a stored update that has no review stat
   expect(readDelivery(database)).toMatchObject({ state: "pending" });
   database.connection.exec(`UPDATE work_status_outbox SET review_state = NULL,
     review_pending = NULL, review_rejected = NULL, review_approved = NULL`);
+  requests.length = 0;
+  const statusRead = vi.spyOn(Service.prototype, "status");
 
   fixture.state.time += 30_000;
-  const later = await deliverGitHubStatuses(fixture.context);
+  const first = await deliverGitHubStatuses(fixture.context);
 
-  expect(later).toMatchObject({ completed: ["1"], deferred: [], attention: [] });
-  expect(patches).toEqual([
-    expect.objectContaining({
-      status: "completed",
-      conclusion: "success",
-      output: expect.objectContaining({ title: "1 change approved" }),
-    }),
-  ]);
-  expect(readDelivery(database)).toMatchObject({ state: "complete" });
+  // The pass uses the last attempt of the update. A dead update asks for attention.
+  expect(first).toMatchObject({ completed: [], deferred: ["1"], attention: [] });
+  expect(readDelivery(database)).toMatchObject({ state: "dead" });
+  expect(await deliverGitHubStatuses(fixture.context)).toMatchObject({
+    completed: [],
+    attention: ["1"],
+  });
+  expect(requests).toEqual([]);
+  expect(fixture.state.patches).toBe(0);
+  expect(statusRead).not.toHaveBeenCalled();
+  statusRead.mockRestore();
 });
 
 it("delivers an update in a later pass after one failed read of its check", async () => {
