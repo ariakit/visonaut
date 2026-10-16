@@ -135,6 +135,33 @@ function deferred() {
   return { promise, resolve };
 }
 
+class FailingStatement extends SqliteStatement {
+  override bind(...values: SqlValue[]) {
+    return new FailingStatement(this.database, this.sql, values);
+  }
+
+  override execute<T>(): Result<T> {
+    throw new Error("D1_ERROR: Network connection lost.");
+  }
+}
+
+// The first statement of a settle step, and a statement that removes only the
+// request mark.
+const settleOrUnmarkSql =
+  /UPDATE work_status_outbox SET state = CASE|UPDATE work_checks SET request_started = 0\s/;
+
+/** Each statement with matching SQL fails as a D1 error until disposal. */
+function failStatements(database: TestDatabase, sql: RegExp) {
+  const prepare = database.prepare;
+  database.prepare = (text) =>
+    sql.test(text) ? new FailingStatement(database.connection, text) : prepare.call(database, text);
+  return {
+    [Symbol.dispose]() {
+      database.prepare = prepare;
+    },
+  };
+}
+
 describe("durable comparison work", () => {
   it("keeps enqueue repeat-safe and rejects a conflicting identity", async () => {
     using database = new TestDatabase();
@@ -379,21 +406,29 @@ describe("serialized GitHub status outbox", () => {
     using database = new TestDatabase();
     await database.batch(statusIntentStatements(database, statusInput()));
     await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+    const response = deferred();
     let sent = 0;
     const params = {
       id: "github:123",
       token: "worker",
       revision: 1,
       now: () => 101,
-      send: async () => {
+      send: async (_intent: unknown, isCurrent: () => Promise<boolean>) => {
+        if (!(await isCurrent())) return "not-sent" as const;
         sent += 1;
+        await response.promise;
       },
     };
-    const outcomes = await Promise.all([
-      deliverStatus(database, params),
-      deliverStatus(database, params),
-    ]);
-    expect(outcomes.sort()).toEqual(["delivered", "stale"]);
+    const first = deliverStatus(database, params);
+    // The second call ends while the write request of the first is in flight.
+    expect(await deliverStatus(database, params)).toBe("stale");
+    expect(
+      await database
+        .prepare("SELECT lease_token, request_started, ambiguous FROM work_checks")
+        .first(),
+    ).toEqual({ lease_token: "worker", request_started: 1, ambiguous: 0 });
+    response.resolve();
+    expect(await first).toBe("delivered");
     expect(sent).toBe(1);
   });
 
@@ -410,7 +445,8 @@ describe("serialized GitHub status outbox", () => {
       token: "old",
       revision: 1,
       now: () => now,
-      send: async (intent) => {
+      send: async (intent, isCurrent) => {
+        expect(await isCurrent()).toBe(true);
         entered.resolve();
         await response.promise;
         sent.push(intent.conclusion);
@@ -463,7 +499,8 @@ describe("serialized GitHub status outbox", () => {
         token: "worker",
         revision: 1,
         now: () => 101,
-        send: async () => {
+        send: async (_intent, isCurrent) => {
+          await isCurrent();
           throw new Error("connection reset");
         },
       }),
@@ -639,16 +676,6 @@ describe("serialized GitHub status outbox", () => {
     using database = new TestDatabase();
     await database.batch(statusIntentStatements(database, statusInput()));
     await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
-    const batch = database.batch.bind(database);
-    let failedBatches = 0;
-    // The settle step is the first batch after the sender returns.
-    database.batch = async (statements) => {
-      if (failedBatches === 0) {
-        failedBatches += 1;
-        throw new Error("D1_ERROR: Network connection lost.");
-      }
-      return batch(statements);
-    };
     const readState = () =>
       database
         .prepare(`SELECT checks.ambiguous, checks.lease_token, checks.request_started,
@@ -656,16 +683,20 @@ describe("serialized GitHub status outbox", () => {
         FROM work_checks AS checks JOIN work_status_outbox AS outbox ON outbox.check_id = checks.id`)
         .first();
 
-    await expect(
-      deliverStatus(database, {
-        id: "github:123",
-        token: "worker",
-        revision: 1,
-        now: () => 101,
-        send: async () => result,
-      }),
-    ).rejects.toThrow("D1_ERROR: Network connection lost.");
-    expect(failedBatches).toBe(1);
+    {
+      // The settle step fails, and so does a second statement that would
+      // remove a request mark.
+      using _failure = failStatements(database, settleOrUnmarkSql);
+      await expect(
+        deliverStatus(database, {
+          id: "github:123",
+          token: "worker",
+          revision: 1,
+          now: () => 101,
+          send: async () => result,
+        }),
+      ).rejects.toThrow("D1_ERROR: Network connection lost.");
+    }
     expect(await readState()).toEqual({
       ambiguous: 0,
       lease_token: "worker",
@@ -681,6 +712,247 @@ describe("serialized GitHub status outbox", () => {
     expect(
       await claimStatus(database, { id: "github:123", token: "retry", now: 110, leaseMs: 10 }),
     ).not.toBeNull();
+  });
+
+  describe("an update with no write request", () => {
+    const readCheck = (database: TestDatabase) =>
+      database
+        .prepare(`SELECT checks.ambiguous, checks.request_started, outbox.state, outbox.last_error
+        FROM work_checks AS checks JOIN work_status_outbox AS outbox
+          ON outbox.check_id = checks.id AND outbox.revision = checks.desired_revision`)
+        .first();
+
+    // A later pass claims the update again and sends it.
+    const deliverLater = async (database: TestDatabase, now: number, revision = 1) => {
+      expect(await reconcileStatus(database, { now, limit: 10 })).toEqual([
+        expect.objectContaining({ ambiguous: 0, lease_token: null }),
+      ]);
+      await claimStatus(database, { id: "github:123", token: "later", now, leaseMs: 10 });
+      const sent: string[] = [];
+      expect(
+        await deliverStatus(database, {
+          id: "github:123",
+          token: "later",
+          revision,
+          now: () => now,
+          send: async (intent, isCurrent) => {
+            if (!(await isCurrent())) return "not-sent";
+            sent.push(intent.conclusion);
+          },
+        }),
+      ).toBe("delivered");
+      return sent;
+    };
+
+    it("sets no lock when the Worker stops while the sender reads GitHub", async () => {
+      using database = new TestDatabase();
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      const entered = deferred();
+      // The read never ends, as in a Worker that stops.
+      void deliverStatus(database, {
+        id: "github:123",
+        token: "worker",
+        revision: 1,
+        now: () => 101,
+        send: async () => {
+          entered.resolve();
+          await new Promise(() => {});
+        },
+      });
+      await entered.promise;
+      expect(await deliverLater(database, 110)).toEqual(["success"]);
+    });
+
+    it.each([
+      ["the read of the stored update", /SELECT outbox\.\*/, 1],
+      // A newer update arrives after the claim, so the claimed one is missing.
+      ["the settle step of a missing update", settleOrUnmarkSql, 2],
+    ])("sets no lock when %s has a database error", async (_label, sql, revision) => {
+      using database = new TestDatabase();
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      if (revision === 2) {
+        await database.batch(statusIntentStatements(database, statusInput(2, "failure")));
+      }
+      const sent: string[] = [];
+      {
+        using _failure = failStatements(database, sql);
+        await expect(
+          deliverStatus(database, {
+            id: "github:123",
+            token: "worker",
+            revision: 1,
+            now: () => 101,
+            send: async (intent) => {
+              sent.push(intent.conclusion);
+            },
+          }),
+        ).rejects.toThrow("D1_ERROR: Network connection lost.");
+      }
+      expect(sent).toEqual([]);
+      expect(await readCheck(database)).toMatchObject({ ambiguous: 0, request_started: 0 });
+      expect(await deliverLater(database, 110, revision)).toEqual([
+        revision === 1 ? "success" : "failure",
+      ]);
+    });
+
+    it.each([
+      ["a database read", new Error("D1_ERROR: Network connection lost.")],
+      ["a validation", new Error("Expected a numeric GitHub identifier.")],
+    ])("sets no lock when %s throws before the write request", async (_label, error) => {
+      using database = new TestDatabase();
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      expect(
+        await deliverStatus(database, {
+          id: "github:123",
+          token: "worker",
+          revision: 1,
+          now: () => 101,
+          send: async () => {
+            throw error;
+          },
+        }),
+      ).toBe("read-failed");
+      // The update waits as after a failed read, and keeps the cause.
+      expect(await readCheck(database)).toEqual({
+        ambiguous: 0,
+        request_started: 0,
+        state: "pending",
+        last_error: String(error),
+      });
+      expect(await deliverLater(database, 30_101)).toEqual(["success"]);
+    });
+
+    it("sets no lock when the settle step of an unchanged result has a database error", async () => {
+      using database = new TestDatabase();
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      {
+        using _failure = failStatements(database, settleOrUnmarkSql);
+        await expect(
+          deliverStatus(database, {
+            id: "github:123",
+            token: "worker",
+            revision: 1,
+            now: () => 101,
+            // GitHub already shows this result, so the sender sends no PATCH.
+            send: async (_intent, isCurrent) => {
+              if (!(await isCurrent({ request: false }))) return "not-sent";
+            },
+          }),
+        ).rejects.toThrow("D1_ERROR: Network connection lost.");
+      }
+      expect(await readCheck(database)).toMatchObject({ ambiguous: 0, request_started: 0 });
+      expect(await deliverLater(database, 110)).toEqual(["success"]);
+    });
+
+    it("keeps the lock of a database restore that occurs during the GitHub read", async () => {
+      using database = new TestDatabase();
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      // The statements that a database restore runs for the checks.
+      const restore = () =>
+        database.batch([
+          database.prepare("UPDATE work_checks SET ambiguous = 1"),
+          database.prepare(
+            "UPDATE work_status_outbox SET state = 'obsolete' WHERE state != 'complete'",
+          ),
+        ]);
+      expect(
+        await deliverStatus(database, {
+          id: "github:123",
+          token: "worker",
+          revision: 1,
+          now: () => 101,
+          send: async () => {
+            await restore();
+            return "not-sent";
+          },
+        }),
+      ).toBe("stale");
+      expect(await readCheck(database)).toMatchObject({ ambiguous: 1, state: "obsolete" });
+      await reconcileStatus(database, { now: 110, limit: 10 });
+      expect(await readCheck(database)).toMatchObject({ ambiguous: 1, state: "obsolete" });
+    });
+
+    it("does not report an update that is not current as delivered with no request", async () => {
+      using database = new TestDatabase();
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      await database.batch(statusIntentStatements(database, statusInput(2, "failure")));
+      expect(
+        await deliverStatus(database, {
+          id: "github:123",
+          token: "worker",
+          revision: 1,
+          now: () => 101,
+          send: async (_intent, isCurrent) => {
+            if (!(await isCurrent({ request: false }))) return "not-sent";
+          },
+        }),
+      ).toBe("stale");
+      expect(await database.prepare("SELECT delivered_revision FROM work_checks").first()).toEqual({
+        delivered_revision: null,
+      });
+    });
+  });
+
+  describe("a write request with no answer", () => {
+    it("sets the lock when the Worker stops during the write request", async () => {
+      using database = new TestDatabase();
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      const entered = deferred();
+      void deliverStatus(database, {
+        id: "github:123",
+        token: "worker",
+        revision: 1,
+        now: () => 101,
+        send: async (_intent, isCurrent) => {
+          expect(await isCurrent()).toBe(true);
+          entered.resolve();
+          await new Promise(() => {});
+        },
+      });
+      await entered.promise;
+      expect(await reconcileStatus(database, { now: 110, limit: 10 })).toEqual([
+        expect.objectContaining({ ambiguous: 1, lease_token: "worker" }),
+      ]);
+      expect(
+        await claimStatus(database, { id: "github:123", token: "later", now: 110, leaseMs: 10 }),
+      ).toBeNull();
+    });
+
+    it("sets the lock at once when the write request fails", async () => {
+      using database = new TestDatabase();
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      expect(
+        await deliverStatus(database, {
+          id: "github:123",
+          token: "worker",
+          revision: 1,
+          now: () => 101,
+          send: async (_intent, isCurrent) => {
+            expect(await isCurrent()).toBe(true);
+            throw new Error("Lost PATCH response.");
+          },
+        }),
+      ).toBe("ambiguous");
+      expect(
+        await database
+          .prepare(`SELECT checks.ambiguous, checks.request_started, outbox.state, outbox.last_error
+          FROM work_checks AS checks JOIN work_status_outbox AS outbox ON outbox.check_id = checks.id`)
+          .first(),
+      ).toEqual({
+        ambiguous: 1,
+        request_started: 1,
+        state: "sending",
+        last_error: "Error: Lost PATCH response.",
+      });
+    });
   });
 
   it("recovers a lease that expired before any request started", async () => {

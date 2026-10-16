@@ -336,6 +336,9 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
         token,
         revision: intent.revision,
         now: context.now,
+        // Each pre-run fence writes the pre-run state and then reads the request
+        // mark, so the statement of the mark tests that state too.
+        eligibleCheckSql: currentPreRunCheckSql("work_checks.id"),
         // The service stores the result of a failed send and gives no error
         // to this step, so the cause goes on the report here.
         send: (latest, isCurrent) =>
@@ -351,10 +354,9 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
                   }
                 : undefined,
               origin: context.origin,
-              isCurrent: async () =>
-                (await isCurrent()) &&
-                (await service.isStatusIntentCurrent(latest)) &&
-                (await isCurrentPreRunCheck(database, latest.check_id)),
+              // The outbox sets the request mark, so its call is the last one.
+              isCurrent: async (options) =>
+                (await service.isStatusIntentCurrent(latest)) && (await isCurrent(options)),
             });
             // A failed read is a result, and not an error of the sender.
             if (typeof outcome === "object") {

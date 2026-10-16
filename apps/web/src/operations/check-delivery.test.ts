@@ -644,3 +644,34 @@ it("fails the status step when the update of a run fails for another cause", asy
     prepare.mockRestore();
   }
 });
+
+// A pre-run fence writes the pre-run state and then reads the request mark. So
+// one of the fence and the sender must see the write of the other.
+it("sends no PATCH when a pre-run fence closes the check directly before the request mark", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await reserve(fixture.context);
+  database.connection
+    .prepare(`INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,
+      kind,ref,pull_request_number,external_id,check_id,state,docs_only,plan_visual_required,
+      workflow_run_id,workflow_attempt,created_at,updated_at)
+      VALUES(?,0,'123',?,?,'pull_request','refs/pull/1/merge',1,'visonaut:run','1','active',0,1,
+        'run',1,1,1)`)
+    .run("a".repeat(40), "b".repeat(40), "c".repeat(40));
+  let fenceSawSend: unknown = null;
+  const prepare = database.prepare.bind(database);
+  database.prepare = (sql) => {
+    if (fenceSawSend === null && sql.includes("SET request_started = 1")) {
+      database.connection.exec("UPDATE pre_run_checks SET state='failed' WHERE check_id='1'");
+      fenceSawSend =
+        database.connection
+          .prepare("SELECT 1 FROM work_checks WHERE id='1' AND (request_started=1 OR ambiguous=1)")
+          .get() ?? false;
+    }
+    return prepare(sql);
+  };
+  await deliverGitHubStatuses(fixture.context);
+  expect(fenceSawSend).toBe(false);
+  expect(fixture.state.patches).toBe(0);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, lease_token: null });
+});

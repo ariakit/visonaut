@@ -29,7 +29,7 @@ Closed runs keep their identity, status, all actor decisions, exact tuples, expl
 
 ## Locked check
 
-The service sends the result of a run to GitHub as the text of one required check. Each change of that result is one PATCH request. A check is locked when the service cannot know if such a PATCH reached GitHub, or when the sender stopped before it. A locked check gets no update. It keeps the title and the conclusion of the last update that reached GitHub, also after a Reject or a new decision. The two tables that hold the lock are `work_checks` and `work_status_outbox`.
+The service sends the result of a run to GitHub as the text of one required check. Each change of that result is one PATCH request. A check is locked when the service cannot know if such a PATCH reached GitHub. A locked check gets no update. It keeps the title and the conclusion of the last update that reached GitHub, also after a Reject or a new decision. The two tables that hold the lock are `work_checks` and `work_status_outbox`.
 
 This section covers the check of a run. A mirror check of a pull request head uses the same tables and the same alert, and it has another sender. This guide has no procedure for it: do not run the unlock commands for it. The first read command below finds a mirror check.
 
@@ -49,18 +49,17 @@ A locked check has `ambiguous = 1`. The update that the lock holds has the state
 
 Open the check on GitHub. Its title is the text of the last update that reached GitHub, for example `79 changes need review`, `3 changes rejected`, `12 changes approved`, `Passed`, or `Capturing screenshots`. Compare it with the state of the run in Visonaut.
 
-### The two locks that remain
+### The lock that remains
 
 - **A PATCH with no answer.** The PATCH failed, or the service did not get its answer, or the Worker stopped while it sent the PATCH and the lease of the update ended. GitHub can have applied it. `last_error` has the error text of the send. After a stopped Worker it is empty, or it has an older error text of the same update.
-- **The identity test of the check.** The sender reads the check before it sends the PATCH. It stops when the check has another commit, another name, another external ID, or another GitHub App. `last_error` then reads `SecurityError: The check does not belong to this application and tested commit.` No PATCH was sent.
 
-A failed read of the check does not lock it. The update waits and tries again. A D1 error in the sender before the PATCH also locks the check (issue #278).
+The service marks the update directly before the PATCH (`request_started = 1`), and only a marked update can get the lock. So each failure before that point sets no lock: a failed read of the check, a D1 error, or a Worker that stops. The update waits and tries again.
+
+The identity test of the check also sets no lock. The sender reads the check before it sends the PATCH. It stops when the check has another commit, another name, another external ID, or another GitHub App. `last_error` then reads `SecurityError: The check does not belong to this application and tested commit.` No PATCH was sent. The update tries again as after a failed read. After its last attempt, its state is `dead`, and the alert has the code `exhausted`. Find out why the ID of the check points to another commit, name, or App. This guide has no procedure for that.
 
 ### Unlock
 
-Do not unlock a check with an identity error. The next pass reads the same check and locks it again. Find out why the ID of the check points to another commit, name, or App. This guide has no procedure for that.
-
-Wait until `lease_until` has passed. The lease of a check lasts 12 minutes by default. For each other lock, unlocking is then safe in practice. If a very late request of the first send reaches GitHub after the new one, the check shows an older text until the next change of the result. The sender reads the check on GitHub first. For the check of a run, it sends no PATCH when the check already shows the same completed result. It sends the PATCH again when the result is not there.
+Wait until `lease_until` has passed. The lease of a check lasts 12 minutes by default. Unlocking is then safe in practice. If a very late request of the first send reaches GitHub after the new one, the check shows an older text until the next change of the result. The sender reads the check on GitHub first. For the check of a run, it sends no PATCH when the check already shows the same completed result. It sends the PATCH again when the result is not there.
 
 If the run of the check is closed or replaced, the update is not sent and the alert stays open.
 
