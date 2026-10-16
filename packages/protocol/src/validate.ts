@@ -478,36 +478,6 @@ export function validateLocalComparison(value: unknown): asserts value is LocalC
   unique(removed, "local removal identity");
 }
 
-/** Full capture inventory stays intact; only this byte set needs upload tickets. */
-export function uploadImages(
-  manifest: Manifest,
-): Map<string, Manifest["captures"][number]["image"]> {
-  const results = new Map(
-    manifest.localComparison?.captures.map((result) => [identityKey(result), result]),
-  );
-  const images = new Map<string, Manifest["captures"][number]["image"]>();
-  const add = (image: Manifest["captures"][number]["image"]) => {
-    const existing = images.get(image.digest);
-    if (
-      existing &&
-      (existing.bytes !== image.bytes ||
-        existing.width !== image.width ||
-        existing.height !== image.height ||
-        existing.mediaType !== image.mediaType)
-    )
-      fail("Shared image metadata differs");
-    images.set(image.digest, image);
-  };
-  for (const capture of manifest.captures) {
-    const result = results.get(
-      identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
-    );
-    if (!manifest.localComparison || result?.outcome !== "unchanged") add(capture.image);
-    if (result?.mask) add(result.mask);
-  }
-  return images;
-}
-
 export function validateCollection(value: unknown): asserts value is TrustedCollection {
   object(value, "collection");
   const projectName = field(value, "projectName");

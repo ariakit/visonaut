@@ -21,21 +21,19 @@ The plan lists all required shards, tests, captures, and accepted environment pr
 
 All JSON requests and responses use `Content-Type: application/json`. Binary uploads use the declared image media type. IDs and ticket tokens are encoded as single URL path components. Redirects are not part of this protocol.
 
-| Method | Path                       | Request              | Response               | Authority                                |
-| ------ | -------------------------- | -------------------- | ---------------------- | ---------------------------------------- |
-| POST   | `/v1/runs`                 | `ReserveRunRequest`  | `ReserveRunResponse`   | GitHub OIDC bearer                       |
-| POST   | `/v1/runs/:id/shards/:key` | `Manifest`           | `DeclareShardResponse` | Short-lived shard capability             |
-| PUT    | `/v1/uploads/:ticket`      | Original image bytes | Successful 2xx         | Same shard capability and bounded ticket |
-| POST   | `/v1/runs/:id/finalize`    | `FinalizeRequest`    | `RunStatus`            | Same shard capability                    |
-| GET    | `/v1/runs/:id`             | None                 | `RunStatus`            | Separate private read authorization      |
+The service accepts one request form: the capture pages below. It refuses a reserve call without `comparisonMode: "local-pages-v1"` with the code `capture_pages_required`.
 
-An upload capability cannot read private run status or change a review decision. A reserve response supplies its expiration. A shard declaration returns a canonical manifest digest and upload tickets bound to image digests and maximum bytes. Replaying the same manifest is harmless; a changed manifest under the same shard identity must return a conflict. The service computes image digests from received bytes. It must not open a submitted local image path.
+| Method | Path           | Request | Response    | Authority                           |
+| ------ | -------------- | ------- | ----------- | ----------------------------------- |
+| GET    | `/v1/runs/:id` | None    | `RunStatus` | Separate private read authorization |
 
-Finalization validates one shard and may leave the full run uploading. Only complete trusted evidence permits sealing. The client must not interpret an upload or finalization response as visual approval. Structured errors use `ProtocolErrorBody` with a stable code and a private diagnostic message.
+The reserve call and the submit call (`TRANSPORT.submit`) each use a GitHub OIDC bearer token. The page, reuse, upload, index, and reference calls use the short-lived upload capability of the reserve response, and an upload also uses its bounded ticket. An upload capability cannot read private run status or change a review decision. A reserve response supplies its expiration. The service computes image digests from received bytes. It must not open a submitted local image path.
+
+Only complete trusted evidence permits sealing. The client must not interpret an upload or index response as visual approval. Structured errors use `ProtocolErrorBody` with a stable code and a private diagnostic message.
 
 ## Capture pages
 
-The capture pages are a second request form of HTTP version 1. They stand beside the `Manifest` requests above. A client selects them with `comparisonMode: "local-pages-v1"` (`CAPTURE_PAGES_MODE`) in the reserve call. This form has no limit for the capture count of a run: each bound is a bound of one row, of one page, or a value that the reader gives.
+The capture pages are the request form of HTTP version 1. A client selects them with `comparisonMode: "local-pages-v1"` (`CAPTURE_PAGES_MODE`) in the reserve call. This form has no limit for the capture count of a run: each bound is a bound of one row, of one page, or a value that the reader gives.
 
 ### Row, page, and index
 
