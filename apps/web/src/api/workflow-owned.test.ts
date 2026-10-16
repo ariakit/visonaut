@@ -3778,8 +3778,8 @@ describe("credential checks of the ingest routes", () => {
   });
 
   /** A GitHub token with a correct form, signed with the given key. */
-  const tokenOfKey = (privateKey: CryptoKey) =>
-    new SignJWT({})
+  const tokenOfKey = (privateKey: CryptoKey, claims: Record<string, unknown> = {}) =>
+    new SignJWT(claims)
       .setProtectedHeader({ alg: "RS256", kid: oidcKeyId })
       .setIssuer("https://token.actions.githubusercontent.com")
       .setAudience("https://preview.example/submit")
@@ -3846,7 +3846,11 @@ describe("credential checks of the ingest routes", () => {
       // Submit checks the signature before the project, so its token must have
       // a valid signature of GitHub. Each other route checks the project first.
       const token = route.endsWith("/submit")
-        ? await tokenOfKey(oidcKeys.privateKey)
+        ? await tokenOfKey(oidcKeys.privateKey, {
+            repository: "ariakit/ariakit",
+            repository_id: "999999",
+            repository_owner_id: "5",
+          })
         : "unverified";
       stubGitHubSigningKeys();
       const { response } = await sendIngestRoute(test, method, route, {
@@ -3925,6 +3929,63 @@ describe("credential checks of the ingest routes", () => {
         statements: [],
       });
       expect(answers[1]).toEqual(answers[0]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each([
+    ["repository_id", "777"],
+    ["repository", "other/repository"],
+    ["repository_owner_id", "6"],
+  ])(
+    "answers the same 403 to Submit with a valid token of another %s for each run number",
+    async (claim, value) => {
+      const test = await fixture();
+      const token = await tokenOfKey(oidcKeys.privateKey, {
+        repository: "ariakit/ariakit",
+        repository_id: test.context.configuration.github.repositoryId,
+        repository_owner_id: "5",
+        [claim]: value,
+      });
+      stubGitHubSigningKeys();
+      try {
+        // The run of the fixture has a staged attempt, and the other run
+        // number has none. The answer must not tell the two apart.
+        const answers = [];
+        for (const runNumber of [test.manifest.run.workflowRunId, "987654321"]) {
+          const { response, statements } = await sendMeasured(
+            test,
+            `/v1/runs/${runNumber}/submit`,
+            cliJson(token, { schemaVersion: "1.0", workflowAttempt: 1 }),
+          );
+          answers.push({ status: response.status, body: await response.json(), statements });
+        }
+        expect(answers[0]).toMatchObject({
+          status: 403,
+          body: { error: { code: "untrusted_run" } },
+          statements: [],
+        });
+        expect(answers[1]).toEqual(answers[0]);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    },
+  );
+
+  it("answers 503 to Submit with a valid token that has no repository claims", async () => {
+    const test = await fixture();
+    const token = await tokenOfKey(oidcKeys.privateKey);
+    stubGitHubSigningKeys();
+    try {
+      const { response, statements } = await sendMeasured(
+        test,
+        `/v1/runs/${test.manifest.run.workflowRunId}/submit`,
+        cliJson(token, { schemaVersion: "1.0", workflowAttempt: 1 }),
+      );
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ error: { code: "invalid_metadata" } });
+      expect(statements).toEqual([]);
     } finally {
       vi.unstubAllGlobals();
     }
