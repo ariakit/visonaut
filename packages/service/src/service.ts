@@ -58,32 +58,6 @@ import {
 export type { ComparisonPolicy } from "@visonaut/protocol";
 export { captureProfilesDigest, maximumImageRegistrationBatchSize } from "./run-admission.ts";
 
-export interface ComparisonTask {
-  id: string;
-  comparisonId: string;
-  runId: string;
-  policyDigest: string;
-  policy: ComparisonPolicy;
-  reference: {
-    imageId: string;
-    objectKey: string;
-    digest: string;
-    width: number;
-    height: number;
-    bytes: number;
-    contentType: "image/png" | "image/webp";
-  } | null;
-  candidate: {
-    imageId: string;
-    objectKey: string;
-    digest: string;
-    width: number;
-    height: number;
-    bytes: number;
-    contentType: "image/png" | "image/webp";
-  } | null;
-}
-
 export class Service {
   constructor(readonly database: Database) {}
 

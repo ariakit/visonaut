@@ -2,6 +2,7 @@ import {
   readLegacyComparisonTask,
   seedLegacyComparison,
   seedLegacyResult,
+  type ComparisonTask,
 } from "../../../tooling/legacy-comparison-fixture.ts";
 import { readTestMigrations } from "../../../tooling/test-migrations.ts";
 import { createHash } from "node:crypto";
@@ -17,7 +18,7 @@ import { describe, expect, it, vi } from "vitest";
 import { compareImages, selectedComparisonPolicy } from "../../compare/src/compare.ts";
 import type { Database, Result, SqlValue, Statement } from "./database.ts";
 import { ConflictError, IncompleteError } from "./database.ts";
-import { captureProfilesDigest, Service, type ComparisonTask } from "./service.ts";
+import { captureProfilesDigest, Service } from "./service.ts";
 import {
   claimRetiredSnapshotDeletion,
   completeRetiredRunDeletion,

@@ -78,11 +78,6 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
     action:
       "The service could not complete this comparison. Check the comparison results and database access.",
   },
-  "comparison-publication": {
-    title: "A comparison could not enter the queue",
-    action:
-      "Check queue access and service availability. The scheduler retries pending work automatically.",
-  },
   "comparison-task": {
     title: "A comparison exhausted its retries",
     action:

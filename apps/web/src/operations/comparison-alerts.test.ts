@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { claimWork, completeWork, enqueueWork, reconcileWork } from "@visonaut/service";
 import { context, TestDatabase } from "./test-fixtures.ts";
 import { reportComparisonRecovery } from "./comparison-alerts.ts";
-const noPublication = { published: [], failed: [] };
 const noFinalization = { completed: [], errors: [] };
 const receiptLifetime = (14 * 24 + 1) * 60 * 60 * 1000;
 function comparison(database: TestDatabase, id: string) {
@@ -35,67 +34,6 @@ function unresolved(database: TestDatabase) {
     .all();
 }
 describe("comparison recovery alerts", () => {
-  it.each(["review", "historical"])(
-    "uses only a ready %s archive receipt after completed task pruning",
-    async (purpose) => {
-      using database = new TestDatabase();
-      const fixture = context(database);
-      const id = `receipt-${purpose}`;
-      comparison(database, id);
-      database.connection
-        .prepare("UPDATE visonaut_comparisons SET purpose=? WHERE id=?")
-        .run(purpose, id);
-      await enqueueWork(database, {
-        id: `${id}:row`,
-        kind: "compare",
-        payload: "{}",
-        maxAttempts: 3,
-        now: fixture.state.time,
-      });
-      await reportComparisonRecovery(
-        fixture.context,
-        { published: [], failed: [`${id}:row`, `${id}-lookalike:row`] },
-        noFinalization,
-      );
-      // A consumer completes after the scheduler read; the archive then prunes its task.
-      database.connection
-        .prepare("UPDATE work_tasks SET state='complete',attempts=1,updated_at=? WHERE id=?")
-        .run(fixture.state.time + 1, `${id}:row`);
-      database.connection
-        .prepare("UPDATE visonaut_comparisons SET state='ready' WHERE id=?")
-        .run(id);
-      database.connection.prepare("DELETE FROM work_tasks WHERE id=?").run(`${id}:row`);
-      database.connection
-        .prepare("DELETE FROM visonaut_comparison_rows WHERE comparison_id=?")
-        .run(id);
-      database.connection
-        .prepare(
-          "INSERT INTO operations_run_archives(run_id,generation,state,source_revision,project_revision,object_key,progress_json,created_at,digest,bytes,verified_at) VALUES(?,'fixture','ready',0,0,?,'{}',0,'digest',1,1)",
-        )
-        .run(id, `history/${id}`);
-      if (purpose === "historical") {
-        await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-        expect(unresolved(database)).toHaveLength(2);
-        database.connection
-          .prepare(
-            "INSERT INTO operations_comparison_archives(comparison_id,run_id,generation,state,created_at) VALUES(?,?,'fixture','building',0)",
-          )
-          .run(id, id);
-        await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-        expect(unresolved(database)).toHaveLength(2);
-        database.connection
-          .prepare(
-            "UPDATE operations_comparison_archives SET state='ready',object_key=?,digest='digest',bytes=1,page_count=1,verified_at=1 WHERE comparison_id=?",
-          )
-          .run(`history/comparison/${id}`, id);
-      }
-      await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-      expect(unresolved(database)).toEqual([
-        { kind: "comparison-publication", subject: `${id}-lookalike:row` },
-      ]);
-    },
-  );
-
   it("retains historical failures on inactive runs until an exact later recomparison succeeds", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
@@ -113,11 +51,11 @@ describe("comparison recovery alerts", () => {
     database.connection.exec(
       "UPDATE work_tasks SET state='dead',attempts=3 WHERE id='historical:row'",
     );
-    await reportComparisonRecovery(fixture.context, noPublication, {
+    await reportComparisonRecovery(fixture.context, {
       completed: [],
       errors: [{ comparisonId: "historical" }],
     });
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toEqual([
       { kind: "comparison-finalization", subject: "historical" },
       { kind: "comparison-task", subject: "historical" },
@@ -128,13 +66,13 @@ describe("comparison recovery alerts", () => {
     database.connection.exec(
       "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at,purpose,state) VALUES('different','historical',0,'different-policy',2,1,'historical','ready')",
     );
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toHaveLength(2);
     database.connection.exec(
       "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,created_at,purpose,state) VALUES('recovered','historical',0,'policy',3,2,'historical','ready')",
     );
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toEqual([]);
     expect(
       database.connection
@@ -142,43 +80,12 @@ describe("comparison recovery alerts", () => {
         .get()?.state,
     ).toBe("invalidated");
   });
-
-  it("keeps publication failures across unrelated pages and resolves actual queue acceptance", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    await enqueueWork(database, {
-      id: "lost",
-      kind: "compare",
-      payload: "{}",
-      maxAttempts: 3,
-      now: fixture.state.time,
-    });
-    await reportComparisonRecovery(
-      fixture.context,
-      { published: [], failed: ["lost"] },
-      noFinalization,
-    );
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-    expect(unresolved(database)).toEqual([{ kind: "comparison-publication", subject: "lost" }]);
-    await reportComparisonRecovery(
-      fixture.context,
-      { published: ["other"], failed: [] },
-      noFinalization,
-    );
-    expect(unresolved(database)).toHaveLength(1);
-    await reportComparisonRecovery(
-      fixture.context,
-      { published: ["lost"], failed: [] },
-      noFinalization,
-    );
-    expect(unresolved(database)).toEqual([]);
-  });
   it("resolves finalized subjects between pages without clearing other finalization errors", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     comparison(database, "ready");
     comparison(database, "still-failing");
-    await reportComparisonRecovery(fixture.context, noPublication, {
+    await reportComparisonRecovery(fixture.context, {
       completed: [],
       errors: [{ comparisonId: "ready" }, { comparisonId: "still-failing" }],
     });
@@ -186,7 +93,7 @@ describe("comparison recovery alerts", () => {
       .prepare("UPDATE visonaut_comparisons SET state='ready' WHERE id='ready'")
       .run();
     fixture.context.budget.tasksPerStep = 1;
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toEqual([
       { kind: "comparison-finalization", subject: "still-failing" },
     ]);
@@ -207,8 +114,8 @@ describe("comparison recovery alerts", () => {
         "UPDATE work_tasks SET state='dead',attempts=3,last_error='injected-failure' WHERE id='dead:row'",
       )
       .run();
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toEqual([{ kind: "comparison-task", subject: "dead" }]);
     expect(
       database.connection
@@ -218,42 +125,13 @@ describe("comparison recovery alerts", () => {
     database.connection
       .prepare("UPDATE visonaut_runs SET comparison_id='new-comparison' WHERE id='dead'")
       .run();
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toEqual([]);
     expect(
       database.connection
         .prepare("SELECT state,attempts FROM work_tasks WHERE id='dead:row'")
         .get(),
     ).toEqual({ state: "dead", attempts: 3 });
-  });
-  it("does not report an invalidated review delivery as exhausted", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    comparison(database, "invalidated");
-    await enqueueWork(database, {
-      id: "invalidated:row",
-      kind: "compare",
-      payload: "{}",
-      maxAttempts: 3,
-      now: fixture.state.time,
-    });
-    const publication = await reconcileWork(database, {
-      now: fixture.state.time,
-      limit: 1,
-      kind: "compare",
-      publish: async () => {
-        throw new Error("Queue send result is unknown");
-      },
-    });
-    await reportComparisonRecovery(fixture.context, publication, noFinalization);
-    expect(unresolved(database)).toEqual([
-      { kind: "comparison-publication", subject: "invalidated:row" },
-    ]);
-    database.connection
-      .prepare("UPDATE visonaut_comparisons SET state='invalidated' WHERE id='invalidated'")
-      .run();
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-    expect(unresolved(database)).toEqual([]);
   });
   it("does not report a final lease that expires after review invalidation", async () => {
     using database = new TestDatabase();
@@ -280,7 +158,7 @@ describe("comparison recovery alerts", () => {
       kind: "compare",
       publish: async () => {},
     });
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toEqual([]);
   });
   it("resolves an exhausted review alert after invalidation", async () => {
@@ -297,235 +175,13 @@ describe("comparison recovery alerts", () => {
     database.connection
       .prepare("UPDATE work_tasks SET state='dead', attempts=3 WHERE id='failed-review:row'")
       .run();
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toEqual([{ kind: "comparison-task", subject: "failed-review" }]);
     database.connection
       .prepare("UPDATE visonaut_comparisons SET state='invalidated' WHERE id='failed-review'")
       .run();
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
+    await reportComparisonRecovery(fixture.context, noFinalization);
     expect(unresolved(database)).toEqual([]);
-  });
-  it("resolves a failed publication after its review comparison is superseded", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    comparison(database, "superseded-send");
-    await enqueueWork(database, {
-      id: "superseded-send:row",
-      kind: "compare",
-      payload: "{}",
-      maxAttempts: 3,
-      now: fixture.state.time,
-    });
-    const publication = await reconcileWork(database, {
-      now: fixture.state.time,
-      limit: 1,
-      kind: "compare",
-      publish: async () => {
-        throw new Error("Queue send failed: 10250");
-      },
-    });
-    await reportComparisonRecovery(fixture.context, publication, noFinalization);
-    expect(unresolved(database)).toEqual([
-      { kind: "comparison-publication", subject: "superseded-send:row" },
-    ]);
-    database.connection
-      .prepare("UPDATE visonaut_runs SET active=0,state='superseded' WHERE id='superseded-send'")
-      .run();
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-    expect(unresolved(database)).toEqual([]);
-    expect(
-      database.connection
-        .prepare(
-          "SELECT state,publication_due_at AS due FROM work_tasks WHERE id='superseded-send:row'",
-        )
-        .get(),
-    ).toEqual({ state: "queued", due: fixture.state.time + 5 * 60 * 1000 });
-  });
-  it("resolves ambiguous publication only after a newer durable consumer claim", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    await enqueueWork(database, {
-      id: "ambiguous",
-      kind: "compare",
-      payload: "{}",
-      maxAttempts: 3,
-      now: fixture.state.time,
-    });
-    await reportComparisonRecovery(
-      fixture.context,
-      { published: [], failed: ["ambiguous"] },
-      noFinalization,
-    );
-    database.connection
-      .prepare(
-        "UPDATE work_tasks SET state='complete',attempts=1,updated_at=? WHERE id='ambiguous'",
-      )
-      .run(fixture.state.time - 1);
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-    expect(unresolved(database)).toHaveLength(1);
-    database.connection
-      .prepare("UPDATE work_tasks SET updated_at=? WHERE id='ambiguous'")
-      .run(fixture.state.time + 1);
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-    expect(unresolved(database)).toEqual([]);
-  });
-
-  it("clears a failed send when the consumer finished before its response arrived", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    const now = fixture.state.time;
-    comparison(database, "accepted");
-    await enqueueWork(database, {
-      id: "accepted:row",
-      kind: "compare",
-      payload: "{}",
-      maxAttempts: 3,
-      now,
-    });
-    const publication = await reconcileWork(database, {
-      now,
-      limit: 1,
-      kind: "compare",
-      publish: async (id) => {
-        expect(
-          await claimWork(database, {
-            id,
-            token: "consumer",
-            now: now + 1,
-            leaseMs: 100,
-          }),
-        ).not.toBeNull();
-        expect(
-          await completeWork(database, {
-            id,
-            token: "consumer",
-            now: now + 2,
-            result: "changed",
-          }),
-        ).toBe(true);
-        throw new Error("Queue accepted but lost its response");
-      },
-    });
-    expect(publication.failed).toEqual(["accepted:row"]);
-    expect(
-      await database
-        .prepare(`SELECT state,attempts,published_at,publication_token,updated_at
-          FROM work_tasks WHERE id='accepted:row'`)
-        .first(),
-    ).toEqual({
-      state: "complete",
-      attempts: 1,
-      published_at: now + 1,
-      publication_token: null,
-      updated_at: now + 2,
-    });
-    fixture.state.time = now + 3;
-    await reportComparisonRecovery(fixture.context, publication, noFinalization);
-    expect(unresolved(database)).toEqual([]);
-  });
-
-  it("keeps a failed resend alert until the new message is consumed", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    const now = fixture.state.time;
-    const taskId = "resend:row";
-    comparison(database, "resend");
-    await enqueueWork(database, {
-      id: taskId,
-      kind: "compare",
-      payload: "{}",
-      maxAttempts: 3,
-      now,
-    });
-    await reconcileWork(database, {
-      now,
-      limit: 1,
-      kind: "compare",
-      publish: async () => {},
-    });
-    await claimWork(database, {
-      id: taskId,
-      token: "first-consumer",
-      now: now + 1,
-      leaseMs: 100,
-    });
-    const resendAt = now + (14 * 24 + 1) * 60 * 60 * 1000;
-    fixture.state.time = resendAt;
-    const publication = await reconcileWork(database, {
-      now: resendAt,
-      limit: 1,
-      kind: "compare",
-      publish: async () => {
-        throw new Error("Queue response lost");
-      },
-    });
-    expect(publication.failed).toEqual([taskId]);
-    expect(
-      database.connection
-        .prepare("SELECT state,attempts,published_at,publication_token FROM work_tasks WHERE id=?")
-        .get(taskId),
-    ).toMatchObject({
-      state: "leased",
-      attempts: 1,
-      published_at: null,
-      publication_token: expect.any(String),
-    });
-    await reportComparisonRecovery(fixture.context, publication, noFinalization);
-    expect(unresolved(database)).toEqual([{ kind: "comparison-publication", subject: taskId }]);
-    await claimWork(database, {
-      id: taskId,
-      token: "second-consumer",
-      now: resendAt + 1,
-      leaseMs: 100,
-    });
-    fixture.state.time = resendAt + 2;
-    await reportComparisonRecovery(fixture.context, noPublication, noFinalization);
-    expect(unresolved(database)).toEqual([]);
-  });
-
-  it("keeps an expired lease alert open after an explicit Queue rejection", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    const now = fixture.state.time;
-    comparison(database, "rejected");
-    await enqueueWork(database, {
-      id: "rejected:row",
-      kind: "compare",
-      payload: "{}",
-      maxAttempts: 3,
-      now,
-    });
-    await reconcileWork(database, {
-      now,
-      limit: 1,
-      kind: "compare",
-      publish: async () => {},
-    });
-    await claimWork(database, {
-      id: "rejected:row",
-      token: "consumer",
-      now: now + 1,
-      leaseMs: 100,
-    });
-    const resendAt = now + (14 * 24 + 1) * 60 * 60 * 1000;
-    fixture.state.time = resendAt;
-    const publication = await reconcileWork(database, {
-      now: resendAt,
-      limit: 1,
-      kind: "compare",
-      publish: async () => {
-        throw new Error("Queue send failed: 10250");
-      },
-    });
-    await reportComparisonRecovery(fixture.context, publication, noFinalization);
-    expect(unresolved(database)).toEqual([
-      { kind: "comparison-publication", subject: "rejected:row" },
-    ]);
-    expect(
-      database.connection
-        .prepare("SELECT publication_due_at AS due FROM work_tasks WHERE id='rejected:row'")
-        .get(),
-    ).toEqual({ due: resendAt + 5 * 60 * 1000 });
   });
 });
 
