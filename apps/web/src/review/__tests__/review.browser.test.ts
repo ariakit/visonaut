@@ -33,6 +33,16 @@ function stageImage(page: Page, side: "Current" | "Baseline") {
   return page.getByRole("img", { name: new RegExp(`^${side}: `) });
 }
 
+/** The stage of the selected variant. */
+function stage(page: Page) {
+  return page.getByRole("group", { name: /^Images of / });
+}
+
+/** The marks of the changed regions on the stage. */
+function regionMarks(page: Page) {
+  return page.getByRole("button", { name: /^Changed region / });
+}
+
 /** The button of a view mode, for example `Baseline`. */
 function modeButton(page: Page, name: "Current" | "Baseline" | "Two panes" | "Swipe" | "Overlay") {
   return page.getByRole("group", { name: "View mode" }).getByRole("button", { name, exact: true });
@@ -91,11 +101,14 @@ test.beforeEach(async ({ page }) => {
 test("a locally matched capture does not show the reference as a new image", async ({ page }) => {
   await page.goto("/src/review/__tests__/index.html?localComparison");
   await page.getByRole("link", { name: /React/ }).click();
-  await expect(page.getByText("Matched locally. The new image was not uploaded.")).toBeVisible();
+  await expect(stage(page).getByText("No visible change", { exact: true })).toBeVisible();
+  await expect(
+    stage(page).getByText("CI did not upload this image", { exact: true }),
+  ).toBeVisible();
   await ready(page);
   await expect(stageImage(page, "Baseline")).toBeVisible();
   await expect(stageImage(page, "Current")).toHaveCount(0);
-  await expect(page.getByText("Removed. It has no current image.")).toHaveCount(0);
+  await expect(stage(page).getByText("Removed", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
@@ -267,7 +280,7 @@ test("a pending comparison stays visible without an evidence error", async ({ pa
   const comparing = row(page, "dialog/open");
   await expect(comparing).toHaveAccessibleName(/^dialog\/open\. 1 comparing/);
   await comparing.click();
-  await expect(page.getByText("Comparison is still running…")).toBeVisible();
+  await expect(stage(page).getByRole("status").filter({ hasText: "Comparing" })).toBeVisible();
   await expect(page.getByText("Image evidence unavailable")).not.toBeVisible();
   await expect(page.locator(".review-actions button").first()).toBeDisabled();
 });
@@ -993,13 +1006,16 @@ test("an expired reference shows that the image history expired and offers no re
     reference.expired = true;
     window.reviewFixture.update(model);
   });
-  const status = page.getByRole("status").filter({ hasText: "Image history expired" });
-  await expect(status).toBeVisible();
+  await expect(
+    stage(page).getByRole("status").filter({ hasText: "Image history expired" }),
+  ).toBeVisible();
   // The other side still shows its image, so the text does not say that the
   // view has no image bytes.
-  await expect(status).toHaveText(
-    "Image history expiredReview results and capture identity remain available.",
-  );
+  await expect(
+    stage(page).getByText("Review results and capture identity remain available.", {
+      exact: true,
+    }),
+  ).toBeVisible();
   await expect(page.getByText("Image evidence unavailable")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
@@ -1408,7 +1424,8 @@ test("an added or a removed variant shows its one image, with no empty pane and 
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   await ready(page);
-  await expect(page.getByText("New screenshot. It has no baseline.")).toBeVisible();
+  await expect(stage(page).getByText("Added", { exact: true })).toBeVisible();
+  await expect(stage(page).getByText("No baseline", { exact: true })).toBeVisible();
   await expect(stageImage(page, "Current")).toBeVisible();
   await expect(page.locator("[data-stage-pane]")).toHaveCount(1);
   await expect(maskSwitch(page)).toHaveAttribute("aria-disabled", "true");
@@ -1430,13 +1447,194 @@ test("an added or a removed variant shows its one image, with no empty pane and 
   }
   await page.keyboard.press("ArrowDown");
   await ready(page);
-  await expect(page.getByText("Removed. It has no current image.")).toBeVisible();
-  await expect(page.getByText(/Matched locally/)).not.toBeVisible();
+  await expect(stage(page).getByText("Removed", { exact: true })).toBeVisible();
+  await expect(stage(page).getByText("No current image", { exact: true })).toBeVisible();
+  await expect(stage(page).getByText("No visible change")).toHaveCount(0);
   await page.keyboard.press("f");
   await expect(stageImage(page, "Baseline")).toBeVisible();
   await expect(stageImage(page, "Current")).toHaveCount(0);
   await expect(page.locator("[data-stage-pane]")).toHaveCount(1);
   await expect(modeButton(page, "Current")).toHaveAttribute("aria-disabled", "true");
+});
+
+test("a mark shows each changed region, and the hidden pane of two panes has none", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const diff = model.items[0]?.variants[0]?.diff;
+    if (!diff) throw new Error("Expected a mask.");
+    // Two small changes far apart: the title and the button.
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect x="150" y="120" width="40" height="24" fill="#f33"/><rect x="320" y="250" width="125" height="35" fill="#f33"/></svg>`;
+    diff.url = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    window.reviewFixture.update(model);
+  });
+  await ready(page);
+  await expect(regionMarks(page)).toHaveCount(2);
+  await expect(regionMarks(page).first()).toHaveAccessibleName("Changed region 1 of 2");
+  await expect(regionMarks(page).nth(1)).toBeVisible();
+  // The baseline has no mark.
+  await page.keyboard.press("g");
+  await expect(regionMarks(page)).toHaveCount(0);
+  // In two panes only the current pane has the marks. The first pane keeps a
+  // hidden current image, and nothing in it can take the focus.
+  await page.keyboard.press("s");
+  await expect(page.locator("[data-stage-pane]")).toHaveCount(2);
+  await expect(regionMarks(page)).toHaveCount(2);
+  await expect(page.locator("[data-stage-pane]").first().locator("button")).toHaveCount(0);
+  await expect(
+    page
+      .locator("[data-stage-pane]")
+      .nth(1)
+      .getByRole("button", { name: /^Changed region / }),
+  ).toHaveCount(2);
+  // In a swipe the line hides the first half of the current image, and the
+  // box of the title there is gone, so it takes no focus.
+  await page.keyboard.press("w");
+  await expect(regionMarks(page)).toHaveCount(1);
+  await expect(regionMarks(page)).toHaveAccessibleName("Changed region 2 of 2");
+  // D turns the marks off with the mask.
+  await page.keyboard.press("d");
+  await expect(regionMarks(page)).toHaveCount(0);
+  await page.keyboard.press("d");
+  await page.keyboard.press("f");
+  // A click on a mark zooms to its region.
+  const before = await stageImage(page, "Current").boundingBox();
+  await regionMarks(page).first().click();
+  await expect
+    .poll(async () => (await stageImage(page, "Current").boundingBox())?.width)
+    .toBeGreaterThan(before?.width ?? 0);
+  await expect(regionMarks(page).first()).toHaveAttribute("aria-current", "true");
+  // The zoom puts the box of the button outside the pane, so it is gone and
+  // takes no focus.
+  await expect(regionMarks(page)).toHaveCount(1);
+  await expect(regionMarks(page)).toHaveAccessibleName("Changed region 1 of 2");
+});
+
+test("a variant whose size changed says Size changed with the two sizes", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[0]?.variants[0];
+    if (!variant?.candidate) throw new Error("Expected a current image.");
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="420"><rect width="600" height="420" fill="#e5edf7"/></svg>`;
+    variant.candidate.url = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    variant.candidate.height = 420;
+    // The service sends no mask for a size change, and counts each pixel.
+    variant.diff = null;
+    variant.maskExpected = false;
+    variant.changedPixels = 252_000;
+    variant.ratio = 1;
+    window.reviewFixture.update(model);
+  });
+  await ready(page);
+  await expect(stage(page).getByText("Size changed", { exact: true })).toBeVisible();
+  await expect(stage(page).getByText("600 × 400 → 600 × 420", { exact: true })).toBeVisible();
+  await expect(page.getByText(/tolerance/)).toHaveCount(0);
+  await expect(page.getByText(/% changed/)).toHaveCount(0);
+  await expect(
+    page.getByText("Size changed · 600 × 400 → 600 × 420", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
+  // A band marks the rows that only the current image has. There is no
+  // mask, so the switch is off, and D does not hide the band.
+  const band = page.locator("[data-stage-pane] [data-size-band]");
+  await expect(band).toHaveCount(1);
+  await expect(maskSwitch(page)).toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("d");
+  await expect(band).toHaveCount(1);
+});
+
+test("the pixel line has the singular for one pixel, a ratio below 0.01%, and no count for a removal", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[0]?.variants[0];
+    if (!variant) throw new Error("Expected a variant.");
+    variant.changedPixels = 1;
+    variant.ratio = 1 / 240_000;
+    window.reviewFixture.update(model);
+  });
+  await expect(page.getByText("< 0.01% changed · 1 changed pixel", { exact: true })).toBeVisible();
+  await page.keyboard.press("ArrowRight");
+  await ready(page);
+  await expect(page.getByText("0.05% changed · 120 changed pixels", { exact: true })).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await ready(page);
+  await expect(stage(page).getByText("Removed", { exact: true })).toBeVisible();
+  await expect(page.getByText(/changed pixel/)).toHaveCount(0);
+});
+
+test("the loading and the error states show inside the stage, so the stage does not move", async ({
+  page,
+}) => {
+  const placed = await stage(page).boundingBox();
+  let failing = true;
+  let release: (() => void) | undefined;
+  await page.route("**/state.svg", async (route) => {
+    if (failing) {
+      await route.abort();
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"/>',
+    });
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const candidate = model.items[0]?.variants[0]?.candidate;
+    if (candidate) candidate.url = "/state.svg";
+    window.reviewFixture.update(model);
+  });
+  await expect(stage(page).getByRole("alert")).toHaveText("Image evidence unavailable");
+  expect(await stage(page).boundingBox()).toEqual(placed);
+  failing = false;
+  await stage(page).getByRole("button", { name: "Retry images" }).click();
+  // The loading chip shows after a short wait, so a fast load shows none.
+  await expect(stage(page).getByRole("status").filter({ hasText: "Loading images" })).toBeVisible();
+  expect(await stage(page).boundingBox()).toEqual(placed);
+  await expect.poll(() => !!release).toBe(true);
+  release?.();
+  await ready(page);
+  await expect(stage(page).getByRole("status").filter({ hasText: "Loading images" })).toHaveCount(
+    0,
+  );
+  expect(await stage(page).boundingBox()).toEqual(placed);
+});
+
+test("the online event loads the failed images again", async ({ page }) => {
+  let failing = true;
+  let reads = 0;
+  await page.route("**/online.svg", async (route) => {
+    reads += 1;
+    if (failing) {
+      await route.abort();
+      return;
+    }
+    await route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"/>',
+    });
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const candidate = model.items[0]?.variants[0]?.candidate;
+    if (candidate) candidate.url = "/online.svg";
+    window.reviewFixture.update(model);
+  });
+  await expect(page.getByText("Image evidence unavailable")).toBeVisible();
+  const failedReads = reads;
+  failing = false;
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await ready(page);
+  expect(reads).toBeGreaterThan(failedReads);
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
 });
 
 test("G shows the baseline in the place of the current image, and F shows the current image again", async ({

@@ -1,10 +1,17 @@
 // The stage of the review page: the images of the selected variant on one
-// stage. The frame gives it the run, the variant, and the state of the
-// comparison, and it reads the keys of the views from `useStageHost`.
+// stage, with the state of the images in the status row of the stage. The
+// frame gives it the run, the variant, and the state of the comparison, and
+// it reads the keys of the views from `useStageHost`.
 
+import { useEffect, useEffectEvent } from "react";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
-import { ControlButton as Button } from "../components/control-button.tsx";
+import { Hourglass, TriangleAlert } from "lucide-react";
+import { ErrorBand, ErrorBandButton } from "../components/kit/error-band.tsx";
+import { formatCount, formatRatio } from "../components/kit/format.ts";
+import { getChipState, StateChip, useLateLoad } from "../components/kit/stage/chip.tsx";
 import { ReviewStage } from "../components/kit/stage/stage.tsx";
+import { formatSize } from "../components/kit/stage/geometry.ts";
+import { getStageSubject } from "../components/kit/stage/model.ts";
 import { useStageView } from "../components/kit/stage/view.ts";
 import type { StageEngine } from "../components/kit/stage/view.ts";
 import { useStoredView } from "../components/kit/view-store.ts";
@@ -19,6 +26,8 @@ export interface UseStageHostParams {
   variant: ReviewVariant | undefined;
   /** A new number loads the images again. */
   retry: number;
+  /** Gives a new `retry`, as Retry images does. */
+  onRetry(): void;
 }
 
 export interface StageHostState {
@@ -38,12 +47,18 @@ export interface StageHostState {
  * images. The frame calls it once, gives the result to `StageHost`, and sends
  * the keys of `keys`. F shows the current image, G the baseline in the same
  * place, S the two panes, W the swipe, O the overlay, and D turns the mask
- * off and on. No held key shows the baseline.
+ * off and on. No held key shows the baseline. When the browser is online
+ * again, an image that failed to load loads again.
  * @example
- * const stage = useStageHost({ model, variant, retry });
+ * const stage = useStageHost({ model, variant, retry, onRetry });
  * <StageHost stage={stage} model={model} variant={variant} … />
  */
-export function useStageHost({ model, variant, retry }: UseStageHostParams): StageHostState {
+export function useStageHost({
+  model,
+  variant,
+  retry,
+  onRetry,
+}: UseStageHostParams): StageHostState {
   const stored = useStoredView();
   const summary = model.evidenceState === "summary";
   const view = useStageView({ variant, mode: stored.mode, expired: summary });
@@ -52,6 +67,15 @@ export function useStageHost({ model, variant, retry }: UseStageHostParams): Sta
     variant: summary ? undefined : variant,
     retry,
   });
+  // A connection that comes back cannot fix bytes that do not decode, so
+  // only a failed load starts a new request.
+  const failedLoad = evidence.failure === "load";
+  const onOnline = useEffectEvent(onRetry);
+  useEffect(() => {
+    if (!failedLoad) return;
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [failedLoad]);
   return {
     stored,
     view,
@@ -102,19 +126,83 @@ function terminalMessage(model: ReviewModel) {
   }
 }
 
-// The one image of a variant that has no pair. Step 3 of #274 moves this
-// fact into the stage.
-function getSingleImageNote(variant: ReviewVariant) {
-  if (variant.reference && variant.candidate) return;
-  if (variant.candidateOmitted) return "Matched locally. The new image was not uploaded.";
-  if (variant.candidate) return "New screenshot. It has no baseline.";
-  if (variant.reference) return "Removed. It has no current image.";
+/**
+ * The line of the pixel counts of a variant, or null without one. Only two
+ * images of one size have a count: a size change says the two sizes, and an
+ * added or a removed variant has no line.
+ * @example
+ * getPixelLine(variant) // "0.05% changed · 120 changed pixels"
+ */
+export function getPixelLine(variant: ReviewVariant) {
+  const { reference, candidate, changedPixels, ratio } = variant;
+  if (!reference || !candidate) return null;
+  const resize = getStageSubject(variant).resize;
+  if (resize) return `Size changed · ${formatSize(resize.from)} → ${formatSize(resize.to)}`;
+  if (changedPixels == null) return null;
+  const count = formatCount(changedPixels, "changed pixel");
+  if (ratio == null) return count;
+  return `${formatRatio(ratio)} changed · ${count}`;
+}
+
+interface StageProblemProps {
+  stage: StageHostState;
+  model: ReviewModel;
+  variant: ReviewVariant;
+  terminal: boolean;
+  busy: boolean;
+  onRetryImages(): void;
 }
 
 /**
- * The stage: the read-only reason, the state of the images, and the images.
- * The decision bar has the view and zoom controls. A closed review with no
- * image bytes shows a summary.
+ * The error of the stage, for its status row: a stopped comparison, missing
+ * or expired evidence, or an image that failed its checks. A failed load and
+ * bytes that do not decode have Retry images.
+ */
+function StageProblem({ stage, model, variant, terminal, busy, onRetryImages }: StageProblemProps) {
+  const { evidence } = stage;
+  const expired = !terminal && evidence.failure === "expired";
+  const retryImages = !terminal && (evidence.failure === "load" || evidence.failure === "decode");
+  let title = "Comparison evidence incomplete";
+  if (terminal) {
+    title = terminalTitle(model);
+  } else if (expired) {
+    title = "Image history expired";
+  } else if (retryImages) {
+    title = "Image evidence unavailable";
+  }
+  return (
+    <ErrorBand
+      tone={terminal || expired ? "neutral" : "danger"}
+      icon={expired ? Hourglass : TriangleAlert}
+      role={terminal || expired ? "status" : "alert"}
+      title={title}
+      detail={
+        terminal ? (
+          <>
+            {terminalMessage(model)}
+            {variant.error && ` ${variant.error}`}
+          </>
+        ) : (
+          evidence.error
+        )
+      }
+      action={
+        retryImages && (
+          <ErrorBandButton disabled={busy} onClick={onRetryImages}>
+            Retry images
+          </ErrorBandButton>
+        )
+      }
+      // The band has a container query, so it needs a width of its own.
+      className="w-160 max-w-full"
+    />
+  );
+}
+
+/**
+ * The stage: the read-only reason, and the images with their state in the
+ * status row of the stage. The decision bar has the view and zoom controls.
+ * A closed review with no image bytes shows a summary.
  */
 export function StageHost({
   stage,
@@ -125,8 +213,23 @@ export function StageHost({
   onRetryImages,
 }: StageHostProps) {
   const { evidence, view, stored } = stage;
-  const retryImages = !terminal && (evidence.failure === "load" || evidence.failure === "decode");
-  const note = getSingleImageNote(variant);
+  const loading = evidence.status === "loading" && !terminal;
+  const late = useLateLoad(loading && variant.kind !== "pending", evidence.identity);
+  let status = <StateChip state={getChipState(view.subject, late)} />;
+  if (terminal || evidence.status === "error") {
+    status = (
+      <StageProblem
+        stage={stage}
+        model={model}
+        variant={variant}
+        terminal={terminal}
+        busy={busy}
+        onRetryImages={onRetryImages}
+      />
+    );
+  } else if (variant.kind === "pending") {
+    status = <StateChip state={{ kind: "comparing" }} />;
+  }
   return (
     <Frame
       $cover
@@ -153,44 +256,10 @@ export function StageHost({
         </Frame>
       ) : (
         <>
-          {note && <p className="text-xs ak-ink-60 px-3 pb-3">{note}</p>}
           <div
             className="review-evidence grid"
             data-evidence={terminal ? "terminal" : evidence.status}
           >
-            {evidence.status === "loading" && !terminal && (
-              <div
-                className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
-                role="status"
-              >
-                {variant.kind === "pending"
-                  ? "Comparison is still running…"
-                  : "Loading this comparison’s images…"}
-              </div>
-            )}
-            {(terminal || evidence.status === "error") && (
-              <div
-                className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
-                role={terminal || evidence.failure === "expired" ? "status" : "alert"}
-              >
-                <strong>
-                  {terminal
-                    ? terminalTitle(model)
-                    : evidence.failure === "expired"
-                      ? "Image history expired"
-                      : retryImages
-                        ? "Image evidence unavailable"
-                        : "Comparison evidence incomplete"}
-                </strong>
-                <p>{terminal ? terminalMessage(model) : evidence.error}</p>
-                {terminal && variant.error && <p>{variant.error}</p>}
-                {retryImages && (
-                  <Button $size="xs" disabled={busy} onClick={onRetryImages}>
-                    Retry images
-                  </Button>
-                )}
-              </div>
-            )}
             <ReviewStage
               view={view}
               name={variant.label}
@@ -198,6 +267,7 @@ export function StageHost({
               images={evidence.images}
               requestKey={evidence.identity}
               onReport={evidence.report}
+              status={status}
               aria-busy={evidence.status === "loading" || undefined}
               className="mx-3 mb-3 h-[min(75dvh,60rem)] min-h-80"
             />

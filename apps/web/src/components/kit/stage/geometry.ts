@@ -19,3 +19,8 @@ export function clamp(value: number, minimum: number, maximum: number) {
 export function getBoxCenter(box: Box): Point {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
+
+/** `600 × 400`. */
+export function formatSize({ width, height }: Size) {
+  return `${width} × ${height}`;
+}

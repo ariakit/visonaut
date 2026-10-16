@@ -1,16 +1,21 @@
 // The pieces that the stage draws with: the picture with its ring and its
-// image checks, the mask, the pixel grid, and the label of an image. The
-// region boxes and the band of a size change come with step 3 of #274.
+// image checks, the mask, the boxes around the changed regions, the band of a
+// size change, the pixel grid, and the label of an image.
 
 import { cx } from "clava";
+import { useMemo } from "react";
 import type { CSSProperties, SyntheticEvent } from "react";
 import type { ReviewImage } from "../../../review/model.ts";
 import type { ImageEvidence } from "../../../review/use-evidence.ts";
 import { Badge, BadgeLabel } from "../../ariakit/components/badge.ariakit.react.tsx";
+import { Button } from "../../ariakit/components/button.ariakit.react.tsx";
 import { Frame } from "../../ariakit/components/frame.ariakit.react.tsx";
+import { Layer } from "../../ariakit/components/layer.ariakit.react.tsx";
 import { Text } from "../../ariakit/components/text.ariakit.react.tsx";
-import { imageMotion, tertiary } from "../tokens.ts";
+import type { ChangedRegion } from "../session.ts";
+import { diffColor, imageMotion, tertiary } from "../tokens.ts";
 import type { Size } from "./geometry.ts";
+import { getMarkRects, isLargeMark, toShare } from "./marks.ts";
 import { describeSizeDelta } from "./model.ts";
 import type { SizeChange } from "./model.ts";
 import { pixelGridScale } from "./view.ts";
@@ -234,6 +239,172 @@ export function MaskPicture({
       )}
       style={getShare(mask, bounds)}
     />
+  );
+}
+
+const corners = [
+  "top-0 left-0 border-t-2 border-l-2",
+  "top-0 right-0 border-t-2 border-r-2",
+  "bottom-0 left-0 border-b-2 border-l-2",
+  "right-0 bottom-0 border-r-2 border-b-2",
+];
+
+// Above this number of boxes, each box has a thinner line.
+const manyBoxes = 9;
+
+/** The sides of a box, as shares from 0 to 1 of the image box. */
+export interface Edges {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface RegionBoxesProps {
+  regions: readonly ChangedRegion[];
+  /** The image that the regions are in. */
+  image: Size;
+  bounds: Size;
+  scale: number;
+  /** The region of the last jump. */
+  active: number | null;
+  /**
+   * The part of the image box that shows, as shares from 0 to 1 of `bounds`:
+   * the pane clips a zoomed image, and a swipe hides the part before its
+   * line. A box outside it is not there, so a hidden box takes no focus.
+   */
+  shown: Edges;
+  /** A click on a box zooms to its region. */
+  onSelect(region: number): void;
+}
+
+/**
+ * One outline box around each changed region: at least 24 screen pixels, and
+ * boxes that would cross give way. A region that covers most of the image
+ * gets corner brackets, so no line runs along the changed pixels. A box is a
+ * button that zooms to its region.
+ */
+export function RegionBoxes({
+  regions,
+  image,
+  bounds,
+  scale,
+  active,
+  onSelect,
+  shown,
+}: RegionBoxesProps) {
+  // After a jump the line keeps more space, so it does not touch the glyphs
+  // beside the changed pixels. A pan renders again with the same scale, so
+  // the boxes are not measured again.
+  const rects = useMemo(
+    () => getMarkRects(regions, image, { scale, padding: scale > 1 ? 6 : 4 }),
+    [regions, image, scale],
+  );
+  const width = regions.length > manyBoxes ? 1 : 2;
+  return (
+    <div className="pointer-events-none absolute top-0 left-0" style={getShare(image, bounds)}>
+      {regions.map((region, index) => {
+        const rect = rects[index];
+        if (!rect) return null;
+        if ((rect.x + rect.width) / bounds.width <= shown.left) return null;
+        if (rect.x / bounds.width >= shown.right) return null;
+        if ((rect.y + rect.height) / bounds.height <= shown.top) return null;
+        if (rect.y / bounds.height >= shown.bottom) return null;
+        const current = index === active;
+        const large = isLargeMark(region, image);
+        return (
+          <div key={index} className="absolute grid" style={toShare(rect, image)}>
+            <Button
+              aria-label={`Changed region ${index + 1} of ${regions.length}`}
+              aria-current={current ? "true" : undefined}
+              $border={large ? false : current ? 3 : width}
+              $borderType={large ? undefined : "border"}
+              $edge={diffColor}
+              $edgeRaw
+              $rounded="sm"
+              $forceRounded
+              $p="none"
+              $hoverOffset={false}
+              onClick={() => onSelect(index)}
+              // A drag inside a large region moves the image. Only its
+              // brackets take the pointer.
+              className={large ? "pointer-events-none" : "pointer-events-auto cursor-zoom-in"}
+            >
+              {large && <Brackets />}
+            </Button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Brackets() {
+  return corners.map((corner) => (
+    <Frame
+      key={corner}
+      $edge={diffColor}
+      $edgeRaw
+      $rounded="none"
+      $forceRounded
+      className={cx("pointer-events-auto absolute size-5", corner)}
+    />
+  ));
+}
+
+export interface SizeBandProps {
+  resize: SizeChange;
+  bounds: Size;
+}
+
+// The lines have the text color at 40%, in the color of each line and not as
+// the opacity of the element.
+const hatch =
+  "absolute inset-0 bg-[repeating-linear-gradient(-45deg,color-mix(in_srgb,currentColor_40%,transparent)_0_0.0625em,transparent_0.0625em_0.4375em)]";
+
+/**
+ * Marks the rows and the columns that only one of the two images has. Both
+ * images share the top-left corner, so these pixels are at the bottom and at
+ * the end. A real size change is 2 px: the band keeps a visible thickness at
+ * every scale, so its minimum follows the font size.
+ */
+export function SizeBand({ resize, bounds }: SizeBandProps) {
+  const { from, to } = resize;
+  const extraHeight = Math.abs(resize.height);
+  const extraWidth = Math.abs(resize.width);
+  const taller = resize.height > 0 ? to : from;
+  const wider = resize.width > 0 ? to : from;
+  return (
+    <>
+      {extraHeight > 0 && (
+        <Layer
+          $layer="warning"
+          aria-hidden
+          data-size-band=""
+          className="pointer-events-none absolute bottom-0 left-0 min-h-[0.1875em] overflow-clip"
+          style={{
+            width: `${(taller.width / bounds.width) * 100}%`,
+            height: `${(extraHeight / bounds.height) * 100}%`,
+          }}
+        >
+          <span className={hatch} />
+        </Layer>
+      )}
+      {extraWidth > 0 && (
+        <Layer
+          $layer="warning"
+          aria-hidden
+          data-size-band=""
+          className="pointer-events-none absolute top-0 right-0 min-w-[0.1875em] overflow-clip"
+          style={{
+            width: `${(extraWidth / bounds.width) * 100}%`,
+            height: `${(wider.height / bounds.height) * 100}%`,
+          }}
+        >
+          <span className={hatch} />
+        </Layer>
+      )}
+    </>
   );
 }
 
