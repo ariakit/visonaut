@@ -76,7 +76,7 @@ test("a click on any place of a run row opens the run, and the row has one link 
 }) => {
   await openQueue(page, [next, second]);
   const group = page.getByRole("group", { name: "Runs to review" });
-  // The group has the row and its two gliders, and the row is one link.
+  // The group has one row, and the row is one link.
   await expect(group.getByRole("link")).toHaveCount(1);
   const row = group.getByRole("link");
   await expect(row).toHaveAccessibleName(/Fix Link underline offset in Safari/);

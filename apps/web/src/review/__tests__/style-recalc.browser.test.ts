@@ -9,9 +9,11 @@ const count = 41;
 // The largest style recalculation of one key, in elements, with the size
 // containers off. Measured: 76 for ArrowDown and 80 for A, on macOS (5 runs,
 // each equal, of 642 elements) and on the Linux runner of CI (the first run).
-// A count does not change with the speed of the runner, so the limit is twice
-// the largest count. A rule that restyles the whole page at each selection
-// gives 564. In round 4 of the lab, the hover glider of the list gave 1,216.
+// With the Ariakit UI copy of dce9723: 71 and 75 on macOS (5 runs, each
+// equal). A count does not change with the speed of the runner, so the limit
+// is twice the largest count of the first measurement. A rule that restyles
+// the whole page at each selection gives 564. In round 4 of the lab, the
+// hover glider of the list gave 1,216.
 const recalcLimit = 160;
 
 interface TraceEvent {

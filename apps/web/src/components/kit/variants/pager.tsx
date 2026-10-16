@@ -116,8 +116,6 @@ export function VariantPager({ item, variant: selected, onSelect, className }: V
           </Hint>
         ))}
       {!counted && <ButtonGlider />}
-      <ButtonGlider $state="hover" />
-      <ButtonGlider $state="focus" />
     </ButtonGroup>
   );
 }

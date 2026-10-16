@@ -133,7 +133,7 @@ export function MainNav({ reviewCount = 0, alertCount }: MainNavProps) {
       <Nav
         aria-label="Pages"
         $layout="horizontal"
-        glider={[{ $state: "hover" }, { $kind: "bar", $side: "end", $barOffset: "frame" }]}
+        glider={{ $kind: "bar", $side: "end", $barOffset: "frame" }}
         // The nav clips its content, and its corners take the radius that is
         // concentric with the shell. The inline room keeps the bar of the first
         // and of the last link out of those corners, so both ends are square.
