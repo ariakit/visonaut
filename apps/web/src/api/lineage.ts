@@ -24,6 +24,7 @@ export interface LineageSource {
   kind: string;
   tested_sha: string;
   lineage_key: string;
+  created_at: number;
   verified_json: string;
 }
 export interface MergeGroupMember {
@@ -56,6 +57,12 @@ function sha(value: unknown) {
   if (!/^[a-f0-9]{40}$/.test(result))
     throw new SecurityError("invalid_lineage", 503, "GitHub commit metadata is unavailable.");
   return result;
+}
+
+/** Orders runs as the lineage writer does: by admission time, then by ID. */
+function isAdmittedBefore(run: LineageSource, other: LineageSource) {
+  if (run.created_at !== other.created_at) return run.created_at < other.created_at;
+  return run.id < other.id;
 }
 
 const queueQuery = `query VisonautQueue($owner: String!, $name: String!, $after: String) {
@@ -314,6 +321,17 @@ export async function verifyLineage(
       );
   }
 
+  // Only the final state of a pull request merges, so only its newest run by
+  // admission order is a merged-pr source. That run holds the approvals that it
+  // copied from the earlier runs of the same pull request.
+  const finalRuns = new Map<string, LineageSource>();
+  for (const source of sources) {
+    if (source.kind !== "pull_request") continue;
+    const newest = finalRuns.get(source.lineage_key);
+    if (newest && isAdmittedBefore(source, newest)) continue;
+    finalRuns.set(source.lineage_key, source);
+  }
+
   const associatedWithMain = new Set<number>();
   if (target.event === "push" || target.event === "workflow_dispatch") {
     for (let page = 1; page <= 20; page += 1) {
@@ -378,6 +396,7 @@ export async function verifyLineage(
         target.event === "push" || target.event === "workflow_dispatch"
           ? target.testedSha
           : target.targetHead;
+      if (finalRuns.get(source.lineage_key) !== source) continue;
       if (await isMergedAncestor(merged, targetBase))
         add(source, {
           reason: "merged-pr",
@@ -567,7 +586,7 @@ export async function relatedRunEvidence(
   const projection = `json_object('repositoryId', json_extract(p.verified_json, '$.repositoryId'), 'repository', json_extract(p.verified_json, '$.repository'), 'testedSha', json_extract(p.verified_json, '$.testedSha'), 'event', json_extract(p.verified_json, '$.event'), 'ref', json_extract(p.verified_json, '$.ref'), 'sourceHead', json_extract(p.verified_json, '$.sourceHead'), 'pullRequestNumber', json_extract(p.verified_json, '$.pullRequestNumber'), 'mergeGroup', json_extract(p.verified_json, '$.mergeGroup'), 'lineageProof', json_object('version', json_extract(p.verified_json, '$.lineageProof.version'), 'testedSha', json_extract(p.verified_json, '$.lineageProof.testedSha'), 'mergeGroupMembers', json_extract(p.verified_json, '$.lineageProof.mergeGroupMembers'))) AS verified_json`;
   const result = await context.database
     .prepare(
-      `SELECT r.id, r.kind, r.tested_sha, r.lineage_key, ${projection} FROM visonaut_runs r JOIN ingest_run_provenance p ON p.run_id = r.id WHERE r.project_id = ? AND (? = 1 OR (r.kind = 'pull_request' AND r.lineage_key IN (SELECT 'pr:' || value FROM json_each(?))) OR (r.kind != 'pull_request' AND (r.created_at >= ? OR p.created_at >= ?)) OR (r.kind = 'merge_group' AND EXISTS (SELECT 1 FROM json_each(p.verified_json, '$.lineageProof.mergeGroupMembers') member WHERE json_extract(member.value, '$.number') IN (SELECT value FROM json_each(?))))) ORDER BY r.created_at DESC`,
+      `SELECT r.id, r.kind, r.tested_sha, r.lineage_key, r.created_at, ${projection} FROM visonaut_runs r JOIN ingest_run_provenance p ON p.run_id = r.id WHERE r.project_id = ? AND (? = 1 OR (r.kind = 'pull_request' AND r.lineage_key IN (SELECT 'pr:' || value FROM json_each(?))) OR (r.kind != 'pull_request' AND (r.created_at >= ? OR p.created_at >= ?)) OR (r.kind = 'merge_group' AND EXISTS (SELECT 1 FROM json_each(p.verified_json, '$.lineageProof.mergeGroupMembers') member WHERE json_extract(member.value, '$.number') IN (SELECT value FROM json_each(?))))) ORDER BY r.created_at DESC`,
     )
     .bind(
       context.configuration.projectId,

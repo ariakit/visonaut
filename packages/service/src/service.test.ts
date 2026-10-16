@@ -3592,6 +3592,109 @@ describe("bounded snapshot evidence roots", () => {
   });
 });
 
+describe("lineage of a merged pull request", () => {
+  // The run with the larger ID is admitted first, so the ID order alone does
+  // not select the final run.
+  async function intermediateRun(service: Service, database: TestDatabase, color: string) {
+    await fixture(service, { id: "pr-z", kind: "pull_request", lineage: "pr:1", color });
+    await review(service, "comparison-pr-z");
+    database.connection.prepare("UPDATE visonaut_runs SET created_at=0 WHERE id='pr-z'").run();
+  }
+  function lineageSources(database: TestDatabase, targetRunId: string) {
+    return database.connection
+      .prepare(
+        "SELECT source_run_id FROM visonaut_lineage WHERE target_run_id=? ORDER BY source_run_id",
+      )
+      .all(targetRunId)
+      .map((row) => row.source_run_id);
+  }
+
+  it("does not copy an approval of an earlier run to main after the merge", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await intermediateRun(service, database, "red");
+    await fixture(service, {
+      id: "pr-final",
+      kind: "pull_request",
+      lineage: "pr:1",
+      color: "green",
+      related: ["pr-z"],
+    });
+    expect(await copiedSource(service, "pr-final")).toBeNull();
+    await review(service, "comparison-pr-final");
+    const queries = vi.spyOn(database, "prepare");
+    await fixture(service, { id: "main-red", color: "red", related: ["seed", "pr-final"] });
+    expect(lineageSources(database, "main-red")).toEqual(["pr-final", "seed"]);
+    const writer = queries.mock.calls.find(([sql]) => sql.includes("superseded(id)"))?.[0];
+    if (!writer) {
+      throw new Error("Missing lineage writer");
+    }
+    const plan = database.connection
+      .prepare(`EXPLAIN QUERY PLAN ${writer}`)
+      .all("main-red", "main-red", "main-red", "proof", "main-red", "main-red")
+      .map((entry) => entry.detail);
+    // Each read of the run table is a search by ID: the target run, and the run
+    // of each ancestor.
+    expect(plan.filter((detail) => /\b(run|visonaut_runs)\b/u.test(String(detail)))).toEqual([
+      "SEARCH run USING INDEX sqlite_autoindex_visonaut_runs_1 (id=?)",
+      "SEARCH visonaut_runs USING INDEX sqlite_autoindex_visonaut_runs_1 (id=?)",
+    ]);
+    expect(await currentDecision(service, "main-red")).toBeNull();
+    expect((await service.status("main-red")).status).not.toBe("passed");
+    await fixture(service, { id: "main-green", color: "green", related: ["main-red", "pr-final"] });
+    expect(await copiedSource(service, "main-green")).toBe(
+      await currentDecision(service, "pr-final"),
+    );
+    expect((await service.status("main-green")).status).toBe("passed");
+  });
+
+  it("keeps an approval that the final run copied from an earlier run", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await intermediateRun(service, database, "red");
+    await fixture(service, {
+      id: "pr-final",
+      kind: "pull_request",
+      lineage: "pr:1",
+      color: "red",
+      related: ["pr-z"],
+    });
+    expect(await currentDecision(service, "pr-final")).toMatch(/^copied:/u);
+    await fixture(service, { id: "main", color: "red", related: ["seed", "pr-final"] });
+    expect(await copiedSource(service, "main")).toBe(await currentDecision(service, "pr-final"));
+    expect((await service.status("main")).status).toBe("passed");
+  });
+
+  it("keeps every run of a queued pull request as a direct source of its merge group only", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await intermediateRun(service, database, "red");
+    await fixture(service, {
+      id: "pr-final",
+      kind: "pull_request",
+      lineage: "pr:1",
+      color: "green",
+      related: ["pr-z"],
+    });
+    await review(service, "comparison-pr-final");
+    await fixture(service, {
+      id: "queue",
+      kind: "merge_group",
+      lineage: "merge:queue",
+      color: "green",
+      related: ["seed", "pr-z", "pr-final"],
+    });
+    expect(lineageSources(database, "queue")).toEqual(["pr-final", "pr-z", "seed"]);
+    expect((await service.status("queue")).status).toBe("passed");
+    await fixture(service, { id: "main", color: "red", related: ["queue", "pr-final"] });
+    expect(lineageSources(database, "main")).toEqual(["pr-final", "queue", "seed"]);
+    expect(await currentDecision(service, "main")).toBeNull();
+  });
+});
+
 it("rebuilds eligible historical ancestry from direct proofs after intermediate cache eviction", async () => {
   using database = new TestDatabase();
   const service = new Service(database);
