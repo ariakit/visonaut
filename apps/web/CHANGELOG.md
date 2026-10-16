@@ -1,5 +1,55 @@
 # @visonaut/web
 
+## 0.3.6
+
+### Approvals no longer depend on the comparison engine
+
+The review rows and the decisions no longer record the comparison engine or the image codec. An approval copies to a later run with the same two images, the same rendering profiles, and the same comparison policy, also when the CLI of that run compares with another engine. The engine decides only whether a run flags a pair of images.
+
+The review now shows the CLI version of the Submit in the details of a capture, in place of the engine and the codec. The service stores this version with the run as provenance only, and it checks no list of versions. Submit still accepts the engine and codec names that an earlier CLI sends, and it ignores them.
+
+The rows of runs from before this release keep their engine and codec names. So their approvals do not copy to the rows of later runs, one time: the next run of an open pull request needs a new review of each change that an earlier run of it approved.
+
+### One stage for the images of a variant
+
+The review page shows the images of the selected variant on one stage:
+
+- **The current image with the mask.** A changed variant opens on the current image with the red mask on it. <kbd>F</kbd> shows the current image, <kbd>G</kbd> shows the baseline in the same place, and <kbd>D</kbd> turns the mask off and on. The browser remembers the mode and the mask switch.
+- **Two panes, swipe, and overlay.** <kbd>S</kbd> shows the baseline and the current image in two panes, <kbd>W</kbd> shows a swipe with a line that you drag, and <kbd>O</kbd> shows the current image at half strength on the baseline. A pan or a zoom in one pane moves both panes, and a change of zoom or mode keeps the place of the image.
+- **The mask is evidence.** Approve and Reject stay off until the baseline, the current image, and the mask of a changed variant have loaded, passed the decode check, and have their stored size. The mask loads with the two images, also while it is off.
+- **Zoom and pan.** The zoom control has Fit, Fit width, 50% to 800%, and Actual pixels. A drag pans a zoomed image, the wheel pans it, and the wheel with Ctrl or Command, or a pinch, zooms at the pointer. The zoom stays from variant to variant. The pan buttons are gone.
+- **A file that is not an image.** A stored file that the browser cannot show as an image now says so, and no longer names the connection as the cause.
+
+The separate difference view is gone: the mask lies on the current image wherever it shows.
+
+### Submit reads the capture lists one page at a time, and the capture limit is 20,000
+
+In the heap test of Submit in local workerd, one Submit of 11,000 captures with 4 changed captures held 3.2× less live heap (5.6 MB in place of 18.1 MB), and one of 50,000 captures held 7.2× less (11.4 MB in place of 81.5 MB). Submit validation, materialization, the reference selection, promotion, and the recovery check now read the pages of a capture list one at a time, and keep only a short value for each capture for the checks across the pages.
+
+The capture limit of a run is now 20,000 captures (before, 11,000). A Submit with more captures still gets the code `capture_limit_exceeded`. In the same heap test, a Submit of 20,000 captures held 7.3 MB with 4 changed captures, and 62.9 MB when each capture changed.
+
+The materialization of a run of 11,000 captures also makes fewer D1 requests (287 statements and 72 round trips in place of 493 and 174), and it writes the same rows.
+
+### Updated the copied Ariakit UI primitives to the current Ariakit version
+
+The pages use the Ariakit UI primitives of [ariakit/ariakit@dce9723](https://github.com/ariakit/ariakit/commit/dce9723d3575c88ab038995e4993d7a1fce94afe). The visible changes come from upstream:
+
+- **No hover or focus glider.** A row, a nav link, or a variant mark paints its own hover surface. Only the selected control has a glider.
+- **A lighter dark scheme.** The dark canvas is lighter, and the layers above it have stronger steps.
+- **Brand buttons.** A brand button, for example "Sign in with GitHub" or "Review", is a little darker (`rgb(0 104 184)` in place of `rgb(0 106 187)`).
+
+In the style test of the review page (41 changed screenshots), one arrow key recalculates the style of 71 elements in place of 76, and one approval 75 in place of 80.
+
+### Other updates
+
+- Stopped the copies of the closed summary. The summary of a closed run no longer copies its comparison rows and its decisions into the summary tables, and the scheduled pass deletes the earlier copies in parts of a fixed size. The page of a closed run that is older than 30 days now reads its rows and its decisions in D1, with the change metrics of each row, and takes the names of its captures from its capture list.
+- Dropped the unused D1 table `ingest_staged_evidence_pages` with migration 0044, and stopped writing the unused column `ingest_staged_manifests.evidence_version`. No code read or wrote the table any more, and it held no row in production. A Submit does not change.
+- Dropped the unused D1 column `ingest_staged_manifests.evidence_version` with migration 0045. No code reads or writes it any more. A Submit does not change.
+- Removed the last code paths of the earlier list form of Submit. The retention pass no longer reads the staged evidence pages of that form, and the service now accepts the comparison and the capture proof of a run with a capture list only in the page form that Submit sends. A Submit does not change.
+- Removed the `check-aliases` step of the scheduled pass. It closed the pending check of a regenerated pull request merge after the tested result passed, and it read GitHub and wrote D1 in each pass while that result had not passed. The webhook no longer creates such a check, and production had no row that the step could read. An unbound pull request check now waits for its own workflow run, which closes it.
+- Fixed the webhook step of the scheduled pass, which tried more `workflow_run` deliveries again in each pass and kept the alert "The webhook step failed" open. A `requested` or `in_progress` delivery of a pull request run whose check is complete now ends when the pull request has a newer head or another target branch. A delivery of a run whose head has two recorded candidates with no check now ends when the pull request closes or moves. A delivery of a main rerun that did not bind a check now ends when main moved and another attempt of the run owns the check.
+- Updated dependencies: `@visonaut/service@0.0.5`
+
 ## 0.3.5
 
 ### Repaired small points of the header, the not found page, and the Status page
