@@ -30,11 +30,12 @@ import type {
   Variant,
 } from "@visonaut/protocol";
 import { beginSubmission } from "./bundle-submit.js";
+import type { Preparation } from "./bundle-submit.js";
 import { captureLabel, CliError, protocolVersion, record, text } from "./errors.js";
 import type { ExitCode } from "./errors.js";
 import { readImageFile } from "./files.js";
 import { githubToken, request, serverOrigin } from "./http.js";
-import { compareCaptures, maskPath } from "./local-comparison.js";
+import { compareCaptures, comparisonTimings, maskPath } from "./local-comparison.js";
 import { CAPABILITY_HEADROOM_MS, openSession, SUBMIT_SHARD_KEY } from "./session.js";
 import type { Session } from "./session.js";
 import { writeReceipt } from "./signed-context.js";
@@ -537,8 +538,13 @@ interface SubmitPagesParams {
   directory: string;
   environment: NodeJS.ProcessEnv;
   secrets: Set<string>;
+  preparation: Preparation | undefined;
   stdout: (value: string) => void;
   stderr: (value: string) => void;
+}
+
+function seconds(milliseconds: number) {
+  return `${(milliseconds / 1000).toFixed(1)}s`;
 }
 
 /**
@@ -550,9 +556,11 @@ async function submitPages({
   directory,
   environment,
   secrets,
+  preparation,
   stdout,
   stderr,
 }: SubmitPagesParams): Promise<string> {
+  const recordsStarted = performance.now();
   const submission = await loadSubmission(directory);
   const { run } = submission;
   if (
@@ -570,8 +578,23 @@ async function submitPages({
   if (!captureCount) {
     throw new CliError("The capture jobs made no capture.");
   }
+  const sessionStarted = performance.now();
   // The wait notices go to standard error, so they never mix with the output of the command.
   const session = await openSession({ origin, run, environment, secrets }, stderr);
+  const comparisonStarted = performance.now();
+  const preparationPhases = [
+    ...(preparation
+      ? [
+          `${seconds(preparation.artifactsMs)} for the capture artifacts`,
+          `${seconds(preparation.bundlesMs)} for the bundle checks`,
+        ]
+      : []),
+    `${seconds(sessionStarted - recordsStarted)} for the capture records`,
+    `${seconds(comparisonStarted - sessionStarted)} for the session`,
+  ];
+  stdout(
+    `Visonaut prepared ${captureCount} captures in ${seconds(comparisonStarted - (preparation?.started ?? recordsStarted))}: ${preparationPhases.join(", ")}.\n`,
+  );
   const totals: UploadTotals = {
     started: performance.now(),
     reused: 0,
@@ -585,8 +608,10 @@ async function submitPages({
   const pages: CapturePageEntry[] = [];
   let builder = pageBuilder();
   let last: [string, string] | undefined;
+  let stagingMs = 0;
   const flush = async () => {
     if (!last) return;
+    const stagingStarted = performance.now();
     const digest = await stagePage({
       session,
       directory,
@@ -598,13 +623,16 @@ async function submitPages({
     pages.push({ digest, last });
     builder = pageBuilder();
     last = undefined;
+    stagingMs += performance.now() - stagingStarted;
   };
   stdout(`Visonaut comparing ${captureCount} captures.\n`);
   let compared = 0;
+  const timings = comparisonTimings();
   const comparisons = compareCaptures({
     session,
     directory,
     captures: mergeCaptureRecords(directory, submission.files),
+    timings,
   });
   for await (const { capture, result } of comparisons) {
     const identity: [string, string] = [capture.itemKey, capture.variant.key];
@@ -619,6 +647,10 @@ async function submitPages({
     }
   }
   await flush();
+  // The rest of the time reads the capture records and builds the pages.
+  stdout(
+    `Visonaut compared ${captureCount} captures in ${seconds(performance.now() - comparisonStarted)}: ${seconds(timings.referenceImagesMs)} waiting for reference images, ${seconds(timings.comparisonMs)} decoding and comparing, ${seconds(timings.referencePagesMs)} reading reference pages, ${seconds(stagingMs)} staging pages.\n`,
+  );
   stdout(
     `Visonaut staged ${totals.reused + totals.uploaded} originals (${totals.reused} reused, ${totals.uploaded} uploaded) and ${pages.length} capture pages in ${Math.round((performance.now() - totals.started) / 1000)}s.\n`,
   );
@@ -780,6 +812,11 @@ export interface CliOptions {
   stderr?: (value: string) => void;
 }
 
+interface InternalCliOptions extends CliOptions {
+  /** The time of the artifact downloads and checks of `submit --shard`. */
+  preparation?: Preparation | undefined;
+}
+
 /**
  * A browser shows the session cookie with percent sequences. The service reads
  * the decoded value, so the CLI decodes a copied VISONAUT_TOKEN. The request
@@ -799,7 +836,8 @@ export async function runInternalCli({
   environment = process.env,
   stdout = (value) => process.stdout.write(value),
   stderr = (value) => process.stderr.write(value),
-}: CliOptions): Promise<ExitCode> {
+  preparation,
+}: InternalCliOptions): Promise<ExitCode> {
   const session = environment.VISONAUT_TOKEN
     ? decodeSession(environment.VISONAUT_TOKEN)
     : undefined;
@@ -867,6 +905,7 @@ export async function runInternalCli({
       directory: await realpath(options.directory ?? DEFAULT_CAPTURE_DIRECTORY),
       environment,
       secrets,
+      preparation,
       stdout: (value) => stdout(redact(value)),
       stderr,
     });

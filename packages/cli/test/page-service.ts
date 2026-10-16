@@ -23,6 +23,7 @@ import type {
   Variant,
 } from "@visonaut/protocol";
 import { expect, vi } from "vitest";
+import type { Preparation } from "../src/bundle-submit.js";
 import { combineBundles } from "../src/bundles.js";
 import { writeSubmission } from "../src/submission.js";
 
@@ -109,6 +110,8 @@ export interface Prepared {
   directories: string[];
   /** The attempt of the signed Submit job. The default is the attempt of the first bundle. */
   attempt?: number;
+  /** The time of the artifact downloads and checks that the workflow reports. */
+  preparation?: Preparation;
 }
 
 export function preparedState(server: string): Prepared {
@@ -122,7 +125,12 @@ export function workflowMock(prepared: Prepared) {
       prepared.directory = await prepare(prepared.directories, prepared.bundles, {
         attempt: prepared.attempt,
       });
-      return { command: "submit", directory: prepared.directory, server: prepared.server };
+      return {
+        command: "submit",
+        directory: prepared.directory,
+        server: prepared.server,
+        preparation: prepared.preparation,
+      };
     },
   };
 }

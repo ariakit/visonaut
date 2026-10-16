@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -180,20 +180,25 @@ async function execute(local: Local) {
 }
 
 it.each([false, true])(
-  "bounds parallel reference downloads and drains them on failure: %s",
+  "keeps a sliding window of reference downloads and drains it on failure: %s",
   async (fail) => {
     const local = await localFixture();
     const capture = local.manifest.captures.find((entry) => entry.itemKey === "tolerated");
     const reference = local.reference.find((entry) => entry.itemKey === "tolerated");
     if (!capture || !reference) throw new Error("Missing tolerated capture.");
     const keys = Array.from(
-      { length: 17 },
+      { length: 40 },
       (_, index) => `capture-${String(index).padStart(2, "0")}`,
     );
     await save(
       local,
       keys.map((itemKey, ordinal) => ({ ...capture, itemKey, ordinal })),
     );
+    prepared.preparation = {
+      started: performance.now() - 5000,
+      artifactsMs: 3000,
+      bundlesMs: 1000,
+    };
     const pending: (() => void)[] = [];
     let started = 0;
     let active = 0;
@@ -218,35 +223,30 @@ it.each([false, true])(
       finished = true;
     });
     try {
-      await vi.waitFor(() => expect(started).toBe(8));
-      expect(active).toBe(8);
-      // The first request fails while the other seven remain in flight.
+      await vi.waitFor(() => expect(started).toBe(32));
+      expect(active).toBe(32);
+      // Only the first request ends. The other 31 remain in flight.
+      pending.shift()?.();
       if (fail) {
-        pending.shift()?.();
-        await vi.waitFor(() => expect(active).toBe(7));
+        await vi.waitFor(() => expect(active).toBe(31));
         expect(finished).toBe(false);
+      } else {
+        // The comparison of the first capture starts the next download at once.
+        await vi.waitFor(() => expect(started).toBe(33));
+        expect(active).toBe(32);
       }
+      releaseAll = true;
       for (const release of pending.splice(0).reverse()) {
         release();
-      }
-      if (!fail) {
-        await vi.waitFor(() => expect(started).toBe(16));
-        for (const release of pending.splice(0).reverse()) {
-          release();
-        }
-        await vi.waitFor(() => expect(started).toBe(17));
-        for (const release of pending.splice(0)) {
-          release();
-        }
       }
       const result = await submitted;
       expect(result.code).toBe(fail ? 1 : 0);
       expect(active).toBe(0);
-      expect(maximum).toBe(8);
+      expect(maximum).toBe(32);
       if (fail) {
         expect(service.index()).toBeUndefined();
         expect(service.pageRequests()).toBe(0);
-        expect(started).toBe(8);
+        expect(started).toBe(32);
       } else {
         const rows = await service.rows();
         expect([...rows.keys()]).toEqual(keys);
@@ -255,8 +255,95 @@ it.each([false, true])(
             (row) => typeof row.result === "object" && row.result.outcome === "unchanged",
           ),
         ).toBe(true);
-        expect(result.output).toContain("Visonaut compared 17 of 17 captures.");
+        expect(result.output).toMatch(
+          /^Visonaut prepared 40 captures in \d+\.\ds: 3\.0s for the capture artifacts, 1\.0s for the bundle checks, \d+\.\ds for the capture records, \d+\.\ds for the session\.$/m,
+        );
+        expect(result.output).toContain("Visonaut compared 40 of 40 captures.");
+        expect(result.output).toMatch(
+          /^Visonaut compared 40 captures in \d+\.\ds: \d+\.\ds waiting for reference images, \d+\.\ds decoding and comparing, \d+\.\ds reading reference pages, \d+\.\ds staging pages\.$/m,
+        );
       }
+    } finally {
+      // Release any blocked request even when an assertion fails.
+      releaseAll = true;
+      for (const release of pending.splice(0)) {
+        release();
+      }
+      await submitted;
+      prepared.preparation = undefined;
+    }
+  },
+);
+
+it(
+  "keeps the encoded bytes of the reference downloads under 16 MiB",
+  { timeout: 60_000 },
+  async () => {
+    const local = await localFixture();
+    const template = local.manifest.captures.find((entry) => entry.itemKey === "tolerated");
+    const tolerated = local.reference.find((entry) => entry.itemKey === "tolerated");
+    if (!template || !tolerated) throw new Error("Missing tolerated capture.");
+    // Random pixels do not compress, so each reference has more than 1 MiB.
+    const noise = new PNG({ width: 640, height: 640 });
+    noise.data.set(randomBytes(noise.data.length));
+    for (let index = 3; index < noise.data.length; index += 4) {
+      noise.data[index] = 255;
+    }
+    const referenceBytes = PNG.sync.write(noise);
+    noise.data.set([0, 0, 0, 255], 0);
+    const candidateBytes = PNG.sync.write(noise);
+    await writeFile(join(local.directory, "noise.png"), candidateBytes);
+    const { mediaType: _mediaType, ...accepted } = metadata(referenceBytes, 640, 640);
+    local.referenceImages.set(accepted.digest, referenceBytes);
+    const keys = Array.from(
+      { length: 20 },
+      (_, index) => `capture-${String(index).padStart(2, "0")}`,
+    );
+    await save(
+      local,
+      keys.map((itemKey, ordinal) => ({
+        ...template,
+        itemKey,
+        ordinal,
+        comparison: { threshold: 0.2, maxDiffPixels: 1 },
+        image: { ...metadata(candidateBytes, 640, 640), path: "noise.png" },
+      })),
+    );
+    expect(referenceBytes.length).toBeGreaterThan(1024 * 1024);
+    const limit = Math.floor((16 * 1024 * 1024) / referenceBytes.length);
+    const pending: (() => void)[] = [];
+    let started = 0;
+    let active = 0;
+    let maximum = 0;
+    let releaseAll = false;
+    const service = mockService(local, {
+      reference: keys.map((itemKey) => ({ ...tolerated, itemKey, image: accepted })),
+      respond: async (url) => {
+        if (!url.pathname.includes("/reference/images/")) return;
+        started++;
+        active++;
+        maximum = Math.max(maximum, active);
+        if (!releaseAll) {
+          await new Promise<void>((resolve) => pending.push(resolve));
+        }
+        active--;
+      },
+    });
+    const submitted = execute(local);
+    try {
+      // The bundle check decodes each large capture before the comparison starts.
+      await vi.waitFor(() => expect(started).toBe(limit), { timeout: 30_000 });
+      expect(active).toBe(limit);
+      releaseAll = true;
+      for (const release of pending.splice(0).reverse()) {
+        release();
+      }
+      const result = await submitted;
+      expect(result.code).toBe(0);
+      expect(started).toBe(20);
+      expect(maximum).toBe(limit);
+      const rows = await service.rows();
+      expect([...rows.keys()]).toEqual(keys);
     } finally {
       // Release any blocked request even when an assertion fails.
       releaseAll = true;

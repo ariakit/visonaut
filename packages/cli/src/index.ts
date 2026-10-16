@@ -29,6 +29,7 @@ export async function runCli(options: CliOptions) {
       ...options,
       argv: ["submit", "--dir", prepared.directory],
       environment: { ...environment, VISONAUT_SERVER: prepared.server },
+      preparation: prepared.preparation,
     });
   } catch (error) {
     const failure =

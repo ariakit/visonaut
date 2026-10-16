@@ -19,14 +19,32 @@ import { imagePath } from "./submission.js";
 import type { CaptureRecord } from "./submission.js";
 
 export const MASK_DIRECTORY = "local-masks";
-// Keep at most 16 MiB of encoded references beside one decoded image pair.
-const REFERENCE_DOWNLOAD_CONCURRENCY = 8;
+// Keep at most 32 reference requests and 16 MiB of encoded references beside
+// one decoded image pair.
+const REFERENCE_DOWNLOAD_CONCURRENCY = 32;
+const REFERENCE_DOWNLOAD_BYTES = 16 * 1024 * 1024;
+// Bound the captures that wait in the window when most need no download.
+const COMPARISON_LOOKAHEAD = 256;
 
 export function maskPath(digest: string): string {
   return `${MASK_DIRECTORY}/${digest}.png`;
 }
 
 type Identity = [itemKey: string, variantKey: string];
+
+/** The time that the comparison of the captures spends in each phase. */
+export interface ComparisonTimings {
+  /** The time that the comparison waits for reference image downloads. */
+  referenceImagesMs: number;
+  /** The time to decode and compare the images and to write the masks. */
+  comparisonMs: number;
+  /** The time that the comparison waits for reference pages. */
+  referencePagesMs: number;
+}
+
+export function comparisonTimings(): ComparisonTimings {
+  return { referenceImagesMs: 0, comparisonMs: 0, referencePagesMs: 0 };
+}
 
 function identityOf(view: CaptureRowView): Identity {
   return [view.itemKey, view.variantKey];
@@ -61,7 +79,7 @@ async function referencePage(session: Session, number: number): Promise<CaptureR
  * that order. A reference capture that no capture of the run asks for is a
  * removal, which the service finds itself.
  */
-export function referenceCursor(session: Session) {
+export function referenceCursor(session: Session, timings = comparisonTimings()) {
   let rows: CaptureRowView[] = [];
   let position = 0;
   let nextPage = 1;
@@ -69,7 +87,9 @@ export function referenceCursor(session: Session) {
   const current = async (): Promise<CaptureRowView | undefined> => {
     while (position >= rows.length) {
       if (nextPage > session.reference.pages) return;
+      const started = performance.now();
       rows = await referencePage(session, nextPage++);
+      timings.referencePagesMs += performance.now() - started;
       position = 0;
       for (const row of rows) {
         const identity = identityOf(row);
@@ -109,6 +129,7 @@ interface CompareCapturesParams {
   session: Session;
   directory: string;
   captures: AsyncIterable<CaptureRecord>;
+  timings?: ComparisonTimings;
 }
 
 interface ComparisonInput {
@@ -116,60 +137,119 @@ interface ComparisonInput {
   accepted: CaptureRowView | undefined;
 }
 
-async function downloadReference(session: Session, input: ComparisonInput) {
-  const { capture, accepted } = input;
-  if (!accepted) return;
-  if (accepted.image.digest === capture.image.digest) return;
-  const bytes = await request({
+/** The encoded bytes that the reference of this capture reserves, or 0 with no download. */
+function downloadBytes({ capture, accepted }: ComparisonInput) {
+  if (!accepted) return 0;
+  if (accepted.image.digest === capture.image.digest) return 0;
+  return Math.min(accepted.image.bytes, imageLimits.maxEncodedBytes);
+}
+
+async function downloadReference(session: Session, input: ComparisonInput, bytes: number) {
+  const { accepted } = input;
+  if (!accepted || !bytes) return;
+  const response = await request({
     url: new URL(TRANSPORT.referenceImage(session.runId, accepted.image.digest), session.origin),
     token: await session.capability(),
     responseMediaType: "image/png",
-    maximumResponseBytes: Math.min(accepted.image.bytes, imageLimits.maxEncodedBytes),
+    maximumResponseBytes: bytes,
     retryUnavailable: true,
   });
-  if (!Buffer.isBuffer(bytes)) {
+  if (!Buffer.isBuffer(response)) {
     throw new CliError("The service returned invalid reference bytes.");
   }
-  return bytes;
+  return response;
 }
 
-async function* compareBatch(session: Session, directory: string, batch: ComparisonInput[]) {
-  // Drain every request before reporting a failure or decoding an image.
-  const downloads = await Promise.allSettled(
-    batch.map((input) => downloadReference(session, input)),
-  );
-  for (const result of downloads) {
-    if (result.status === "rejected") {
-      throw result.reason;
-    }
-  }
-  for (const [index, input] of batch.entries()) {
-    const download = downloads[index];
-    if (!download || download.status !== "fulfilled") {
-      throw new CliError("A comparison has no reference download result.");
-    }
-    const result = await compareCapture({
-      directory,
-      ...input,
-      referenceBytes: download.value,
-    });
-    yield { capture: input.capture, result };
-  }
+/** The result of a reference download. A failure is a value, so a waiting download never rejects. */
+type Download = { bytes: Buffer | undefined } | { failure: unknown };
+
+interface PendingComparison extends ComparisonInput {
+  /** The encoded bytes that the download reserves until the comparison of the capture ends. */
+  bytes: number;
+  download: Promise<Download>;
 }
 
-/** Download bounded groups concurrently, then decode and emit captures in order. */
-export async function* compareCaptures({ session, directory, captures }: CompareCapturesParams) {
-  const reference = referenceCursor(session);
-  let batch: ComparisonInput[] = [];
-  for await (const capture of captures) {
-    const accepted = await reference.take([capture.itemKey, capture.variant.key]);
-    batch.push({ capture, accepted });
-    if (batch.length === REFERENCE_DOWNLOAD_CONCURRENCY) {
-      yield* compareBatch(session, directory, batch);
-      batch = [];
+/**
+ * Compare the captures in order. A window of reference downloads runs ahead of
+ * the comparison, so the next downloads continue while a capture is decoded,
+ * compared, and staged. Each failure drains the window before it is reported.
+ */
+export async function* compareCaptures({
+  session,
+  directory,
+  captures,
+  timings = comparisonTimings(),
+}: CompareCapturesParams) {
+  const reference = referenceCursor(session, timings);
+  const iterator = captures[Symbol.asyncIterator]();
+  const window: PendingComparison[] = [];
+  let next: ComparisonInput | undefined;
+  let done = false;
+  let failed = false;
+  let requests = 0;
+  let reservedBytes = 0;
+  // Read captures and start their downloads until the window is full. A capture
+  // that does not fit waits in `next`, so the order of the captures stays.
+  const fill = async () => {
+    while (!done && !failed && window.length < COMPARISON_LOOKAHEAD) {
+      if (!next) {
+        const step = await iterator.next();
+        if (step.done) {
+          done = true;
+          return;
+        }
+        const capture = step.value;
+        const accepted = await reference.take([capture.itemKey, capture.variant.key]);
+        next = { capture, accepted };
+      }
+      const bytes = downloadBytes(next);
+      if (bytes) {
+        if (requests === REFERENCE_DOWNLOAD_CONCURRENCY) return;
+        if (reservedBytes + bytes > REFERENCE_DOWNLOAD_BYTES) return;
+        requests++;
+        reservedBytes += bytes;
+      }
+      const download = downloadReference(session, next, bytes).then(
+        (value): Download => ({ bytes: value }),
+        (failure: unknown): Download => {
+          failed = true;
+          return { failure };
+        },
+      );
+      window.push({ ...next, bytes, download });
+      next = undefined;
     }
+  };
+  try {
+    while (true) {
+      await fill();
+      const pending = window.shift();
+      if (!pending) return;
+      const waitStarted = performance.now();
+      const download = await pending.download;
+      timings.referenceImagesMs += performance.now() - waitStarted;
+      if ("failure" in download) {
+        throw download.failure;
+      }
+      const comparisonStarted = performance.now();
+      const result = await compareCapture({
+        directory,
+        capture: pending.capture,
+        accepted: pending.accepted,
+        referenceBytes: download.bytes,
+      });
+      timings.comparisonMs += performance.now() - comparisonStarted;
+      if (pending.bytes) {
+        requests--;
+        reservedBytes -= pending.bytes;
+      }
+      yield { capture: pending.capture, result };
+    }
+  } finally {
+    // Drain every request before a failure is reported or the command ends.
+    await Promise.all(window.map((pending) => pending.download));
+    await iterator.return?.();
   }
-  yield* compareBatch(session, directory, batch);
 }
 
 /**
