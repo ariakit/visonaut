@@ -15,11 +15,13 @@ const counts = process.env.SUBMIT_HEAP_CAPTURES
   ? process.env.SUBMIT_HEAP_CAPTURES.split(",").map(Number)
   : [apiLimitDefaults.maximumCaptures];
 // The count of changed captures of each run, for example
-// `SUBMIT_HEAP_CHANGED=11000` for a run where each capture changed.
+// `SUBMIT_HEAP_CHANGED=20000` for a run where each capture changed.
 const changedCount = Number(process.env.SUBMIT_HEAP_CHANGED ?? 4);
-// The rule of the live heap of one Submit: at most this many bytes above the
-// heap of the Worker before the Submit.
-const ruleBytes = 16 * 1024 * 1024;
+// The rules of the live heap of one Submit: at most this many bytes above the
+// heap of the Worker before the Submit. A run where each capture changed (a
+// mass change) has its own rule, one half of the 128 MB of an isolate.
+const fewChangedRuleBytes = 16 * 1024 * 1024;
+const massChangeRuleBytes = 64 * 1024 * 1024;
 
 const worker = await bundleWorker(fileURLToPath(new URL("./submit-worker.ts", import.meta.url)));
 afterAll(() => worker[Symbol.asyncDispose]());
@@ -77,6 +79,7 @@ async function measure(path: string, body: unknown) {
 
 for (const captureCount of counts) {
   it(`holds less than the heap rule in one Submit of ${captureCount} captures`, async () => {
+    const ruleBytes = changedCount >= captureCount ? massChangeRuleBytes : fewChangedRuleBytes;
     const test = await owned.fixture();
     const source = test.manifest.captures[0];
     if (!source) throw new Error("Expected a source capture.");

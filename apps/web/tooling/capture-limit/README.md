@@ -1,22 +1,59 @@
 # Capture limit measurement
 
-This probe measures the memory that the capture list of a run needs in local workerd. The capture limit of a run in the [current contract](../../../../docs/current-contract.md#current-path-and-evidence-state) comes from its numbers. The probe is not a part of the service, and no test runs it.
+The capture limit of a run in the [current contract](../../../../docs/current-contract.md#current-path-and-evidence-state) comes from the [heap test of Submit](#heap-test-of-submit). Since #276, Submit validation, materialization, promotion, and the recovery check read the capture lists one page at a time, and the heap test measures this real code.
 
-Since #276, Submit validation, materialization, promotion, and the recovery check read the capture lists one page at a time. The probe below is the record of the limit of today, and it models the earlier code. The [heap test of Submit](#heap-test-of-submit) measures the real code.
+The [earlier probe](#earlier-probe) models the code before #276, which read the complete capture lists into memory. It is the record of the earlier limit of 11,000 captures. The probe is not a part of the service, and no test runs it.
 
 ## Heap test of Submit
 
 [`submit-heap.test.ts`](submit-heap.test.ts) runs the real Submit validation (`stageIndex`) and the real materialization (`materializeWorkflowRun`) in local workerd, with the database and the buckets of Miniflare. The run has 4 changed captures, and a reference in pages where each capture has its own image. [`submit-worker.ts`](submit-worker.ts) stops the Submit at each read and each write of a JSON object of R2, and at each fifth D1 batch. At each stop, the test collects all garbage through the inspector of workerd and reads the live heap. The result is the largest live heap above the heap before the request.
 
-CI runs it at the capture limit of today. A measurement gives other counts, and a file for the results:
+CI runs it at the capture limit (`apiLimitDefaults.maximumCaptures` in `apps/web/src/runtime-defaults.ts`). A measurement gives other counts, another count of changed captures (`SUBMIT_HEAP_CHANGED`, the default is 4), and a file for the results:
 
 ```sh
-SUBMIT_HEAP_CAPTURES=25000,50000 SUBMIT_HEAP_OUT=heap.jsonl pnpm exec vitest run apps/web/tooling/capture-limit/submit-heap.test.ts
+SUBMIT_HEAP_CAPTURES=20000 SUBMIT_HEAP_CHANGED=20000 SUBMIT_HEAP_OUT=heap.jsonl pnpm exec vitest run apps/web/tooling/capture-limit/submit-heap.test.ts
 ```
 
-The rule of the test: one Submit of a run with few changed captures holds at most 16 MiB (16,777,216 bytes) of live heap above the heap of the Worker. Two Submits at the same time then hold at most one half of the 64 MiB of [the rule](#the-rule) below. `SUBMIT_HEAP_CHANGED` gives another count of changed captures (the default is 4).
+The test asserts the rule below that fits the run: the rule of a mass change when each capture changed, and else the rule of few changed captures.
 
-Recorded on 2026-10-16 on macOS arm64, with the same versions as the result below. A megabyte here is 1,000,000 bytes.
+### The rule
+
+A Worker isolate has at most 128 MB of memory. The capture limit is the largest of 25,000, 20,000, and 15,000 captures for which both values stay in the rule, in local workerd:
+
+- One Submit of a run with few changed captures (4) holds at most 16 MiB (16,777,216 bytes) of live heap above the heap of the Worker. Two such Submits at the same time then hold at most one half of 64 MiB.
+- One Submit of a run where each capture changed (a mass change) holds at most 64 MiB (67,108,864 bytes), about one half of the memory of the isolate. This value counts one Submit: a mass change is rare, and two of them at the same time in one isolate would hold about 126 MB at the limit.
+
+The comparison still holds one result and one reference capture for each changed capture, and the service reads one D1 row for each. So a mass change, and not the capture count, is the bound of the heap. A limit of changed captures (D-SCALE-02 of #276) is not built. A limit above 25,000 is not in the rule: from 25,000 changes, one statement of the run approval of #275 writes 100,000 rows, so such a limit must name that approval.
+
+### The limit
+
+Recorded on 2026-10-16 with `miniflare` 5.20261006.2-beta, `workerd` 1.20261006.1, and Node.js 24.18.0 on macOS arm64, two runs of each value. A megabyte here is 1,000,000 bytes.
+
+| Captures | Changed captures | Live heap (MB) | Rule   | Result |
+| -------: | ---------------: | -------------: | ------ | ------ |
+|   20,000 |                4 |       7.3, 7.3 | 16 MiB | Passes |
+|   20,000 |           20,000 |     62.9, 62.9 | 64 MiB | Passes |
+|   25,000 |           25,000 |     78.7, 78.7 | 64 MiB | Fails  |
+
+So the capture limit is 20,000 captures. A mass change of 20,000 captures holds 62.9 MB, 4.2 MB (about 6%) below 64 MiB. A mass change holds about 3,150 bytes for each capture at both counts.
+
+The test of 20,000 captures with 4 changed captures took 24 and 46 seconds here, so CI runs it at the limit. A mass change of 20,000 captures took about 3 minutes, so CI does not run it.
+
+### D1 statements of one materialization
+
+Counted on 2026-10-16 with `measureD1` of [`test-d1-costs.ts`](../../src/api/test-d1-costs.ts) around the real `materializeWorkflowRun`, in the same fixture as the heap test, in Node.js and Miniflare. A temporary test file did the count, and it is not in the repository. Each statement of a batch counts as one statement.
+
+| Captures | Changed captures | Statements | Round trips |   Rows read | Rows written |
+| -------: | ---------------: | ---------: | ----------: | ----------: | -----------: |
+|   20,000 |                4 |        384 |          75 |      41,135 |          111 |
+|   11,000 |           11,000 |      1,594 |         289 | 121,341,842 |      121,065 |
+|   20,000 |           20,000 |      2,772 |         473 | 400,601,377 |      220,065 |
+
+One Worker invocation of the Workers Paid plan can send 1,000 queries to D1 ([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)). A run with few changed captures stays below it. A mass change goes above it, also at the earlier limit of 11,000. Most rows that a mass change reads come from one statement, the identity history of the run in `packages/service/src/local-comparison.ts`: for each capture, it searches the rows of the comparison by the comparison ID, so it reads one row for each pair of a capture and a changed row (16,008,000 rows for 4,000 captures where each changed).
+
+### Before and after #276
+
+Recorded on 2026-10-16 on macOS arm64, with the same versions as the [result](#result) of the earlier probe. A megabyte here is 1,000,000 bytes. Each run has 4 changed captures.
 
 | Captures | Before #276 (MB) | After #276 (MB) |
 | -------: | ---------------: | --------------: |
@@ -26,10 +63,12 @@ Recorded on 2026-10-16 on macOS arm64, with the same versions as the result belo
 
 - Before, one Submit held about 1,630 bytes for each capture. After, it holds about 4.5 MB for the pages that it reads at one time, and about 150 bytes for each capture: the checks across the pages keep one short value for each capture (the digest of each row image, and a hash of the facts of each image ID).
 - A stop at a hold point is a sample, and not a proven largest value. The time between two stops is short: one page, or five D1 batches.
-- One run of 50,000 captures needs about 6 minutes on this computer, most of it for the setup of the fixture. So CI does not run the higher counts.
-- The rule does not cover a mass change. The comparison still holds one result and one reference capture for each changed capture, and the service reads one D1 row for each. A run of 11,000 captures where each capture changed holds 40.2 MB, before and after #276 (`SUBMIT_HEAP_CHANGED=11000`): about 3,150 bytes for each changed capture more than the run with 4 changed captures. The answer to a mass change is the limit of changed captures of D-SCALE-02 (#276).
+- One run of 50,000 captures needs about 6 minutes on this computer, most of it for the setup of the fixture.
+- A run of 11,000 captures where each capture changed holds 40.2 MB, before and after #276.
 
-Run it from the repository root. It builds [`worker.ts`](worker.ts) with Vite, starts one new Miniflare instance for each scenario, and prints one JSON line for each scenario. One complete run has 36 scenarios and needs about 6 minutes.
+## Earlier probe
+
+This probe measures the memory that the capture list of a run needs in local workerd, with a model of the code before #276. Run it from the repository root. It builds [`worker.ts`](worker.ts) with Vite, starts one new Miniflare instance for each scenario, and prints one JSON line for each scenario. One complete run has 36 scenarios and needs about 6 minutes.
 
 ```sh
 pnpm --filter @visonaut/web exec node tooling/capture-limit/measure.mjs tooling/capture-limit/recorded/result.json
@@ -88,7 +127,7 @@ Of the three hold points, the point `row` holds the most. Its values:
 - The backing stores are 0.2 MB in each scenario: no byte buffer stays.
 - "Seconds" is the time until the last Submit is at its hold point, on this computer. It is not a time of a hosted Worker.
 
-## The rule
+## The rule of the earlier limit
 
 A Worker isolate has at most 128 MB of memory. The rule gives the capture lists of the Submits 64 MiB (67,108,864 bytes), about one half of it. The rule reads the 128 MB as binary megabytes, as the comment of the inventory bound in `apps/web/src/capture-inventory.ts` does ("a 128 MiB Worker"). With 64,000,000 bytes, the rule with two Submits gives 10,985 captures. The other half is for the code of the Worker, for the parts of a Submit that the model does not have, for the other requests of the same isolate (a review read holds two capture lists), and for garbage that V8 did not collect yet. The half is an assumption: the measurement does not give it. The other half is also the margin for the values that the probe does not record. The rule uses the largest recorded value, 2,913 bytes for each capture.
 
@@ -98,9 +137,9 @@ A Worker isolate has at most 128 MB of memory. The rule gives the capture lists 
 |                                                                  2 |                                   11,518 |
 |                                                                  5 |                                    4,607 |
 
-The rule counts two Submits. A Submit holds its lists for seconds, so two Submits of two pull requests in the same seconds in one isolate are a normal event. Five is the limit of active runs: all five must then be in these seconds of their materialization at the same time and in the same isolate. If that occurs and the isolate ends, the Submit jobs fail, and each of them can run again: materialization can repeat its steps. The rule with two Submits gives 11,518 captures, and the limit is the next smaller thousand: 11,000 captures.
+The rule counts two Submits. A Submit holds its lists for seconds, so two Submits of two pull requests in the same seconds in one isolate are a normal event. Five is the limit of active runs: all five must then be in these seconds of their materialization at the same time and in the same isolate. If that occurs and the isolate ends, the Submit jobs fail, and each of them can run again: materialization can repeat its steps. The rule with two Submits gave 11,518 captures, and the limit was the next smaller thousand: 11,000 captures. Since #276, the [limit](#the-limit) of the heap test replaces it.
 
 ## Scope
 
-- The numbers are from local workerd. A hosted Worker is not measured: the contract authorizes no hosted diagnostic run. Local workerd does not apply the memory limit of 128 MB, so the probe shows no failure at the limit.
-- The numbers are for the model above, and for code that reads all pages of a run into one list. When Submit validation and materialization work on one page at a time, the memory no longer grows with the run, and this limit can go.
+- The numbers of the probe and of the heap test are from local workerd. A hosted Worker is not measured: the contract authorizes no hosted diagnostic run. Local workerd does not apply the memory limit of 128 MB, so neither shows a failure at the limit.
+- The numbers of the probe are for the model above, and for code that reads all pages of a run into one list. Since #276, Submit validation and materialization work on one page at a time, so with few changed captures the memory grows little with the run.
