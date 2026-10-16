@@ -39,6 +39,8 @@ So the capture limit is 20,000 captures. A mass change of 20,000 captures holds 
 
 Since #553, materialization reads the staged pages in one pass. Measured again on 2026-10-16 with this heap test, one run of each value: with 4 changed captures, a Submit of 20,000 captures holds 7.3 MB, and a mass change of 20,000 captures holds 59.0 MB, as on the commit before #553. So the current margin of a mass change is about 8.1 MB below 64 MiB; the value of 62.9 MB in the table is the earlier record, and changes after it lowered the heap. Both values stay in the rule.
 
+Since #576, the same pass also makes the comparison of the run, and keeps its results until the comparison is created after the seal. Measured on 2026-10-16, one run of each value: with 4 changed captures, a Submit of 20,000 captures holds 7.4 MB (7.3 MB on the commit before), and a mass change of 20,000 captures holds 59.0 MB (59.0 MB before). A change where the pass also kept its captures for the shard commit, in place of the read after the write, held 17.8 MB with 4 changed captures and failed the rule, so that read stays.
+
 The test of 20,000 captures with 4 changed captures took 24 and 46 seconds here, so CI runs it at the limit. A mass change of 20,000 captures took about 3 minutes, so CI does not run it.
 
 ### D1 statements of one materialization

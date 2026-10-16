@@ -430,7 +430,7 @@ it("stores a Submit of 4,100 captures as 3 pages and 1 index, with the D1 rows o
   expect(written[1]).toBe(written[0]);
 }, 180_000);
 
-it("reads each staged page one time and each reference page in one pass in materialization", async () => {
+it("reads each staged, reference, and committed page one time in materialization", async () => {
   const test = await fixture();
   const source = test.manifest.captures[0];
   if (!source) {
@@ -463,10 +463,11 @@ it("reads each staged page one time and each reference page in one pass in mater
   // One pass checks each staged page against its reference page, and gives it
   // to the writer.
   expect(reads(stagedKeys, `quarantine/staged/${test.runId}/${test.jobId}/pages/`)).toEqual([1, 1]);
-  // The pass and the comparison after the seal each read the reference pages.
-  expect(reads(storedKeys, `runs/${reference.runId}/inventory/pages/`)).toEqual([2, 2]);
-  // The read after the write and the comparison each read the committed pages.
-  expect(reads(storedKeys, `runs/${run.id}/inventory/pages/`)).toEqual([2, 2]);
+  // The pass also makes the comparison, so no read of the reference pages
+  // follows the seal.
+  expect(reads(storedKeys, `runs/${reference.runId}/inventory/pages/`)).toEqual([1, 1]);
+  // Only the read after the write reads the committed pages.
+  expect(reads(storedKeys, `runs/${run.id}/inventory/pages/`)).toEqual([1, 1]);
   // The committed shard has the counts that the Submit staging computed.
   const staged = await database
     .prepare("SELECT declared_bytes, capture_count FROM ingest_staged_manifests WHERE run_id=?")
