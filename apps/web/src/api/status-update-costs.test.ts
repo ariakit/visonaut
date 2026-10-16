@@ -19,13 +19,13 @@ const runtime = new Miniflare(
     modules: true,
     script: "export default { fetch() { return new Response('ok'); } }",
     compatibilityDate: "2026-09-22",
-    d1Databases: ["DB", "STEP", "STORED", "NO_STATE", "MIRROR", "BEFORE"],
+    d1Databases: ["DB", "STEP", "STORED", "MIRROR", "BEFORE"],
   }),
 );
 // The fixtures need the object stores and the GitHub client of a test context.
 const memory = new TestDatabase();
 
-async function measuredFixture(name: "DB" | "STEP" | "STORED" | "NO_STATE" | "MIRROR") {
+async function measuredFixture(name: "DB" | "STEP" | "STORED" | "MIRROR") {
   const native = await runtime.getD1Database(name);
   await applyTestMigrations(native);
   const measured = measureD1(native);
@@ -151,12 +151,11 @@ function writes(fixture: MeasuredFixture) {
 }
 
 /**
- * The writes and the PATCH requests of the pass that sends an update which
- * waited after one failed read. With `stored: false` the update has the form
- * of the time before the review columns.
+ * The writes, the D1 round trips, and the PATCH requests of the pass that
+ * sends an update which waited after one failed read.
  */
-async function waitingUpdateCosts(name: "STORED" | "NO_STATE", stored: boolean) {
-  const fixture = await measuredFixture(name);
+async function waitingUpdateCosts() {
+  const fixture = await measuredFixture("STORED");
   await captured(fixture.operations, "waiting");
   const request = fixture.operations.github.request.bind(fixture.operations.github);
   let failedReads = 0;
@@ -168,12 +167,6 @@ async function waitingUpdateCosts(name: "STORED" | "NO_STATE", stored: boolean) 
     return request(path, init);
   };
   await deliverGitHubStatuses(fixture.operations);
-  if (!stored) {
-    await fixture.native
-      .prepare(`UPDATE work_status_outbox SET review_state = NULL, review_pending = NULL,
-        review_rejected = NULL, review_approved = NULL`)
-      .run();
-  }
   fixture.state.time += 30_000;
   const patches = fixture.state.patches;
   fixture.measured.reset();
@@ -185,14 +178,14 @@ async function waitingUpdateCosts(name: "STORED" | "NO_STATE", stored: boolean) 
   };
 }
 
-// The case exists only for an update from before the deploy of the review
-// columns that the service did not send yet. The sender reads the status of
-// its run: five more D1 round trips that only read, and no more written row.
-it("writes no more rows for a stored update that has no review state", async () => {
-  const stored = await waitingUpdateCosts("STORED", true);
-  const noState = await waitingUpdateCosts("NO_STATE", false);
-  expect(stored).toEqual({ writingStatements: 5, rowsWritten: 7, roundTrips: 29, patches: 1 });
-  expect(noState).toEqual({ ...stored, roundTrips: stored.roundTrips + 5 });
+// The sender reads no status of the run: the update has its review values.
+it("sends a waiting update with its stored review values and no status read", async () => {
+  expect(await waitingUpdateCosts()).toEqual({
+    writingStatements: 5,
+    rowsWritten: 7,
+    roundTrips: 29,
+    patches: 1,
+  });
 });
 
 // Only a pull request from before migration 0031 has a mirror check. Before
