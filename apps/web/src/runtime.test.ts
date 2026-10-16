@@ -728,6 +728,32 @@ it.each([
   },
 );
 
+it("logs the webhook deliveries that the step could not end", async () => {
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  const item = {
+    subject: { deliveryId: "delivery", event: "workflow_run", action: "completed" },
+    message: "The main branch changed.",
+  };
+  vi.mocked(api.reconcileWebhooks).mockResolvedValue({
+    checked: 1,
+    pending: ["delivery"],
+    causes: [hostileCount],
+    items: [item],
+  });
+  await runScheduledOperations(env);
+  expect(output.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual([
+    {
+      event: "operation-failed",
+      operation: "webhooks",
+      code: "items-failed",
+      correlationId: expect.any(String),
+      elapsedMilliseconds: expect.any(Number),
+      causes: [hostileCount],
+      items: [item],
+    },
+  ]);
+});
+
 it("writes no line for a pass whose steps have no item error", async () => {
   const output = vi.spyOn(console, "error").mockImplementation(() => {});
   await runScheduledOperations(env);

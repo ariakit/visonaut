@@ -408,6 +408,33 @@ async function boundMainWorkflowFixture() {
   return fixture;
 }
 
+/**
+ * A cancelled main run whose Plan never reported: no App check exists. The
+ * push webhook records a candidate with no check, or it found that main had
+ * already moved and recorded nothing.
+ */
+async function unboundMainWorkflowFixture(recorded: boolean) {
+  const fixture = preRunFixture();
+  fixture.state.mainSha = mergeSha;
+  fixture.state.run = {
+    ...fixture.state.run,
+    event: "push",
+    status: "completed",
+    conclusion: "cancelled",
+    head_sha: mergeSha,
+    head_branch: "main",
+    pull_requests: [],
+  };
+  fixture.webhook.event = "push";
+  fixture.webhook.payload = { ref: "refs/heads/main", before: baseSha, after: mergeSha };
+  if (recorded) {
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing main candidate");
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+  }
+  return fixture;
+}
+
 describe("pre-run App checks", () => {
   async function equivalentMergeChecks(headChecks = false, sourceConclusion = "success") {
     const fixture = preRunFixture();
@@ -989,6 +1016,12 @@ describe("pre-run App checks", () => {
       checked: 1,
       pending: [expect.any(String)],
       causes: [{ errorName: "SecurityError", code: "merge_not_ready", count: 1 }],
+      items: [
+        {
+          subject: { deliveryId: expect.any(String), event: "pull_request", action: "opened" },
+          message: "The pull request merge commit is not ready.",
+        },
+      ],
     });
     fixture.state.currentSha = mergeSha;
     expect(await reconcileWebhooks(apiContext(scoped))).toEqual({ checked: 1, pending: [] });
@@ -2038,6 +2071,47 @@ describe("pre-run App checks", () => {
     expect(fixture.state.posts).toBe(0);
   });
 
+  it.each(
+    ["head-changed", "non-main"].flatMap((change) =>
+      ["completed", "in_progress", "requested"].map((action) => [change, action]),
+    ),
+  )("ends an uncreated candidate of an open PR after %s: %s", async (change, action) => {
+    const fixture = preRunFixture();
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+    const before = await database.prepare("SELECT * FROM pre_run_checks").all();
+    // GitHub keeps the association of a run whose PR has a newer head.
+    fixture.state.run.pull_requests = [
+      { number: 7, head: { repo: { id: 100 } }, base: { repo: { id: 100 } } },
+    ];
+    if (change === "non-main") {
+      fixture.state.pullBaseRef = "release";
+    } else {
+      fixture.state.pullHeadSha = "d".repeat(40);
+    }
+    const webhook = fixture.workflowWebhook();
+    webhook.payload.action = action;
+    expect(await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook)).toBe(
+      "historical",
+    );
+    expect((await database.prepare("SELECT * FROM pre_run_checks").all()).results).toEqual(
+      before.results,
+    );
+    expect(fixture.state.posts).toBe(0);
+  });
+
+  it("keeps an uncreated candidate of an open PR retryable while its head is current", async () => {
+    const fixture = preRunFixture();
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+    fixture.state.run.pull_requests = [];
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+  });
+
   it("reuses the uncreated candidate when an acknowledged closed PR reopens", async () => {
     const fixture = preRunFixture();
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
@@ -2523,6 +2597,191 @@ describe("pre-run App checks", () => {
       settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
     ).rejects.toMatchObject({ code: "workflow_candidate" });
     expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+  });
+
+  it.each(
+    ["recorded", "missed"].flatMap((candidate) =>
+      ["completed", "in_progress", "requested"].map((action) => [candidate, action]),
+    ),
+  )(
+    "ends an unbound main run after main moved, with a %s candidate: %s",
+    async (candidate, action) => {
+      const fixture = await unboundMainWorkflowFixture(candidate === "recorded");
+      const before = await database.prepare("SELECT * FROM pre_run_checks").all();
+      fixture.state.mainSha = "e".repeat(40);
+      const webhook = fixture.workflowWebhook();
+      webhook.payload.action = action;
+      expect(await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook)).toBe(
+        "historical",
+      );
+      expect((await database.prepare("SELECT * FROM pre_run_checks").all()).results).toEqual(
+        before.results,
+      );
+      expect(fixture.state.posts).toBe(0);
+    },
+  );
+
+  it.each(["main-current", "running", "stage", "run"])(
+    "keeps an unbound main run retryable with %s",
+    async (condition) => {
+      const fixture = await unboundMainWorkflowFixture(false);
+      if (condition !== "main-current") {
+        fixture.state.mainSha = "e".repeat(40);
+      }
+      const webhook = fixture.workflowWebhook();
+      if (condition === "running") {
+        fixture.state.run.status = "in_progress";
+        fixture.state.run.conclusion = null;
+        webhook.payload.action = "in_progress";
+      } else if (condition === "stage") {
+        await database
+          .prepare(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,
+            workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,
+            capture_job_prefix,submit_job_name,verified_json,submitted_at,created_at)
+            VALUES('stage','100','77',1,?,'digest','path','ref','capture','submit','{}',1,1)`)
+          .bind(mergeSha)
+          .run();
+      } else if (condition === "run") {
+        await database
+          .prepare(`INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,
+            kind,tested_sha,lineage_key,plan_digest,plan_json,state,created_at)
+            VALUES('owned','project','77',1,'main',?,'main','plan','{}','failed',1)`)
+          .bind(mergeSha)
+          .run();
+      }
+      await expect(
+        settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook),
+      ).rejects.toMatchObject({ code: "workflow_candidate" });
+      expect(fixture.state.posts).toBe(0);
+    },
+  );
+
+  it.each([
+    ["main", true],
+    ["pull request", false],
+  ])(
+    "ends a %s delivery whose candidate is gone, and the next pass reads GitHub 0 times and writes 0 rows",
+    async (_kind, main) => {
+      const fixture = main ? await unboundMainWorkflowFixture(true) : preRunFixture();
+      if (main) {
+        fixture.state.mainSha = "e".repeat(40);
+      } else {
+        const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+        if (!candidate) throw new Error("Missing candidate");
+        await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+        fixture.state.run.pull_requests = [
+          { number: 7, head: { repo: { id: 100 } }, base: { repo: { id: 100 } } },
+        ];
+        fixture.state.pullHeadSha = "d".repeat(40);
+      }
+      const webhook = fixture.workflowWebhook();
+      webhook.payload.repository = { id: 100 };
+      webhook.payload.installation = installation;
+      webhook.payload.sender = sender;
+      const scoped = await githubBindings(preRunBindings, fixture);
+      let requests = 0;
+      const request = fixture.github.request;
+      fixture.github.request = async (path, init) => {
+        requests += 1;
+        return request(path, init);
+      };
+      await persistWebhook(database, webhook);
+      expect(await reconcileWebhooks(apiContext(scoped))).toEqual({ checked: 1, pending: [] });
+      expect(requests).toBeGreaterThan(0);
+
+      requests = 0;
+      const measured = measureD1(database);
+      expect(
+        await reconcileWebhooks(apiContext({ ...scoped, database: measured.database })),
+      ).toEqual({ checked: 0, pending: [] });
+      expect(requests).toBe(0);
+      expect(measured.totals().rows_written).toBe(0);
+    },
+  );
+
+  it("names each delivery that the step cannot end, with the message of its error", async () => {
+    const fixture = await unboundMainWorkflowFixture(false);
+    fixture.state.run.status = "in_progress";
+    fixture.state.run.conclusion = null;
+    fixture.state.mainSha = "e".repeat(40);
+    const webhook = fixture.workflowWebhook();
+    webhook.payload.action = "in_progress";
+    webhook.payload.repository = { id: 100 };
+    webhook.payload.installation = installation;
+    webhook.payload.sender = sender;
+    await persistWebhook(database, webhook);
+    expect(
+      await reconcileWebhooks(apiContext(await githubBindings(preRunBindings, fixture))),
+    ).toEqual({
+      checked: 1,
+      pending: [webhook.deliveryId],
+      causes: [{ errorName: "SecurityError", code: "workflow_candidate", count: 1 }],
+      items: [
+        {
+          subject: {
+            deliveryId: webhook.deliveryId,
+            event: "workflow_run",
+            action: "in_progress",
+            workflowRunId: 77,
+            workflowAttempt: 1,
+          },
+          message: "The main candidate is unavailable.",
+        },
+      ],
+    });
+  });
+
+  it.each([
+    "state='active'",
+    "check_id='1'",
+    "request_started=1",
+    "lease_until=9999999999999",
+    "workflow_run_id='76',workflow_attempt=1",
+    "workflow_run_id='77',workflow_attempt=1",
+  ])("keeps an unbound main run retryable while its candidate has %s", async (update) => {
+    const fixture = await unboundMainWorkflowFixture(true);
+    await database.prepare(`UPDATE pre_run_checks SET ${update}`).run();
+    fixture.state.mainSha = "e".repeat(40);
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: expect.stringMatching(/workflow_candidate|check_pending/) });
+    expect(fixture.state.posts).toBe(0);
+  });
+
+  it("names a delivery with an unreadable payload, with no payload text and no message", async () => {
+    const deliveryId = crypto.randomUUID();
+    await database
+      .prepare(
+        "INSERT INTO github_webhook_delivery(delivery_id,event,payload_digest,payload_json,received_at) VALUES(?,'workflow_run','digest',?,?)",
+      )
+      .bind(deliveryId, "private payload", Date.now())
+      .run();
+    const result = await reconcileWebhooks(apiContext(preRunBindings));
+    expect(result.items).toEqual([{ subject: { deliveryId, event: "workflow_run" } }]);
+    expect(JSON.stringify(result)).not.toContain("private");
+  });
+
+  it("names only the safe values of a workflow_run payload", async () => {
+    const fixture = await unboundMainWorkflowFixture(false);
+    fixture.state.run.status = "in_progress";
+    fixture.state.run.conclusion = null;
+    const webhook = fixture.workflowWebhook();
+    webhook.payload.action = "private action";
+    webhook.payload.repository = { id: 100 };
+    webhook.payload.installation = installation;
+    webhook.payload.sender = sender;
+    object(webhook.payload.workflow_run).run_attempt = "private";
+    await persistWebhook(database, webhook);
+    const result = await reconcileWebhooks(
+      apiContext(await githubBindings(preRunBindings, fixture)),
+    );
+    expect(result.items).toEqual([
+      {
+        subject: { deliveryId: webhook.deliveryId, event: "workflow_run" },
+        message: expect.any(String),
+      },
+    ]);
+    expect(JSON.stringify(result.items)).not.toContain("private");
   });
 
   it("keeps a still-running old main workflow retryable", async () => {

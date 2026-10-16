@@ -9,7 +9,12 @@ import {
   type VerifiedWebhook,
 } from "@visonaut/security";
 import { assertion, atomic, ConflictError } from "@visonaut/service";
-import { noteCause, type CountedCause } from "../operations/failure.ts";
+import {
+  failedItemMessage,
+  noteCause,
+  type CountedCause,
+  type FailedItem,
+} from "../operations/failure.ts";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
 import { mergeBaseForHead } from "./merge.js";
@@ -424,36 +429,71 @@ export async function receiveWebhook(
   return Response.json({ received: true }, { status: 202 });
 }
 
+interface StoredDelivery {
+  delivery_id: string;
+  event: string;
+  payload_digest: string;
+  payload_json: string;
+  received_at: number;
+}
+
+/**
+ * The subject of a delivery that the step could not end. The ID and the event
+ * have the form that `verifyGitHubWebhook` fixed. Of the payload, only an
+ * action of lowercase words and the numbers of a workflow run are on the line.
+ */
+function failedDelivery(
+  row: StoredDelivery,
+  payload: Record<string, unknown> | null,
+  error: unknown,
+) {
+  const subject: FailedItem["subject"] = { deliveryId: row.delivery_id, event: row.event };
+  const action = payload?.action;
+  if (typeof action === "string" && /^[a-z_]{1,40}$/.test(action)) {
+    subject.action = action;
+  }
+  const workflow = payload && isRecord(payload.workflow_run) ? payload.workflow_run : null;
+  if (workflow && Number.isSafeInteger(workflow.id) && Number.isSafeInteger(workflow.run_attempt)) {
+    subject.workflowRunId = Number(workflow.id);
+    subject.workflowAttempt = Number(workflow.run_attempt);
+  }
+  const message = failedItemMessage(error);
+  return message ? { subject, message } : { subject };
+}
+
 export async function reconcileWebhooks(
   context: ApiContext,
   limit = 25,
-): Promise<{ checked: number; pending: string[]; causes?: CountedCause[] }> {
+): Promise<{
+  checked: number;
+  pending: string[];
+  causes?: CountedCause[];
+  items?: FailedItem[];
+}> {
   const rows = await context.database
     .prepare(
       "SELECT delivery_id, event, payload_digest, payload_json, received_at FROM github_webhook_delivery WHERE processed_at IS NULL ORDER BY last_attempt_at, received_at LIMIT ?",
     )
     .bind(Math.min(limit, 100))
-    .all<{
-      delivery_id: string;
-      event: string;
-      payload_digest: string;
-      payload_json: string;
-      received_at: number;
-    }>();
+    .all<StoredDelivery>();
   const pending: string[] = [];
-  const report: { causes?: CountedCause[] } = {};
+  const report: { causes?: CountedCause[]; items?: FailedItem[] } = {};
   for (const row of rows.results) {
+    let payload: Record<string, unknown> | null = null;
     try {
+      payload = object(JSON.parse(row.payload_json));
       await processWebhook(context, {
         deliveryId: row.delivery_id,
         event: row.event,
         payloadDigest: row.payload_digest,
-        payload: object(JSON.parse(row.payload_json)),
+        payload,
         receivedAt: row.received_at,
       });
     } catch (error) {
       noteCause(report, error);
       pending.push(row.delivery_id);
+      report.items ??= [];
+      report.items.push(failedDelivery(row, payload, error));
     } finally {
       await context.database
         .prepare("UPDATE github_webhook_delivery SET last_attempt_at = ? WHERE delivery_id = ?")
@@ -461,5 +501,5 @@ export async function reconcileWebhooks(
         .run();
     }
   }
-  return { checked: rows.results.length, pending, causes: report.causes };
+  return { checked: rows.results.length, pending, causes: report.causes, items: report.items };
 }

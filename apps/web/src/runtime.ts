@@ -2,6 +2,7 @@ import {
   errorCause,
   logOperationFailure,
   type CountedCause,
+  type FailedItem,
   type OperationFailureContext,
 } from "./operations/failure.ts";
 import { imageLimits } from "@visonaut/compare";
@@ -333,9 +334,16 @@ async function runPass({ env, message, delivery, pass }: RunPassParams) {
   const context = operationsContext(env);
   // A step that went on after an error of one item gives the causes of these
   // errors. A pass with no such error writes no line.
-  const logItemCauses = (operation: string, causes?: CountedCause[]) => {
+  const logItemCauses = (operation: string, causes?: CountedCause[], items?: FailedItem[]) => {
     if (!causes) return;
-    logOperationFailure({ operation, code: "items-failed", correlationId, startedAt, causes });
+    logOperationFailure({
+      operation,
+      code: "items-failed",
+      correlationId,
+      startedAt,
+      causes,
+      items,
+    });
   };
   // The alert of each step that completes closes with one statement at the
   // end of the pass.
@@ -414,7 +422,9 @@ async function runPass({ env, message, delivery, pass }: RunPassParams) {
     const alert = { kind, subject: "scheduler", code: "reconciliation-failed" };
     try {
       const result = await reconcile(apiContext(apiBindings(env)), context.budget.tasksPerStep);
-      logItemCauses(kind, result.causes);
+      // Only the webhooks step names its failed items.
+      const report: { causes?: CountedCause[]; items?: FailedItem[] } = result;
+      logItemCauses(kind, report.causes, report.items);
       // A staged run that is not ready is an error of the result. The step
       // tries it again, and a run that fails 5 times gets its own alert, so
       // the errors of the staged runs do not raise the alert of the step.
