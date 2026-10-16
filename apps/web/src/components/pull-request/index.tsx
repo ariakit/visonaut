@@ -98,6 +98,9 @@ export function PullRequestPage({
   const lastReadFailed = useRef(false);
   // The check that the last lookup named, and the reads since that lookup began.
   const polled = useRef<{ check: string; reads: number }>(undefined);
+  // The alert count of the header is read once. It has no index in the service,
+  // so a poll does not ask for it again.
+  const headerRead = useRef(false);
   const { content, noteFocus } = useKeepFocus(pull, failure);
   useEffect(() => {
     // The lookup stays in the page, and the code of the run page loads while
@@ -112,7 +115,11 @@ export function PullRequestPage({
       const pinned = check ? undefined : polled.current;
       const poll = pinned && pinned.reads < readsPerLookup ? pinned : undefined;
       const asked = check ?? poll?.check;
-      const query = asked ? `?check=${encodeURIComponent(asked)}` : "";
+      const params = new URLSearchParams();
+      if (asked) params.set("check", asked);
+      if (!headerRead.current) params.set("header", "1");
+      const search = params.toString();
+      const query = search ? `?${search}` : "";
       const response = await fetchOrFail(`/api/pulls/${encodeURIComponent(pullNumber)}${query}`, {
         credentials: "same-origin",
         cache: "no-store",
@@ -149,10 +156,12 @@ export function PullRequestPage({
       }
       const next = readPullAnswer(await readSuccess(response));
       if (signal.aborted) return;
+      headerRead.current = true;
+      // A poll has no alert count, and the header keeps the one that it has.
       onFacts?.({
         repository: next.repository,
         login: next.viewerLogin,
-        alertCount: next.alertCount,
+        ...(next.alertCount !== undefined && { alertCount: next.alertCount }),
       });
       if (poll && next.state !== "pending") {
         // The named check is over, and the newest head commit can have a newer

@@ -1020,8 +1020,15 @@ export async function handleReview(
     if (check !== null && !/^visonaut:pre:[a-f0-9]{40}(?::[1-9][0-9]*)?$/.test(check)) {
       throw new PullNotFoundError(context.configuration.github.repository);
     }
+    // The first read of a page asks for the alert count of its header.
+    const withAlertCount = new URL(request.url).searchParams.get("header") === "1";
     return Response.json({
-      ...(await pullAnswer({ context, pullNumber: Number(pullMatch[1]), check })),
+      ...(await pullAnswer({
+        context,
+        pullNumber: Number(pullMatch[1]),
+        check,
+        withAlertCount,
+      })),
       viewerLogin: context.identity.login,
     });
   }

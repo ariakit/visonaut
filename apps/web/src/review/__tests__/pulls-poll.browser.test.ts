@@ -21,21 +21,39 @@ function answer(fields: Answer) {
   return { repository: "ariakit/ariakit", pullNumber: 7, runId: null, ...fields };
 }
 
+/** The search string of a request without the flag of the header facts. */
+function searchWithoutHeader(url: string) {
+  const search = new URL(url).searchParams;
+  search.delete("header");
+  return search.size ? `?${search}` : "";
+}
+
 /** Answers each request for pull request 7 with the newest reply, and keeps its query. */
 async function serve(page: Page, first: Answer) {
   const queries: string[] = [];
+  const headerFlags: (string | null)[] = [];
   // A request with a check ID gets the answer for that check, as the service does.
   const json = (value: Answer) => (route: Route) => {
     const asked = new URL(route.request().url()).searchParams.get("check");
-    return route.fulfill({ json: answer({ ...value, check: asked ?? value.check }) });
+    const header = new URL(route.request().url()).searchParams.has("header");
+    return route.fulfill({
+      json: {
+        ...answer({ ...value, check: asked ?? value.check }),
+        viewerLogin: "octo-maintainer",
+        // Only a read that asks for the header facts gets the count.
+        ...(header && { alertCount: 2 }),
+      },
+    });
   };
   let reply = json(first);
   await page.route("**/api/pulls/7*", (route) => {
-    queries.push(new URL(route.request().url()).search);
+    queries.push(searchWithoutHeader(route.request().url()));
+    headerFlags.push(new URL(route.request().url()).searchParams.get("header"));
     return reply(route);
   });
   return {
     queries: () => queries,
+    headerFlags: () => headerFlags,
     reply: (next: Answer) => {
       reply = json(next);
     },
@@ -89,6 +107,34 @@ test("a link with no check ID looks up each fourth read, and the reads between a
   }
   const named = checkQuery(firstCheck);
   expect(lookup.queries()).toEqual(["", named, named, named, "", named]);
+});
+
+test("the first read asks for the facts of the header, and a poll does not", async ({ page }) => {
+  await page.clock.install();
+  const lookup = await serve(page, { state: "pending", check: firstCheck });
+  await page.goto(entryWithoutCheck);
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("link", { name: "Status 2 open alerts" })).toBeVisible();
+  await readAfterWait(page, lookup, 2);
+  await readAfterWait(page, lookup, 3);
+  // The polls keep the count that the first read gave.
+  await expect(header.getByRole("link", { name: "Status 2 open alerts" })).toBeVisible();
+  await expect(header.getByRole("button", { name: "Account menu" })).toContainText(
+    "@octo-maintainer",
+  );
+  expect(lookup.headerFlags()).toEqual(["1", null, null]);
+});
+
+test("a first read that fails asks for the facts of the header again", async ({ page }) => {
+  await page.clock.install();
+  const lookup = await serve(page, { state: "pending", check: firstCheck });
+  lookup.notFound();
+  await page.goto(entryWithoutCheck);
+  await expect(page.getByRole("alert")).toBeVisible();
+  lookup.reply({ state: "pending", check: firstCheck });
+  await page.getByRole("button", { name: "Try again" }).click();
+  await expect.poll(() => lookup.queries().length).toBe(2);
+  expect(lookup.headerFlags()).toEqual(["1", "1"]);
 });
 
 test("a poll by check opens the run after a lookup confirms the newest check", async ({ page }) => {

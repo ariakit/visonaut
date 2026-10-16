@@ -32,8 +32,11 @@ export interface PullAnswer {
    * not the table.
    */
   check?: string;
-  /** The open alerts, for the Status link of the header. */
-  alertCount: number;
+  /**
+   * The open alerts, for the Status link of the header. The answer has it only
+   * when the request asked for the header facts.
+   */
+  alertCount?: number;
   /** The attempt of the workflow run, when the check has one. */
   attempt?: number;
   /** The page of that attempt on GitHub, when the check has one. */
@@ -57,6 +60,11 @@ interface PullParams {
    * workflow attempt, or its newest check when none is bound.
    */
   check: string | null;
+  /**
+   * Reads the count of the open alerts. The count has no index and scans the
+   * alert table, so only the first read of a page asks for it, and not each poll.
+   */
+  withAlertCount?: boolean;
 }
 
 interface PullRow {
@@ -101,19 +109,21 @@ function captureState(row: PullRow): PullCaptureState {
 }
 
 /** Throws `PullNotFoundError` when no check of the pull request matches. */
-export async function pullAnswer({ context, pullNumber, check }: PullParams): Promise<PullAnswer> {
+export async function pullAnswer({
+  context,
+  pullNumber,
+  check,
+  withAlertCount = false,
+}: PullParams): Promise<PullAnswer> {
   const { projectId, github } = context.configuration;
   // One statement finds the check, the run of its workflow attempt, and the title.
-  // The count of the open alerts is a second statement of the same batch: the
-  // header has it on a direct open, and the batch is still one round trip.
   // Among the checks of one head commit, a check that is bound to a workflow
   // attempt comes first: an unbound regenerated merge must not replace the
   // attempt that actually ran.
   // The title lookup compares with `+0`: a bare integer column there hides the
   // pull request number from the index `github_webhook_delivery_pr_title`.
-  const [rowResult, countResult] = await context.database.batch([
-    context.database
-      .prepare(`SELECT pre.external_id AS externalId, pre.source_sha AS sourceSha, pre.docs_only AS docsOnly,
+  const pullStatement = context.database
+    .prepare(`SELECT pre.external_id AS externalId, pre.source_sha AS sourceSha, pre.docs_only AS docsOnly,
       pre.plan_visual_required AS visualRequired, pre.state AS checkState,
       pre.workflow_run_id AS workflowRunId, pre.workflow_attempt AS workflowAttempt,
       run.id AS runId, run.state AS runState, run.sealed_at AS runSealedAt,
@@ -130,14 +140,16 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
       WHERE pre.repository_id=? AND pre.kind='pull_request' AND pre.pull_request_number=?
         AND ${check === null ? newestHeadSql : "pre.external_id=?"}
       ORDER BY pre.workflow_run_id IS NULL, pre.created_at DESC, pre.generation DESC LIMIT 1`)
-      .bind(
-        projectId,
-        github.repositoryId,
-        pullNumber,
-        ...(check === null ? [github.repositoryId, pullNumber] : [check]),
-      ),
-    context.database.prepare(alertCountSql),
-  ]);
+    .bind(
+      projectId,
+      github.repositoryId,
+      pullNumber,
+      ...(check === null ? [github.repositoryId, pullNumber] : [check]),
+    );
+  // The count is a second statement of the same batch, so it adds no round trip.
+  const [rowResult, countResult] = withAlertCount
+    ? await context.database.batch([pullStatement, context.database.prepare(alertCountSql)])
+    : [await pullStatement.all(), undefined];
   const row = batchRows<PullRow>(rowResult)[0];
   if (!row) {
     throw new PullNotFoundError(github.repository);
@@ -150,8 +162,10 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
     state,
     headSha: row.sourceSha,
     check: row.externalId,
-    alertCount: batchRows<{ alertCount: number }>(countResult)[0]?.alertCount ?? 0,
   };
+  if (countResult) {
+    answer.alertCount = batchRows<{ alertCount: number }>(countResult)[0]?.alertCount ?? 0;
+  }
   if (row.title) {
     answer.title = row.title;
   }

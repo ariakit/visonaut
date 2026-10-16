@@ -2706,7 +2706,7 @@ describe("the facts of the header in the answers of a page", () => {
     expect(costs.totals().rows_written).toBe(0);
   });
 
-  it("gives the login of the viewer and the open alert count in the pull request answer, with no round trip of its own", async () => {
+  it("gives the login of the viewer to each pull request answer, and the open alert count to a read that asks for the header facts", async () => {
     const test = await fixture();
     const headers = { authorization: `Bearer ${test.token}` };
     const sha = crypto.randomUUID().replaceAll("-", "").padEnd(40, "0");
@@ -2731,8 +2731,12 @@ describe("the facts of the header in the answers of a page", () => {
       },
     });
     test.bindings.database = costs.database;
-    const model = await objectResponse(await test.send("/api/pulls/42", { headers }));
+    const model = await objectResponse(await test.send("/api/pulls/42?header=1", { headers }));
+    const poll = await objectResponse(await test.send("/api/pulls/42", { headers }));
     test.bindings.database = database;
+    // A read without the flag has the login and no count, and reads no alert row.
+    expect(poll).toMatchObject({ viewerLogin: "maintainer" });
+    expect(poll).not.toHaveProperty("alertCount");
     // The tests of this file share one database, so the count is the open rows.
     const open = await database
       .prepare("SELECT count(*) AS count FROM operations_events WHERE resolved_at IS NULL")
@@ -2742,6 +2746,10 @@ describe("the facts of the header in the answers of a page", () => {
     // The count is a statement of the batch that already reads the pull request.
     const batch = batches.find((sql) => sql.some((entry) => entry.includes("AS externalId")));
     expect(batch?.filter((entry) => entry.includes("FROM operations_events"))).toHaveLength(1);
+    // Only the read with the flag read the alert table.
+    expect(
+      batches.filter((sql) => sql.some((entry) => entry.includes("operations_events"))),
+    ).toHaveLength(1);
   });
 
   it("gives the login of the viewer in the status answer", async () => {

@@ -71,7 +71,7 @@ function fixture(database: TestDatabase) {
         run.sealed === false ? null : 1,
       );
   };
-  const answer = (check: string | null = null, pullNumber = 42) =>
+  const answer = (check: string | null = null, pullNumber = 42, withAlertCount = false) =>
     pullAnswer({
       context: {
         database,
@@ -82,6 +82,7 @@ function fixture(database: TestDatabase) {
       },
       pullNumber,
       check,
+      withAlertCount,
     });
   return { insertCheck, insertRun, answer };
 }
@@ -249,12 +250,14 @@ it("counts the open alerts for the header, and not the closed ones", async () =>
   using database = new TestDatabase();
   const test = fixture(database);
   const check = test.insertCheck({ testedSha, attempt: 1, createdAt: 1 });
-  expect(await test.answer(check)).toMatchObject({ alertCount: 0 });
+  expect(await test.answer(check, 42, true)).toMatchObject({ alertCount: 0 });
+  // A read that does not ask for the header facts has no count.
+  expect(await test.answer(check)).not.toHaveProperty("alertCount");
   const insertEvent = database.connection.prepare(
     "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at,resolved_at) VALUES(?,'backup',?,'backup-failed',1,2,?)",
   );
   insertEvent.run("open-1", "open-1", null);
   insertEvent.run("open-2", "open-2", null);
   insertEvent.run("closed", "closed", 3);
-  expect(await test.answer(check)).toMatchObject({ alertCount: 2 });
+  expect(await test.answer(check, 42, true)).toMatchObject({ alertCount: 2 });
 });
