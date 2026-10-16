@@ -6,6 +6,16 @@ import { githubToken, request, serverOrigin } from "./http.js";
 import { downloadCaptures } from "./github-artifacts.js";
 import { bindSubmission } from "./signed-context.js";
 
+/** The time of the work before Submit reads the prepared directory. */
+export interface Preparation {
+  /** The `performance.now()` value at the start of the preparation. */
+  started: number;
+  /** The begin request and the download of the capture artifacts. */
+  artifactsMs: number;
+  /** The checks of the capture bundles and the signed binding. */
+  bundlesMs: number;
+}
+
 function required(environment: Record<string, string | undefined>, name: string): string {
   const value = environment[name];
   if (!value) {
@@ -77,10 +87,12 @@ export async function prepareBundleSubmission(
   if (!Number.isSafeInteger(workflowAttempt) || workflowAttempt < 1) {
     throw new CliError("The current workflow attempt is invalid.", 4);
   }
+  const started = performance.now();
   await beginSubmission(environment);
   const root = await mkdtemp(join(required(environment, "RUNNER_TEMP"), "visonaut-submit-"));
   try {
     const sources = await downloadCaptures({ shards, directory: root, environment });
+    const downloaded = performance.now();
     const directory = join(root, "combined");
     const pending = await combineBundles({
       bundles: sources,
@@ -88,7 +100,12 @@ export async function prepareBundleSubmission(
       workflowAttempt,
     });
     await bindSubmission(pending, directory, origin, environment);
-    return { directory, server: origin.origin };
+    const preparation: Preparation = {
+      started,
+      artifactsMs: downloaded - started,
+      bundlesMs: performance.now() - downloaded,
+    };
+    return { directory, server: origin.origin, preparation };
   } catch (error) {
     await rm(root, { recursive: true, force: true });
     throw error;

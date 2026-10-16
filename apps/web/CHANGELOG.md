@@ -1,5 +1,66 @@
 # @visonaut/web
 
+## 0.3.2
+
+### Patch Changes
+
+- 1de8a08: The cause of an error on more failure lines of the service
+
+  The steps of a scheduled service pass that run before its main steps now log the cause of each item that failed, and the line of a pass that stops with an error has the correlation ID of its pass.
+
+  The steps are `github-delivery-recovery`, `webhooks`, `check-aliases`, `staged`, and `staged-retention`. Before this change, the pass logged nothing when one item of these steps failed and the step went on. Now the pass writes one line `operation-failed` for each such step, with the operation of the step, the code `items-failed`, and the causes with the number of errors for each cause. A pass with no item failure writes no new line. For example, when GitHub answers 502 to the check of one alias:
+
+  ```json
+  {
+    "event": "operation-failed",
+    "operation": "check-aliases",
+    "code": "items-failed",
+    "correlationId": "5d1c0c4e-1d4a-4a52-9a46-0c4a7c1b8f2e",
+    "elapsedMilliseconds": 120,
+    "causes": [
+      {
+        "errorName": "SecurityError",
+        "code": "github_unavailable",
+        "upstreamStatus": 502,
+        "count": 1
+      }
+    ]
+  }
+  ```
+
+  Each name and each code is on a list in the source code, and the log gets no message text and no stack of an error. A pass that stops with an error writes one line `operation-failed` with the operation `operations-pass`. This line now has the same `correlationId` as the other lines of the same pass. Before this change, it had an ID of its own.
+
+  The line `operation-failed` of an API request that answers 503 with the code `service_unavailable` now also has the cause of the error. This cause has only the class of the error in `errorName`, because a `SecurityError` gets its own answer and does not write this line. Before this change, this line had no cause, so the logs did not show why the request failed. For example, when a read of D1 throws:
+
+  ```json
+  {
+    "event": "operation-failed",
+    "operation": "api",
+    "code": "service_unavailable",
+    "correlationId": "8a41f013-bdab-44fd-8e8f-12d42d25429f",
+    "elapsedMilliseconds": 579,
+    "cause": { "errorName": "Error" }
+  }
+  ```
+
+- 7742840: Updated the copied Ariakit UI primitives to the version with the glider fix
+
+  The hover and selected gliders of the nav and the button rows now use selectors that limit style invalidation in Chrome, so a pointer move between two rows or the removal of a tooltip is meant to make Chrome recalculate fewer elements in a long list, such as an open review folder. The rows look and behave the same.
+
+- 1b3b2cc: The pull request page reads fewer rows while it waits
+
+  A pull request link with no check ID now looks up the newest check only at each fourth read. The reads between two lookups use the check ID that the service names, and each of them reads one row and not each pull request check of the table. The page still opens the run of a newer head commit, at the next lookup.
+
+  A pull request page for a check that is not found now shows the GitHub link, because the 404 answer carries the repository.
+
+- 642ccc7: Replaced baselines no longer keep their images without end
+
+  A replaced baseline now keeps its images for 30 days after the newer run closes. The scheduled maintenance pass then deletes these images. Before this change, each main run kept the images of the runs before it, so the images of each replaced baseline and of the imported baseline stayed in storage.
+
+  The current baseline, each open run, and each run with a manual pin still keep every image that they show. The capture inventories, the comparison rows, and the decisions of a run stay.
+
+- f722969: Fixed the delivery recovery after a database restore, so that a failed GitHub delivery from after the restore gets its redelivery requests also when its first pass had no request left. A delivery from before the restore still gets no request.
+
 ## 0.3.1
 
 ### Patch Changes

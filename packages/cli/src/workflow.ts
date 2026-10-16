@@ -1,12 +1,13 @@
 import { CliError } from "./errors.js";
 import { prepareBundleSubmission, submitWithoutVisuals } from "./bundle-submit.js";
+import type { Preparation } from "./bundle-submit.js";
 
 /** Submit either binds the native Plan's skip or verifies every capture artifact. */
 export async function runWorkflowCommand(
   argv: string[],
   environment: Record<string, string | undefined>,
 ): Promise<
-  | { command: "submit"; directory: string; server: string }
+  | { command: "submit"; directory: string; server: string; preparation?: Preparation }
   | { command: "submit"; noVisual: true }
   | undefined
 > {
