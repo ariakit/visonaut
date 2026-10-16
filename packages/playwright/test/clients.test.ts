@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -36,6 +37,7 @@ interface FixtureOptions {
   timeout?: number;
   comparisonDefaults?: ComparisonOptions;
   screenshotDefaults?: ComparisonOptions;
+  env?: Record<string, string>;
 }
 
 async function runFixture(source: string, options: FixtureOptions = {}) {
@@ -124,7 +126,11 @@ async function runFixture(source: string, options: FixtureOptions = {}) {
         path.join(directory, "playwright.config.ts"),
         ...extraArgs,
       ],
-      { cwd: directory, env: { ...process.env, CI: "true" }, stdio: ["ignore", "pipe", "pipe"] },
+      {
+        cwd: directory,
+        env: { ...process.env, CI: "true", ...options.env },
+        stdio: ["ignore", "pipe", "pipe"],
+      },
     );
     let output = "";
     child.stdout.on("data", (chunk) => {
@@ -593,6 +599,186 @@ describe("published adapter and reporter", () => {
       await expect(manifestAt(fixture.directory)).rejects.toThrow("ENOENT");
     },
     20000,
+  );
+});
+
+describe("previous capture bundle", () => {
+  interface CountedCapturesOptions {
+    rightColor?: string;
+    variant?: string;
+  }
+
+  // Count the screenshots of one direct capture and of one batch of two crops.
+  // The right half of the page has its own color.
+  function countedCaptures({
+    rightColor = "white",
+    variant = "light",
+  }: CountedCapturesOptions = {}) {
+    return `
+      test('previous capture', async ({ page }) => {
+        await page.setContent('<style>body { margin:0; background:white } div { position:absolute; left:16px; top:0; width:16px; height:32px; background:${rightColor} }</style><div></div>');
+        const screenshot = page.screenshot.bind(page);
+        let calls = 0;
+        page.screenshot = async (options) => {
+          calls++;
+          return screenshot(options);
+        };
+        const variant = { key: '${variant}', browser: 'chromium' };
+        await visual(page, { item: 'card/direct', variant });
+        console.log('direct screenshots: ' + calls);
+        calls = 0;
+        await visualBatch(page, {
+          variant,
+          items: [
+            { item: 'card/left', clip: { x: 0, y: 0, width: 16, height: 32 } },
+            { item: 'card/right', clip: { x: 16, y: 0, width: 16, height: 32 } },
+          ],
+        });
+        console.log('batch screenshots: ' + calls);
+      });
+    `;
+  }
+
+  async function capturedDigests(directory: string) {
+    const manifest = await manifestAt(directory);
+    return new Map(manifest.captures.map((capture) => [capture.itemKey, capture.image.digest]));
+  }
+
+  function withBundle(directory: string): FixtureOptions {
+    return { env: { VISONAUT_PREVIOUS_CAPTURE: path.join(directory, "evidence") } };
+  }
+
+  it("accepts a first screenshot with the digest of the previous capture", async () => {
+    await using previous = await runFixture(countedCaptures());
+    expect(previous.code, previous.output).toBe(0);
+    expect(previous.output).toContain("direct screenshots: 2");
+    expect(previous.output).toContain("batch screenshots: 2");
+    const digests = await capturedDigests(previous.directory);
+    expect([...digests.keys()].sort()).toEqual(["card/direct", "card/left", "card/right"]);
+
+    await using matched = await runFixture(countedCaptures(), withBundle(previous.directory));
+    expect(matched.code, matched.output).toBe(0);
+    expect(matched.output).toContain("direct screenshots: 1");
+    expect(matched.output).toContain("batch screenshots: 1");
+    expect(matched.output).not.toContain("Visonaut ignores");
+    expect(await capturedDigests(matched.directory)).toEqual(digests);
+
+    // The right half changes, so the direct capture and one crop miss. One
+    // crop that misses sends the whole batch to the stability loop.
+    await using changed = await runFixture(
+      countedCaptures({ rightColor: "red" }),
+      withBundle(previous.directory),
+    );
+    expect(changed.code, changed.output).toBe(0);
+    expect(changed.output).toContain("direct screenshots: 2");
+    expect(changed.output).toContain("batch screenshots: 2");
+    const changedDigests = await capturedDigests(changed.directory);
+    expect(changedDigests.get("card/left")).toBe(digests.get("card/left"));
+    expect(changedDigests.get("card/right")).not.toBe(digests.get("card/right"));
+    expect(changedDigests.get("card/direct")).not.toBe(digests.get("card/direct"));
+
+    // The bundle has no entry for another variant.
+    await using other = await runFixture(
+      countedCaptures({ variant: "dark" }),
+      withBundle(previous.directory),
+    );
+    expect(other.code, other.output).toBe(0);
+    expect(other.output).toContain("direct screenshots: 2");
+    expect(other.output).toContain("batch screenshots: 2");
+    expect(other.output).not.toContain("Visonaut ignores");
+  }, 60000);
+
+  it("falls back to the stability loop when a clip is outside the first screenshot", async () => {
+    // The bottom half shows from the start, or only after the first screenshot.
+    const growingPage = (grow: boolean) => `
+      test('growing page', async ({ page }) => {
+        await page.setContent('<style>body { margin:0; background:white } div { height:32px; background:blue }</style><div style="display:${grow ? "none" : "block"}; margin-top:32px"></div>');
+        const screenshot = page.screenshot.bind(page);
+        let calls = 0;
+        page.screenshot = async (options) => {
+          const bytes = await screenshot(options);
+          if (++calls === 1) {
+            await page.evaluate(() => document.querySelector('div').style.display = 'block');
+          }
+          return bytes;
+        };
+        await visualBatch(page, {
+          variant: { key: 'light', browser: 'chromium' },
+          items: [{ item: 'card/bottom', clip: { x: 0, y: 32, width: 32, height: 32 } }],
+        });
+        console.log('batch screenshots: ' + calls);
+      });
+    `;
+    await using previous = await runFixture(growingPage(false));
+    expect(previous.code, previous.output).toBe(0);
+    expect(previous.output).toContain("batch screenshots: 2");
+
+    await using grown = await runFixture(growingPage(true), withBundle(previous.directory));
+    expect(grown.code, grown.output).toBe(0);
+    // The first screenshot is 32 pixels high, so the clip is a miss and not an error.
+    expect(grown.output).toContain("batch screenshots: 3");
+    expect(await capturedDigests(grown.directory)).toEqual(
+      await capturedDigests(previous.directory),
+    );
+  }, 30000);
+
+  type BundleSetup = (directory: string) => Promise<unknown>;
+  const manifestFile = (directory: string) => path.join(directory, "manifest.json");
+
+  it.each<[string, BundleSetup, string]>([
+    ["a missing directory", (directory) => rm(directory, { recursive: true }), "ENOENT"],
+    ["a directory with no manifest", async () => {}, "ENOENT"],
+    [
+      "a manifest that is a folder",
+      (directory) => mkdir(manifestFile(directory)),
+      "not a regular file",
+    ],
+    [
+      "a manifest that is a symbolic link",
+      async (directory) => {
+        await writeFile(path.join(directory, "target.json"), "{}");
+        await symlink("target.json", manifestFile(directory));
+      },
+      "ELOOP",
+    ],
+    [
+      "an empty manifest",
+      (directory) => writeFile(manifestFile(directory), ""),
+      "The manifest is empty",
+    ],
+    ["a manifest that is not JSON", (directory) => writeFile(manifestFile(directory), "["), "JSON"],
+    [
+      "a manifest of an unknown version",
+      // parseManifest checks the version before each other field.
+      (directory) => writeFile(manifestFile(directory), '{"schemaVersion":"2.0"}'),
+      "Unsupported schemaVersion 2.0",
+    ],
+    [
+      "a manifest above 8 MiB",
+      (directory) => writeFile(manifestFile(directory), " ".repeat(8 * 1024 * 1024 + 1)),
+      "larger than 8388608 bytes",
+    ],
+  ])(
+    "falls back to the stability loop for %s",
+    async (_, setup, reason) => {
+      const directory = await mkdtemp(path.join(tmpdir(), "visonaut-previous-"));
+      try {
+        await setup(directory);
+        await using fixture = await runFixture(countedCaptures(), {
+          env: { VISONAUT_PREVIOUS_CAPTURE: directory },
+        });
+        expect(fixture.code, fixture.output).toBe(0);
+        expect(fixture.output).toContain("direct screenshots: 2");
+        expect(fixture.output).toContain("batch screenshots: 2");
+        expect(fixture.output).toContain("Visonaut ignores VISONAUT_PREVIOUS_CAPTURE");
+        expect(fixture.output).toContain(reason);
+        // The worker reads the bundle one time for all its captures.
+        expect(fixture.output.split("Visonaut ignores").length).toBe(2);
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+    30000,
   );
 });
 

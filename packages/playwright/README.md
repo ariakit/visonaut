@@ -55,6 +55,14 @@ await visual(page, {
 
 `visual` and `visualBatch` check the image bounds of Submit when they capture an item: 2 MiB encoded, 2.1 million pixels, and 8192 pixels for each side. An item above a bound fails the capture with its item key and variant key, for example `dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.` A screenshot above the memory limits of the adapter (32 million pixels or 20 MiB) fails earlier, with no item name.
 
+Set `VISONAUT_PREVIOUS_CAPTURE` to the directory of an earlier capture bundle (the directory with `manifest.json` that the reporter writes, for example the capture artifact of the base commit) to skip the second screenshot when the image is already known:
+
+```sh
+VISONAUT_PREVIOUS_CAPTURE="$RUNNER_TEMP/visonaut-previous" npx playwright test
+```
+
+The adapter reads only `manifest.json`, one time for each worker process, and takes the image digest of each item and variant from it. When the first screenshot of `visual` has that digest, the capture accepts it with no second screenshot and no wait. `visualBatch` accepts its first full-page screenshot only when each crop has its digest. Each other case waits for two consecutive equal screenshots as before: an item or variant with no capture in the bundle, a different digest, a missing directory or manifest, a manifest that is not a regular file, is empty, or is above 8 MiB, and a manifest that this release cannot parse (for example an unknown schema version). An unusable bundle also writes one warning and never fails a capture. The digests are only hints: a wrong digest can only cause a miss, and a match records the same image as the stability loop would for a page that renders that image. A render that changes after a matching first screenshot is not seen; the stability loop sees it when it shows before the second screenshot.
+
 This source requires public comparison defaults and no longer reads private Playwright screenshot configuration. To migrate from the compatible adapter `0.4.1`, share your existing effective screenshot settings with `comparisonDefaults` before installing the breaking release. Use `{}` only when you intend the built-in policy. The Playwright peer range is `^1.63.0`. Development and CI use `1.63.0`.
 
 Starting with adapter `0.5.0`, this public configuration is required. See the [comparison-default migration record](../../docs/history/operations/strict-adapter-comparison-defaults.md) for the coordinated release sequence.
