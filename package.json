@@ -23,7 +23,7 @@
     "@changesets/cli": "3.0.3",
     "@changesets/types": "7.0.0",
     "@playwright/test": "1.63.0",
-    "@types/node": "24.13.6",
+    "@types/node": "24.19.2",
     "lefthook": "2.2.2",
     "oxfmt": "0.73.0",
     "oxlint": "1.88.0",
@@ -35,7 +35,7 @@
   "devEngines": {
     "runtime": {
       "name": "node",
-      "version": "24.18.0",
+      "version": "24.21.0",
       "onFail": "download"
     }
   },
