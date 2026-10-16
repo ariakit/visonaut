@@ -23,6 +23,8 @@ interface InventoryReviewCapture {
 }
 interface InventoryReviewImage {
   id: string;
+  /** The run that owns the bytes of the image. */
+  run_id: string;
   digest: string;
   width: number;
   height: number;
@@ -42,12 +44,40 @@ function reviewCaptures(captures: InventoryCapture[]): InventoryReviewCapture[] 
 function reviewImages(captures: InventoryCapture[]): InventoryReviewImage[] {
   return captures.map((capture) => ({
     id: capture.image.id,
+    run_id: capture.image.runId,
     digest: capture.image.digest,
     width: capture.image.width,
     height: capture.image.height,
     bytes_present: 1,
   }));
 }
+/**
+ * The images, with `bytes_present` 0 for each named image whose owner run has
+ * no bytes. A capture list names an image of another run for an unchanged
+ * capture and for its baseline, and that run can be deleted before this run.
+ * The read is one key lookup for each owner run of a named image.
+ */
+export async function withImageByteState(
+  context: PrivateContext,
+  images: InventoryReviewImage[],
+  named: ReadonlySet<string>,
+) {
+  const owners = new Set(
+    images.filter((image) => named.has(image.id)).map((image) => image.run_id),
+  );
+  if (!owners.size) return images;
+  const expired = await context.database
+    .prepare(
+      "SELECT run.id FROM json_each(?) owner JOIN work_retained_runs run ON run.id=owner.value WHERE run.byte_state!='live'",
+    )
+    .bind(JSON.stringify([...owners]))
+    .all<{ id: string }>();
+  const runs = new Set(expired.results.map((run) => run.id));
+  return images.map((image) =>
+    named.has(image.id) && runs.has(image.run_id) ? { ...image, bytes_present: 0 } : image,
+  );
+}
+
 function byIdentity(captures: InventoryReviewCapture[]) {
   return new Map(
     captures.map((capture) => [
@@ -96,7 +126,7 @@ export async function readReviewInventory(context: PrivateContext, run: RunRow) 
   ];
   if (inventory.referenceSnapshotId && !referenceInventory) {
     const referenceImages = await context.database
-      .prepare(`SELECT i.id,i.digest,i.width,i.height,i.bytes_present
+      .prepare(`SELECT i.id,i.run_id,i.digest,i.width,i.height,i.bytes_present
         FROM visonaut_snapshot_images member JOIN visonaut_images i ON i.id=member.image_id
         WHERE member.snapshot_id=?`)
       .bind(inventory.referenceSnapshotId)

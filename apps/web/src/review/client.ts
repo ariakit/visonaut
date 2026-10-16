@@ -78,6 +78,7 @@ function image(value: unknown): ReviewImage | null {
     digest: string(data.digest),
     width: number(data.width),
     height: number(data.height),
+    ...(data.expired === true ? { expired: true as const } : {}),
   };
 }
 

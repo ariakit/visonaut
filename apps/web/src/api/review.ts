@@ -21,6 +21,7 @@ import {
   readReviewCapturePage,
   readReviewInventory,
   unchangedReviewRows,
+  withImageByteState,
   type CapturePagePlace,
   type ReviewPageEvidence,
 } from "./review-inventory.ts";
@@ -49,6 +50,8 @@ interface ImageView {
   digest: string;
   width: number;
   height: number;
+  /** The bytes of the image are gone, so the image route answers 404. */
+  expired?: true;
 }
 interface VariantView {
   id: string;
@@ -87,6 +90,8 @@ interface ImageRecord {
   digest: string;
   width: number;
   height: number;
+  /** 0 for an image with no bytes. Only the records of the capture lists have it. */
+  bytes_present?: number;
 }
 interface CaptureRecord {
   id: string;
@@ -292,6 +297,16 @@ function storedBaseline(row: ReviewRow, referenceDigest: unknown) {
   };
 }
 
+/** True when a variant of the items names an image with no bytes. */
+function hasExpiredImage(items: { variants: VariantView[] }[]) {
+  return items.some((item) =>
+    item.variants.some(
+      (variant) =>
+        variant.reference?.expired || variant.candidate?.expired || variant.diff?.expired,
+    ),
+  );
+}
+
 /** A row with a baseline that D1 does not hold: Submit wrote it before it stored the baseline. */
 function lacksStoredBaseline(row: ReviewRow) {
   if (row.reference_capture_id || row.reference_json) return false;
@@ -349,6 +364,7 @@ function reviewItems({
       digest: image.digest,
       width: image.width,
       height: image.height,
+      ...(image.bytes_present === 0 ? { expired: true as const } : {}),
     };
   };
   const items = new Map<string, { key: string; name: string; variants: VariantView[] }>();
@@ -361,7 +377,8 @@ function reviewItems({
       rowsWithCandidate += 1;
     }
     const baseline = storedBaseline(row, tuple.referenceDigest);
-    if (baseline) {
+    // A record of the capture lists keeps its byte state.
+    if (baseline && !imageById.has(baseline.image.id)) {
       imageById.set(baseline.image.id, baseline.image);
     }
     const candidate =
@@ -725,7 +742,17 @@ export async function reviewModel(
     : { results: liveMetadata ? batchRows<ImageRecord>(liveMetadata[2]) : [] };
   if (inventory) {
     captures.results.push(...inventory.candidates, ...inventory.references);
-    images.results.push(...inventory.images);
+    // Only the images that the rows of the answer name can change it.
+    const named = new Set(
+      rows.flatMap((row) => {
+        const identity = identityKey({ itemKey: row.item_key, variantKey: row.variant_key });
+        return [
+          inventory.candidateByIdentity.get(identity)?.image_id,
+          inventory.referenceByIdentity.get(identity)?.image_id,
+        ].filter((id) => id !== undefined);
+      }),
+    );
+    images.results.push(...(await withImageByteState(context, inventory.images, named)));
   }
   const decisions = archive
     ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
@@ -810,7 +837,10 @@ export async function reviewModel(
         }
       : {}),
     ...(archive
-      ? { evidenceState: "summary" as const, imagesExpired: retained?.byte_state !== "live" }
+      ? {
+          evidenceState: "summary" as const,
+          imagesExpired: retained?.byte_state !== "live" || hasExpiredImage(items),
+        }
       : {}),
     recompareAllowed: false,
     recompareDisabledReason:

@@ -20,6 +20,10 @@ import {
   type ResetContext,
 } from "../../tooling/baseline-reset/reset.ts";
 import { operationsBudgetDefaults } from "../runtime-defaults.ts";
+import { reviewModel } from "../api/review.ts";
+import type { PrivateContext } from "../api/context.ts";
+import { parseReviewModel } from "../review/client.ts";
+import type { ReviewItem } from "../review/model.ts";
 import { runOperations } from "./index.ts";
 import * as mainRetirement from "./main-retirement.ts";
 import { promoteBaselines } from "./promotions.ts";
@@ -1601,5 +1605,84 @@ describe("the prefix rule of the image collector", () => {
     expect(
       plan.filter((detail) => /^(SCAN|SEARCH) /u.test(detail) && !keyLookup.test(detail)),
     ).toEqual(["SCAN work_retained_runs"]);
+  });
+});
+
+describe("the review of a run whose baseline images are deleted", () => {
+  // These private-route reads do not use authentication or request transport.
+  const reviewApi = (fixture: Fixture, service: Service) => {
+    const api = {} as PrivateContext;
+    Object.assign(api, {
+      service,
+      database: fixture.context.database,
+      images: fixture.images,
+      configuration: {
+        projectId: "project",
+        github: { repository: "owner/repo", repositoryId: "123" },
+      },
+      identity: { githubUserId: "viewer" },
+    });
+    return api;
+  };
+  const expiredSides = (items: ReviewItem[]) =>
+    items.flatMap((item) =>
+      item.variants.map((variant) => ({
+        item: item.key,
+        reference: variant.reference?.expired ?? false,
+        candidate: variant.candidate?.expired ?? false,
+      })),
+    );
+
+  /**
+   * The fixture of the test above that keeps an older baseline while a pull
+   * request stays open: the changed rows of the current baseline name the
+   * images of the older baseline as their references.
+   */
+  const replacedBaseline = async (fixture: Fixture) => {
+    await inventoryRun(fixture.context, {
+      id: "older",
+      kind: "main",
+      items: { x: "older", y: "older" },
+    });
+    await runUntilIdle(fixture);
+    const open = await inventoryRun(fixture.context, {
+      id: "open",
+      kind: "pull_request",
+      items: { x: "older", y: "open" },
+    });
+    fixture.state.time += day;
+    const current = await inventoryRun(fixture.context, {
+      id: "current",
+      kind: "main",
+      items: { x: "current", y: "current" },
+    });
+    await runUntilIdle(fixture);
+    fixture.state.time += afterRetention;
+    await runUntilIdle(fixture);
+    await open.service.retireRun({ runId: "open", now: fixture.state.time });
+    await runUntilIdle(fixture);
+    return reviewApi(fixture, current.service);
+  };
+
+  it("marks each deleted image of another run as expired in the review of the live baseline after the release", async () => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    const api = await replacedBaseline(fixture);
+    const before = parseReviewModel(await reviewModel(api, "current"));
+    expect(before).toMatchObject({ evidenceState: "summary", imagesExpired: false });
+    expect(expiredSides(before.items)).toEqual([
+      { item: "x", reference: false, candidate: false },
+      { item: "y", reference: false, candidate: false },
+    ]);
+
+    fixture.state.time += afterRetention;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["older", "open"], attention: [] });
+    expect(await byteStates(database)).toMatchObject({ current: "live", older: "deleted" });
+    const after = parseReviewModel(await reviewModel(api, "current"));
+    expect(after).toMatchObject({ evidenceState: "summary", imagesExpired: true });
+    expect(expiredSides(after.items)).toEqual([
+      { item: "x", reference: true, candidate: false },
+      { item: "y", reference: true, candidate: false },
+    ]);
   });
 });

@@ -67,7 +67,8 @@ export function compactReviewItems(
         existing.url !== image.url ||
         existing.digest !== image.digest ||
         existing.width !== image.width ||
-        existing.height !== image.height
+        existing.height !== image.height ||
+        existing.expired !== image.expired
       ) {
         throw new Error("Shared image identity has inconsistent evidence.");
       }

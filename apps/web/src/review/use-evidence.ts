@@ -7,7 +7,11 @@ export type ImageEvidence =
   | { status: "ready" }
   | { status: "error"; error: string; reason: "load" | "decode" | "dimensions" };
 
-type EvidenceFailure = "comparison" | "missing" | "load" | "decode" | "dimensions";
+/** The text of a closed summary and of a side whose image has no bytes. */
+export const noImageBytes =
+  "Review results and capture identity remain available. This view does not contain image bytes.";
+
+type EvidenceFailure = "comparison" | "missing" | "expired" | "load" | "decode" | "dimensions";
 
 interface EvidenceState {
   key: string;
@@ -100,6 +104,11 @@ export function useEvidence({ comparisonId, variant, mode, retry }: UseEvidenceP
         failure ??= "missing";
       }
     }
+  }
+  // An image with no bytes cannot load, so a retry cannot help.
+  if (variant && required.some((role) => variant[role]?.expired)) {
+    error ??= noImageBytes;
+    failure ??= "expired";
   }
   let status: "loading" | "ready" | "error" = "loading";
   if (state.key === identity && variant) {
