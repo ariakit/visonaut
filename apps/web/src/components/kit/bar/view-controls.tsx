@@ -1,9 +1,7 @@
-// The controls of the stage: the view modes and the mask switch. Step 1 of
-// #274 has the current image and the baseline. Step 2 adds the two panes,
-// the swipe, and the overlay to `viewModes`, and step 3 adds the stepper of
-// the changed regions.
+// The controls of the stage: the view modes and the mask switch. Step 3 of
+// #274 adds the stepper of the changed regions.
 
-import { Diff, History, Image } from "lucide-react";
+import { Columns2, Diff, History, Image, Layers, SquareSplitHorizontal } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   Button,
@@ -13,6 +11,7 @@ import {
 } from "../../ariakit/components/button.ariakit.react.tsx";
 import { Hint } from "../controls.tsx";
 import { iconStroke } from "../tokens.ts";
+import { modeNames } from "../stage/model.ts";
 import type { StageSubject } from "../stage/model.ts";
 import type { StoredView, ViewMode } from "../view-types.ts";
 
@@ -23,10 +22,13 @@ interface ModeEntry {
   icon: LucideIcon;
 }
 
-/** The modes of the stage, in the order of the bar, each with its key. */
+/** The modes of the stage (D-WORK-02), in the order of the bar, each with its key. */
 export const viewModes: readonly ModeEntry[] = [
-  { id: "new", label: "Current", key: "F", icon: Image },
-  { id: "original", label: "Baseline", key: "G", icon: History },
+  { id: "new", label: modeNames.new, key: "F", icon: Image },
+  { id: "original", label: modeNames.original, key: "G", icon: History },
+  { id: "side", label: modeNames.side, key: "S", icon: Columns2 },
+  { id: "swipe", label: modeNames.swipe, key: "W", icon: SquareSplitHorizontal },
+  { id: "overlay", label: modeNames.overlay, key: "O", icon: Layers },
 ];
 
 type ModeSubject = Pick<StageSubject, "baseline" | "current">;

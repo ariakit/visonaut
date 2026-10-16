@@ -5,7 +5,14 @@ import {
 import { enqueueReview, reviewTaskId } from "./review-queue.ts";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { closedRunRetentionMs, Service } from "@visonaut/service";
-import { captured, context, digest, reserve, TestDatabase } from "./test-fixtures.ts";
+import {
+  captured,
+  context,
+  digest,
+  reserve,
+  summaryDecision,
+  TestDatabase,
+} from "./test-fixtures.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { summarizeClosedRuns, readClosedSummary } from "./closed-summary.ts";
 import { expireComparisonReferences } from "./snapshot-retention.ts";
@@ -109,8 +116,8 @@ describe("permanent closed decision summaries", () => {
     fixture.state.time += 2;
     expect((await summarizeClosedRuns(fixture.context)).completed).toEqual(["closed"]);
     const summary = await readClosedSummary(database, "closed");
-    expect(summary?.sections.comparisonRows?.[0]).toMatchObject({
-      tuple_json: tuple,
+    expect(summary?.sections.comparisonRows?.[0]).toMatchObject({ tuple_json: tuple });
+    expect(summaryDecision(summary)).toMatchObject({
       verdict: "rejected",
       actor_id: "second-reviewer",
     });
@@ -196,9 +203,10 @@ describe("permanent closed decision summaries", () => {
       converted = result.completed.includes("legacy-closed");
     }
     expect(converted).toBe(true);
-    expect(
-      (await readClosedSummary(database, "legacy-closed"))?.sections.comparisonRows?.[0],
-    ).toMatchObject({ verdict: "approved", actor_id: "reviewer" });
+    expect(summaryDecision(await readClosedSummary(database, "legacy-closed"))).toMatchObject({
+      verdict: "approved",
+      actor_id: "reviewer",
+    });
     expect(
       database.connection
         .prepare("SELECT COUNT(*) AS count FROM visonaut_summary_conversion_pages")
@@ -354,9 +362,7 @@ it.each([
         (decision) => decision.id === source.decision_id,
       );
       if (!borrowed) throw new Error("Missing borrowed source decision.");
-      const { run_id: summaryRunId, ...savedSourceDecision } = borrowed;
-      expect(savedSourceDecision).toEqual(sourceDecision);
-      expect(summaryRunId).toBe(id);
+      expect(borrowed).toEqual(sourceDecision);
       const header = database.connection
         .prepare("SELECT decision_count FROM visonaut_closed_summaries WHERE run_id=?")
         .get(id);
@@ -533,7 +539,7 @@ it("keeps live capture owners and complete source approval evidence for a later 
   fixture.state.time += closedRunRetentionMs + 1;
   expect((await summarizeClosedRuns(fixture.context)).completed).toEqual(["b-borrower"]);
   const summary = await readClosedSummary(database, "b-borrower");
-  expect(summary?.sections.decisions).toContainEqual({ ...sourceDecision, run_id: "b-borrower" });
+  expect(summary?.sections.decisions).toContainEqual(sourceDecision);
   expect(summary?.sections.acceptance).toEqual([
     { id: "comparison-b-borrower:capture-b-borrower" },
   ]);

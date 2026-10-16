@@ -27,6 +27,7 @@ import { checkedComparison, listReference } from "../api/local-comparison.ts";
 import type { CapturePagesInput } from "../capture-pages.ts";
 import { readSnapshotInventory } from "../inventory-records.ts";
 import { storeCaptureProfiles } from "../profiles.ts";
+import type { ArchivedRunHistory } from "./history-format.ts";
 import type { ObjectStore, OperationsContext } from "./types.ts";
 class SqliteStatement implements Statement {
   constructor(
@@ -170,6 +171,16 @@ export class MemoryStore implements ObjectStore {
     };
   }
 }
+/**
+ * The current decision of a row in the page of a closed run, from the
+ * decisions that `readClosedSummary` reads with the rows.
+ */
+export function summaryDecision(summary: ArchivedRunHistory | null, rowIndex = 0) {
+  const row = summary?.sections.comparisonRows?.[rowIndex];
+  const id = row?.source_decision_id ?? row?.decision_id;
+  return summary?.sections.decisions?.find((decision) => decision.id === id);
+}
+
 export function digest(value: string | Uint8Array) {
   return createHash("sha256").update(value).digest("hex");
 }

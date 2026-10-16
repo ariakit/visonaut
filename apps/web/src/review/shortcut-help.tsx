@@ -35,6 +35,8 @@ export function ShortcutHelp() {
           <dd>Review all changed variants in this item as one command.</dd>
           <dt>F / G / D</dt>
           <dd>The current image, the baseline in the same place, or the red mask off and on.</dd>
+          <dt>S / W / O</dt>
+          <dd>The baseline and the current image in two panes, in a swipe, or in an overlay.</dd>
           <dt>Cmd/Ctrl+Z</dt>
           <dd>Undo your last saved command in this session.</dd>
           <dt>[</dt>

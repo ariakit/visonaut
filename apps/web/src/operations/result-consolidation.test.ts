@@ -320,7 +320,7 @@ it.each(["changed", "unchanged"] as const)(
 );
 
 it.each(["live", "archive"])(
-  "keeps resolved results in the %s closed summary after capture cleanup",
+  "keeps resolved results in the closed summary of a %s run after capture cleanup",
   async (source) => {
     using database = new TestDatabase();
     const fixture = context(database);
@@ -345,13 +345,19 @@ it.each(["live", "archive"])(
       if (report.completed.includes("run")) break;
     }
     const summary = await readClosedSummary(database, "run");
-    expect(JSON.parse(String(summary?.sections.comparisonRows?.[0]?.result_json))).toEqual(
-      changedResult,
-    );
-    expect((await test.model()).items[0]?.variants[0]).toMatchObject({
-      changedPixels: 1,
-      ratio: 1,
-    });
+    if (source === "archive") {
+      // The archive deleted the undecided row from D1, and the summary reads
+      // no copy of the archive pages since #276.
+      expect(summary?.sections.comparisonRows).toEqual([]);
+    } else {
+      expect(JSON.parse(String(summary?.sections.comparisonRows?.[0]?.result_json))).toEqual(
+        changedResult,
+      );
+      expect((await test.model()).items[0]?.variants[0]).toMatchObject({
+        changedPixels: 1,
+        ratio: 1,
+      });
+    }
     expect(
       database.connection.prepare("SELECT id FROM visonaut_captures WHERE id='capture-run'").get(),
     ).toBeUndefined();

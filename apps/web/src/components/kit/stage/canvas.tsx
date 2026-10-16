@@ -142,6 +142,8 @@ export interface PictureProps {
   alt: string;
   /** Screen pixels for one image pixel. A whole zoom shows the pixels. */
   scale: number;
+  /** Half strength, for the current image of an overlay. */
+  faded?: boolean;
   /** Reports the result of the request and of the checks. */
   onReport(result: ImageEvidence): void;
   className?: string;
@@ -161,6 +163,7 @@ export function Picture({
   requestKey,
   alt,
   scale,
+  faded,
   onReport,
   className,
 }: PictureProps) {
@@ -182,8 +185,10 @@ export function Picture({
         requestKey={requestKey}
         alt={alt}
         onReport={onReport}
+        // A faded picture is the one allowed use of an opacity class.
+        data-state={faded ? "faded" : undefined}
         className={cx(
-          "block size-full max-w-none select-none",
+          "block size-full max-w-none select-none data-[state=faded]:opacity-50",
           pixelated && "[image-rendering:pixelated]",
           ready ? imageMotion : "invisible",
         )}
@@ -279,8 +284,8 @@ function Dimension({ value, changed }: DimensionProps) {
 export interface ImageLabelProps {
   /** `Current` or `Baseline`. */
   name: string;
-  /** The size of the image. */
-  size: Size;
+  /** The size of the image. Null shows the name alone. */
+  size: Size | null;
   /** The size change of the pair. A dimension that differs is marked. */
   resize?: SizeChange | null;
   /** True when the label lies on pixels: it then has a surface of its own. */
@@ -296,7 +301,7 @@ export interface ImageLabelProps {
  * an ellipsis.
  */
 export function ImageLabel({ name, size, resize, raised, className }: ImageLabelProps) {
-  const dimensions = (
+  const dimensions = size && (
     <>
       <Dimension value={size.width} changed={!!resize?.width} />
       {" × "}
@@ -312,7 +317,7 @@ export function ImageLabel({ name, size, resize, raised, className }: ImageLabel
             its inline axis. */}
         <BadgeLabel className="min-w-0 overflow-x-clip text-ellipsis whitespace-nowrap">
           <span className="font-medium">{name}</span>
-          <span className={cx(tertiary, "ms-1.5 tabular-nums")}>{dimensions}</span>
+          {dimensions && <span className={cx(tertiary, "ms-1.5 tabular-nums")}>{dimensions}</span>}
         </BadgeLabel>
       </Badge>
     );
@@ -325,7 +330,7 @@ export function ImageLabel({ name, size, resize, raised, className }: ImageLabel
       )}
     >
       <span className="font-medium">{name}</span>
-      <span className={cx(tertiary, "truncate tabular-nums")}>{dimensions}</span>
+      {dimensions && <span className={cx(tertiary, "truncate tabular-nums")}>{dimensions}</span>}
     </Text>
   );
 }

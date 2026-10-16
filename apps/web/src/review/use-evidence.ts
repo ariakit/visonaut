@@ -68,10 +68,14 @@ export function useEvidence({ comparisonId, variant, retry }: UseEvidenceParams)
     (role: EvidenceRole, result: ImageEvidence) => {
       // A decode can complete after another selection or retry is displayed.
       if (activeGeneration.current !== generation) return;
-      setState((previous) => ({
-        ...previous,
-        images: { ...previous.images, [role]: result },
-      }));
+      setState((previous) => {
+        // Two panes show one image in two elements. A later element that
+        // loads does not clear the error of another one: only a retry does.
+        if (result.status === "ready" && previous.images[role]?.status === "error") {
+          return previous;
+        }
+        return { ...previous, images: { ...previous.images, [role]: result } };
+      });
     },
     [generation],
   );

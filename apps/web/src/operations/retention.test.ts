@@ -29,7 +29,16 @@ import * as mainRetirement from "./main-retirement.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { expireComparisonReferences } from "./snapshot-retention.ts";
 import { expireRunImages, imagePrefix, type RetainedImageOwner } from "./retention.ts";
-import { captured, context, digest, inventoryRun, profile, TestDatabase } from "./test-fixtures.ts";
+import { readClosedSummary } from "./closed-summary.ts";
+import {
+  captured,
+  context,
+  digest,
+  inventoryRun,
+  profile,
+  summaryDecision,
+  TestDatabase,
+} from "./test-fixtures.ts";
 
 type Fixture = ReturnType<typeof context>;
 
@@ -694,17 +703,16 @@ async function countsOf(database: Database, runId: string) {
 
 /** The acceptance of each row in the closed summary of a run, by item. */
 async function summaryOf(database: Database, runId: string) {
-  const rows = await database
-    .prepare(
-      "SELECT item_key,accepted,verdict,kind FROM visonaut_closed_summary_rows WHERE run_id=? ORDER BY item_key",
-    )
-    .bind(runId)
-    .all<{ item_key: string; accepted: number; verdict: string | null; kind: string | null }>();
+  const summary = await readClosedSummary(database, runId);
+  const accepted = new Set(summary?.sections.acceptance?.map((row) => row.id));
   return Object.fromEntries(
-    (rows.results ?? []).map((row) => [
-      row.item_key,
-      `${row.accepted ? "accepted" : "not accepted"} ${row.kind ?? ""} ${row.verdict ?? ""}`.trim(),
-    ]),
+    (summary?.sections.comparisonRows ?? []).map((row, index) => {
+      const decision = summaryDecision(summary, index);
+      return [
+        row.item_key,
+        `${accepted.has(row.id) ? "accepted" : "not accepted"} ${decision?.kind ?? ""} ${decision?.verdict ?? ""}`.trim(),
+      ];
+    }),
   );
 }
 
