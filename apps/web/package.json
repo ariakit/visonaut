@@ -29,7 +29,7 @@
     "@visonaut/service": "workspace:*",
     "better-auth": "1.7.7",
     "clava": "0.7.1",
-    "lucide-react": "1.47.0",
+    "lucide-react": "1.58.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
