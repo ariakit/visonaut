@@ -6,7 +6,6 @@ import {
   compareCaptureIdentity,
   digestEnvironmentProfile,
   digestJson,
-  digestRenderingProfile,
   LOCAL_COMPARISON_MODE,
   parseCapturePage,
   parseCapturePageIndex,
@@ -16,6 +15,7 @@ import {
   type CaptureComparison,
   type CapturePage,
   type CapturePageIndex,
+  type CaptureProfile,
   type CaptureRow,
   type CaptureRowView,
   type ProfileRecord,
@@ -340,9 +340,10 @@ async function storedFacts(
   return { owners, images: rows };
 }
 
-/** The digests that depend only on a shared value of the run, computed one time. */
+/** The digests that depend only on a shared value of the page, computed one time. */
 interface SharedDigests {
-  profiles: Map<string, { rendering: string; environment: string }>;
+  /** The environment digest, by the shared profile of the page. */
+  environments: Map<CaptureProfile, string>;
   comparisons: Map<CaptureComparison, string>;
 }
 
@@ -350,6 +351,8 @@ interface RowFactsParams {
   runId: string;
   digests: SharedDigests;
   view: CaptureRowView;
+  /** The shared profile of the row in the page, with no clip rectangle of the row. */
+  sharedProfile: CaptureProfile;
   stored: StoredPageFacts;
   storedImage: StoredRowImage;
   ordinal: number;
@@ -362,6 +365,7 @@ async function rowCapture({
   runId,
   digests,
   view,
+  sharedProfile,
   stored,
   storedImage,
   ordinal,
@@ -406,13 +410,12 @@ async function rowCapture({
     result.ratio === 0 &&
     !mask;
   const pixels = view.image.width * view.image.height;
-  let profile = digests.profiles.get(view.profileDigest);
-  if (!profile) {
-    profile = {
-      rendering: await digestRenderingProfile(view.profile),
-      environment: await digestEnvironmentProfile(view.profile),
-    };
-    digests.profiles.set(view.profileDigest, profile);
+  // The environment digest does not read the clip rectangle, so each row of
+  // one shared profile has the same environment digest.
+  let environmentDigest = digests.environments.get(sharedProfile);
+  if (!environmentDigest) {
+    environmentDigest = await digestEnvironmentProfile(sharedProfile);
+    digests.environments.set(sharedProfile, environmentDigest);
   }
   // Each row of a page that uses one comparison entry has the same object.
   let comparisonDigest = digests.comparisons.get(view.comparison);
@@ -437,8 +440,10 @@ async function rowCapture({
       height,
     },
     profileDigest: view.profileDigest,
-    renderingProfileDigest: profile.rendering,
-    environmentProfileDigest: profile.environment,
+    // A page profile holds no comparison settings, so the rendering profile of
+    // a row is its complete profile.
+    renderingProfileDigest: view.profileDigest,
+    environmentProfileDigest: environmentDigest,
     testId: view.test.id,
     testRetry: view.test.retry,
     metadata: {
@@ -516,6 +521,10 @@ async function pageCaptures({
       fail("a row has no stored image.");
     }
     const view = await captureRowView(stored, row);
+    const sharedProfile = stored.profiles[row[4]];
+    if (!sharedProfile) {
+      fail("a row refers to a missing profile.");
+    }
     const identity: [string, string] = [view.itemKey, view.variantKey];
     if (previous && compareCaptureIdentity(previous, identity) >= 0) {
       fail("the rows of a run must increase from one page to the next.");
@@ -527,6 +536,7 @@ async function pageCaptures({
         runId,
         digests,
         view,
+        sharedProfile,
         stored: stored.stored,
         storedImage,
         ordinal: firstOrdinal + rowAt,
@@ -595,7 +605,7 @@ function pagesBuilder(header: PagesHeader, check: InventoryCheck) {
       cliVersion: receipt?.cliVersion,
       stored,
       check,
-      digests: { profiles: new Map(), comparisons: new Map() },
+      digests: { environments: new Map(), comparisons: new Map() },
       profiles,
       firstOrdinal: ordinal,
       previous,
@@ -832,7 +842,7 @@ export async function readCapturePage({
     ...pageOfIndex(index, pageAt),
     stored: await readStoredPage({ store, index, pageAt, check }),
     check,
-    digests: { profiles: new Map(), comparisons: new Map() },
+    digests: { environments: new Map(), comparisons: new Map() },
     profiles: new Map(),
     firstOrdinal: pageAt * CAPTURE_PAGE_ROWS,
   });
@@ -859,7 +869,7 @@ export async function readReferencePage({
     ...pageOfIndex(index, pageAt),
     stored: { ...page, stored: facts },
     check,
-    digests: { profiles: new Map(), comparisons: new Map() },
+    digests: { environments: new Map(), comparisons: new Map() },
     profiles: new Map(),
     firstOrdinal: pageAt * CAPTURE_PAGE_ROWS,
   });

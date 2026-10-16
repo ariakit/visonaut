@@ -515,6 +515,33 @@ describe("capture list of a run as pages of rows", () => {
     expect(inventory.profiles).toHaveLength(10_001);
   }, 60_000);
 
+  it("computes two digests for each row of a page read", async () => {
+    const [stored] = capturePages(await newCaptures("run", 100));
+    if (!stored) {
+      throw new Error("The run has no page.");
+    }
+    // Each row has its own clip rectangle, and so its own profile.
+    const rows = stored.page.rows.map((row, index): CaptureRow => {
+      const [itemKey, name, variant, test, profile, , ...rest] = row;
+      return [itemKey, name, variant, test, profile, [index, 0, 10, 10], ...rest];
+    });
+    const store = new MemoryStore();
+    const pointer = await writeCapturePages(store, {
+      ...runInput("run", []),
+      pages: [{ page: { ...stored.page, rows }, images: stored.images }],
+    });
+    const digest = vi.spyOn(crypto.subtle, "digest");
+    for (const check of ["bytes", "complete"] as const) {
+      const index = await readCapturePagesIndex(store, pointer, check);
+      digest.mockClear();
+      expect(await readCapturePage({ store, index, pageAt: 0, check })).toHaveLength(100);
+      // The digest of the stored bytes, the profile and the identity of each
+      // row, and the environment and the comparison settings of the page.
+      expect(digest).toHaveBeenCalledTimes(2 * rows.length + 3);
+    }
+    digest.mockRestore();
+  });
+
   it("checks each page against the page index of the Submit job", async () => {
     const input = runInput("run", await newCaptures("run", 2001));
     const receipt = () =>
