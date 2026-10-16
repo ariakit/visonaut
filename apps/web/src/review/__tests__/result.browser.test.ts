@@ -164,3 +164,60 @@ test("an earlier comparison has no run state, so its result names the counts onl
   );
   await expect(result(page, "All approved")).not.toContainText("Run state");
 });
+
+test("the result sheet takes the main area from the header to the footer, and grows with its content", async ({
+  page,
+}) => {
+  await page.goto("/src/review/__tests__/index.html?noChanges");
+  const resultPage = result(page, "Nothing to review");
+  await expect(resultPage).toBeVisible();
+  // The sheet is the panel around the result, as in the lab.
+  const sheet = resultPage.locator("..");
+  const sheetBox = await sheet.boundingBox();
+  const headerBox = await page.getByRole("banner").boundingBox();
+  const footerBox = await page.locator("footer").boundingBox();
+  const searchBox = await page.getByRole("textbox", { name: "Search screenshots" }).boundingBox();
+  const listBox = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+  if (!sheetBox || !headerBox || !footerBox || !searchBox || !listBox) {
+    throw new Error("Expected the sheet, the header, the footer, the search field, and the list.");
+  }
+  // The sheet starts at the edge of the open list.
+  expect(Math.round(sheetBox.x)).toBe(Math.round(listBox.x + listBox.width));
+  const sheetBottom = sheetBox.y + sheetBox.height;
+  // The sheet starts right below the header, with the list, and it ends at
+  // the gutter above the footer.
+  expect(sheetBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height);
+  expect(sheetBox.y).toBeLessThanOrEqual(searchBox.y);
+  expect(footerBox.y - sheetBottom).toBeGreaterThanOrEqual(0);
+  expect(footerBox.y - sheetBottom).toBeLessThanOrEqual(12);
+
+  // In a short window, the sheet grows with its content and the page scrolls.
+  await page.setViewportSize({ width: 1440, height: 300 });
+  const allButton = resultPage.getByRole("button", { name: "All 4 screenshots", exact: true });
+  await expect
+    .poll(async () => {
+      const [button, panel] = await Promise.all([allButton.boundingBox(), sheet.boundingBox()]);
+      if (!button || !panel) return false;
+      return button.y + button.height < panel.y + panel.height;
+    })
+    .toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeGreaterThan(300);
+});
+
+test("the notice of a closed run above the result starts at the edge of the list too", async ({
+  page,
+}) => {
+  await page.goto("/src/review/__tests__/index.html?noChanges");
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.archived = true;
+    window.reviewFixture.update(model);
+  });
+  const notice = page.getByText("This closed run is read-only.", { exact: false });
+  await expect(notice).toBeVisible();
+  await expect(result(page, "Nothing to review")).toBeVisible();
+  const noticeBox = await notice.boundingBox();
+  const listBox = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+  if (!noticeBox || !listBox) throw new Error("Expected the notice and the list.");
+  expect(Math.round(noticeBox.x)).toBe(Math.round(listBox.x + listBox.width));
+});

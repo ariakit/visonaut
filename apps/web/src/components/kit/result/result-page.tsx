@@ -72,13 +72,7 @@ export function ResultPage({
 
   const describedBy = `${titleId} ${sentenceId}`;
   return (
-    <section
-      aria-labelledby={titleId}
-      className={cx(
-        "grid min-h-[min(75dvh,60rem)] flex-1 place-items-center overflow-y-auto",
-        className,
-      )}
-    >
+    <section aria-labelledby={titleId} className={cx("grid flex-1 place-items-center", className)}>
       <EmptyState
         bare
         icon={rejected ? X : Check}

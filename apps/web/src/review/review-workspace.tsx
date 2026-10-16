@@ -1,5 +1,6 @@
 import * as ak from "@ariakit/react";
 import { useEvent } from "@ariakit/react-utils";
+import { cx } from "clava";
 import { Settings2, X } from "lucide-react";
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
@@ -244,6 +245,10 @@ function ReviewSession({
     if (showResult) setResultLeft(true);
   };
   const nextRun = useNextRun(model.run.id, showResult);
+  // Beside an open list, the column of the result starts at the edge of the
+  // list, as the panel of the lab does. The gutter of the main area is a grid
+  // column, so a margin of one gutter takes it back.
+  const besideList = showResult && sidebarOpen && "@5xl/shell:-ms-(--shell-gutter)";
 
   if (
     !route &&
@@ -531,11 +536,25 @@ function ReviewSession({
         >
           {!narrow && itemNavigation}
         </ShellSidebar>
-        <ShellMain $maxWidth="100%" $p="clamp(1rem,2.5vw,2rem)" className="review-main">
-          <ShellMainBody className="pb-0!">
+        {/* The result sheet has the gutter of the lab panel, and it takes the
+            height that the page has left, or more with its content. */}
+        <ShellMain
+          $maxWidth="100%"
+          $p={showResult ? 2 : "clamp(1rem,2.5vw,2rem)"}
+          className="review-main"
+        >
+          <ShellMainBody className={showResult ? "grid-rows-[auto_1fr] content-stretch" : "pb-0!"}>
             <Heading className="sr-only">{`Review of ${identity.full}`}</Heading>
             <HeadingLevel>
-              <div className="grid min-w-0 gap-3 mb-3">
+              {/* Above the result, the row keeps its margin only while it
+                  shows the stepper of a narrow window or a notice. */}
+              <div
+                className={cx(
+                  "grid min-w-0 gap-3",
+                  showResult ? "mb-2 @3xl/shell:mb-0 @3xl/shell:has-[>p]:mb-2" : "mb-3",
+                  besideList,
+                )}
+              >
                 <ScreenshotStepper
                   {...stepperProps}
                   listOpen={narrow ? itemsOpen : sidebarOpen}
@@ -598,7 +617,7 @@ function ReviewSession({
                 )}
               </div>
               {showResult && runResult ? (
-                <PanelSheet>
+                <PanelSheet className={cx(besideList)}>
                   <ResultPage
                     {...runResult}
                     next={nextRun}
