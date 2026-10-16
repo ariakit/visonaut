@@ -380,6 +380,33 @@ describe("complete immutable capture inventory", () => {
     expect(store.put).not.toHaveBeenCalled();
   });
 
+  it("retains the check of a claimed profile digest", async () => {
+    const store = objectStore();
+    const inventory = await fixture();
+    const record = inventory.profiles[0];
+    if (!record) throw new Error("Missing profile.");
+    record.digest = "d".repeat(64);
+    await expect(writeCaptureInventory(store, inventory)).rejects.toThrow(
+      "Capture inventory profile digest differs or is duplicated.",
+    );
+    expect(store.put).not.toHaveBeenCalled();
+  });
+
+  it.each(["renderingProfileDigest", "environmentProfileDigest"] as const)(
+    "retains the check of the claimed %s of a capture",
+    async (key) => {
+      const store = objectStore();
+      const inventory = await fixture();
+      const capture = inventory.captures[0];
+      if (!capture) throw new Error("Missing capture.");
+      capture[key] = "d".repeat(64);
+      await expect(writeCaptureInventory(store, inventory)).rejects.toThrow(
+        "Capture inventory profile identity differs.",
+      );
+      expect(store.put).not.toHaveBeenCalled();
+    },
+  );
+
   it("enforces the hard document cap before storage, including caller overrides", async () => {
     const store = objectStore();
     const inventory = await fixture();
