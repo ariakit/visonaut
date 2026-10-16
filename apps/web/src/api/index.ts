@@ -16,6 +16,7 @@ import { runStatus } from "./ingest.js";
 import { uuid } from "./input.js";
 import { publicImage } from "./images.js";
 import { reportVisualPlan } from "./pre-run.js";
+import { PullNotFoundError } from "./pulls.js";
 import { handleReview, reviewCommandRoute } from "./review.js";
 import { receiveWebhook } from "./webhooks.js";
 import {
@@ -38,7 +39,11 @@ function errorResponse(error: unknown, failure: OperationFailureContext) {
   if (error instanceof SecurityError) {
     console.warn(JSON.stringify({ event: "api_rejected", code: error.code, status: error.status }));
     return Response.json(
-      { schemaVersion: SCHEMA_VERSION, error: { code: error.code, message: error.message } },
+      {
+        schemaVersion: SCHEMA_VERSION,
+        error: { code: error.code, message: error.message },
+        ...(error instanceof PullNotFoundError ? { repository: error.repository } : {}),
+      },
       {
         status: error.status,
         ...(error.status === 503 ? { headers: { "Retry-After": "1" } } : {}),

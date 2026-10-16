@@ -14,7 +14,7 @@ import {
 } from "../review/compact-model.ts";
 import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard, type RunsAnswer } from "./dashboard.js";
-import { pullAnswer } from "./pulls.js";
+import { PullNotFoundError, pullAnswer } from "./pulls.js";
 import { SecurityError } from "@visonaut/security";
 import { CAPTURE_PAGE_ROWS, identityKey } from "@visonaut/protocol";
 import {
@@ -962,7 +962,7 @@ export async function handleReview(
   if (pullMatch?.[1] && request.method === "GET") {
     const check = new URL(request.url).searchParams.get("check");
     if (check !== null && !/^visonaut:pre:[a-f0-9]{40}(?::[1-9][0-9]*)?$/.test(check)) {
-      throw new SecurityError("not_found", 404, "The pull-request check was not found.");
+      throw new PullNotFoundError(context.configuration.github.repository);
     }
     return Response.json(await pullAnswer({ context, pullNumber: Number(pullMatch[1]), check }));
   }

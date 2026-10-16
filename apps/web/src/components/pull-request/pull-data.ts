@@ -9,6 +9,8 @@ export interface PullRead extends Pick<PullAnswer, "repository" | "runId" | "sta
   title?: string;
   /** The head commit of the pull request that the check belongs to. */
   headSha?: string;
+  /** The external ID of the check that the answer is for. A poll can ask for it alone. */
+  check?: string;
   attempt?: number;
   /** The page of the attempt on GitHub. */
   workflowUrl?: string;
@@ -25,6 +27,7 @@ const states: readonly PullRead["state"][] = [
   "replaced",
 ];
 const shaForm = /^[0-9a-f]{7,64}$/u;
+const checkForm = /^visonaut:pre:[0-9a-f]{40}(?::[1-9][0-9]*)?$/u;
 
 function isState(value: unknown): value is PullRead["state"] {
   return states.some((state) => state === value);
@@ -47,7 +50,7 @@ export function getWorkflowsUrl(repository: string) {
 /** Reads the JSON of a successful answer. A form that it does not know is a failure. */
 export function readPullAnswer(value: unknown): PullRead {
   if (!isRecord(value)) throw new ClientError(unknownAnswer);
-  const { repository, runId, state, title, headSha, attempt, workflowUrl } = value;
+  const { repository, runId, state, title, headSha, check, attempt, workflowUrl } = value;
   if (typeof repository !== "string") throw new ClientError(unknownAnswer);
   if (runId !== null && typeof runId !== "string") throw new ClientError(unknownAnswer);
   if (!isState(state)) throw new ClientError(unknownAnswer);
@@ -58,6 +61,9 @@ export function readPullAnswer(value: unknown): PullRead {
   if (typeof headSha === "string" && shaForm.test(headSha)) {
     pull.headSha = headSha;
   }
+  if (typeof check === "string" && checkForm.test(check)) {
+    pull.check = check;
+  }
   if (typeof attempt === "number" && Number.isSafeInteger(attempt) && attempt > 0) {
     pull.attempt = attempt;
   }
@@ -66,4 +72,16 @@ export function readPullAnswer(value: unknown): PullRead {
     pull.workflowUrl = workflowUrl;
   }
   return pull;
+}
+
+/**
+ * Reads the repository that the 404 answer of the service carries, so that a
+ * page for a check that is not found can still link to GitHub.
+ */
+export function readNotFoundRepository(body: unknown) {
+  if (!isRecord(body)) return;
+  const { repository } = body;
+  if (typeof repository === "string" && repository) {
+    return repository;
+  }
 }
