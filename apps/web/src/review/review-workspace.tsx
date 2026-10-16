@@ -22,17 +22,23 @@ import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
 import { ScreenshotList } from "../components/kit/list/screenshot-list.tsx";
 import { useScreenshotList } from "../components/kit/list/use-screenshot-list.ts";
 import type { ScreenshotListState } from "../components/kit/list/use-screenshot-list.ts";
+import { ShortcutsProvider, useShortcuts } from "../components/kit/keys.tsx";
 import { shellRadius } from "../components/kit/tokens.ts";
 import { VariantNav } from "../components/kit/variants/variant-nav.tsx";
-import { BarHost, useBarHost } from "./bar-host.tsx";
+import { BarHost, reviewActionsId, useBarHost } from "./bar-host.tsx";
 import { CaptureDetails } from "./capture-details.tsx";
 import type { ReviewCommands, ReviewModel, ReviewSelection } from "./model.ts";
 import { RunHeader, ScreenshotStepper, getRunIdentity } from "./run-header.tsx";
 import { getFamilyLabels, getSessionItem, pickItem, pickVariant } from "./session-items.ts";
 import { ShortcutHelp } from "./shortcut-help.tsx";
-import { sidebarStorageKey } from "./sidebar-preference.ts";
+import {
+  readSidebarPreference,
+  sidebarStorageKey,
+  writeSidebarPreference,
+} from "./sidebar-preference.ts";
 import { StageHost, useStageHost } from "./stage-host.tsx";
 import { useReviewSession } from "./use-review-session.ts";
+import { narrowProbeClass, useNarrowShell } from "./use-narrow-shell.ts";
 import { useUnchangedScreenshots } from "./use-unchanged-screenshots.ts";
 
 export interface ReviewWorkspaceProps {
@@ -65,6 +71,28 @@ function excludesShortcuts(event: globalThis.KeyboardEvent) {
   );
 }
 
+/**
+ * The first Tab stop of the page: a link to the decision bar, over the page
+ * while it has the focus. The link moves the focus itself: a jump to the
+ * fragment would add an entry to the history of the run.
+ */
+function SkipLink() {
+  return (
+    <div className="sr-only focus-within:not-sr-only focus-within:fixed focus-within:start-3 focus-within:top-3 focus-within:z-50">
+      <Button
+        $layer="brand"
+        render={<a href={`#${reviewActionsId}`} />}
+        onClick={(event) => {
+          event.preventDefault();
+          event.currentTarget.ownerDocument.getElementById(reviewActionsId)?.focus();
+        }}
+      >
+        <ButtonLabel>Skip to review actions</ButtonLabel>
+      </Button>
+    </div>
+  );
+}
+
 function initialSelection(model: ReviewModel): ReviewSelection {
   const item = pickItem(model.items);
   const variant = item && pickVariant(item);
@@ -73,7 +101,13 @@ function initialSelection(model: ReviewModel): ReviewSelection {
 }
 
 export function ReviewWorkspace(props: ReviewWorkspaceProps) {
-  return <ReviewSession key={props.model.run.id} {...props} />;
+  // The provider keeps the keyboard switch in the browser, and the key hints
+  // of the page hide while the switch is off.
+  return (
+    <ShortcutsProvider>
+      <ReviewSession key={props.model.run.id} {...props} />
+    </ShortcutsProvider>
+  );
 }
 
 /**
@@ -89,34 +123,18 @@ function ReviewSession({
   onUnsentDecisionsChange,
 }: ReviewWorkspaceProps) {
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
-  const [shortcuts, setShortcuts] = useState(true);
+  const { enabled: shortcuts, setEnabled: setShortcuts } = useShortcuts();
   const [retry, setRetry] = useState(0);
   const [announcement, setAnnouncement] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(
-    () =>
-      typeof document === "undefined" ||
-      document.documentElement.dataset.reviewSidebarOpen !== "false",
-  );
+  const [sidebarOpen, setSidebarOpen] = useState(readSidebarPreference);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(false);
-  const [narrow, setNarrow] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches,
-  );
+  // A dialog of the narrow layout holds it (see useNarrowShell).
+  const [narrowProbe, narrow] = useNarrowShell(itemsOpen || detailsOpen);
   const detailsTrigger = useRef<HTMLButtonElement>(null);
   const toggleSidebar = () => setSidebarOpen((open) => !open);
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 1023px)");
-    const update = () => setNarrow(media.matches);
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
-  useEffect(() => {
-    document.documentElement.dataset.reviewSidebarOpen = String(sidebarOpen);
-    try {
-      localStorage.setItem(sidebarStorageKey, String(sidebarOpen));
-    } catch {
-      /* Keep the control usable when storage is unavailable. */
-    }
+    writeSidebarPreference(sidebarOpen);
   }, [sidebarOpen]);
   useEffect(() => {
     const sync = (event: StorageEvent) => {
@@ -414,14 +432,20 @@ function ReviewSession({
 
   return (
     <HeadingLevel level={1}>
+      {/* The page root takes the focus after a decision, so the keys of the
+          page work at once. It is not a Tab stop: the first Tab stop is the
+          skip link to the decision bar. */}
       <Shell
         className="review-workspace text-sm"
         ref={workspace}
-        tabIndex={0}
+        tabIndex={-1}
+        role="group"
         aria-label="Review workspace"
         $layer="canvas"
         $rounded={shellRadius}
       >
+        <SkipLink />
+        <span ref={narrowProbe} aria-hidden className={narrowProbeClass} />
         <RunHeader
           model={changedModel}
           stepper={
@@ -598,11 +622,7 @@ function ReviewSession({
         >
           <div className="flex flex-wrap items-center gap-2">
             <ShortcutHelp />
-            <Button
-              $size="xs"
-              aria-pressed={shortcuts}
-              onClick={() => setShortcuts((value) => !value)}
-            >
+            <Button $size="xs" aria-pressed={shortcuts} onClick={() => setShortcuts(!shortcuts)}>
               <ButtonLabel>Shortcuts {shortcuts ? "on" : "off"}</ButtonLabel>
             </Button>
             {commands.recompare && !model.preview && (

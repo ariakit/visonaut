@@ -144,6 +144,8 @@ function Run() {
           variant: selection.variantKey,
         },
         replace: true,
+        // A new place must not scroll the page to its top.
+        resetScroll: false,
       });
     },
     [comparison, navigate, runId],

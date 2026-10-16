@@ -1,3 +1,9 @@
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { createRoot } from "react-dom/client";
 import "../../src/styles.css";
 import { ReviewWorkspace } from "../../src/review/review-workspace.tsx";
@@ -69,20 +75,29 @@ const observer = new MutationObserver(() => {
 observer.observe(rootElement, { childList: true, subtree: true, attributes: true });
 const root = createRoot(rootElement);
 metrics.renderStart = performance.now();
-root.render(
-  <ReviewWorkspace
-    model={model}
-    commands={{
-      save: async () => {
-        throw new Error("Save is outside the local render evidence scope.");
-      },
-      undo: async () => {
-        throw new Error("Undo is outside the local render evidence scope.");
-      },
-      refresh: async () => model,
-    }}
-  />,
-);
+// The links of the list and of the variant control need a router. The
+// workspace has no route, so it keeps its selection, and the memory history
+// holds the URLs that the links write.
+const router = createRouter({
+  routeTree: createRootRoute({
+    component: () => (
+      <ReviewWorkspace
+        model={model}
+        commands={{
+          save: async () => {
+            throw new Error("Save is outside the local render evidence scope.");
+          },
+          undo: async () => {
+            throw new Error("Undo is outside the local render evidence scope.");
+          },
+          refresh: async () => model,
+        }}
+      />
+    ),
+  }),
+  history: createMemoryHistory({ initialEntries: ["/"] }),
+});
+root.render(<RouterProvider router={router} />);
 
 window.scaleFixture = {
   async navigate(key) {
@@ -91,13 +106,18 @@ window.scaleFixture = {
       throw new Error("Review workspace is missing.");
     }
     workspace.focus();
+    // The stepper of the variant control names the selected variant and its
+    // place, for example `Variant: Solid. Needs review. 2 of 7`. The marks do
+    // not name it for a screenshot with more than 8 variants.
     const selectedVariant = () =>
-      document.querySelector('[aria-label="Variants"] [aria-selected="true"]');
-    const previous = selectedVariant()?.id;
+      document
+        .querySelector('[role="combobox"][aria-label^="Variant: "]')
+        ?.getAttribute("aria-label");
+    const previous = selectedVariant();
     if (!previous) throw new Error("A selected variant is required before navigation.");
     const ready = new Promise((resolve) => {
       const navigationObserver = new MutationObserver(() => {
-        const selected = selectedVariant()?.id;
+        const selected = selectedVariant();
         if (!selected || selected === previous) return;
         if (!document.querySelector('[data-evidence="ready"]')) return;
         navigationObserver.disconnect();
@@ -116,7 +136,7 @@ window.scaleFixture = {
       readyCommitMs: readyCommit - start,
       paintOpportunityMs: performance.now() - start,
       resourceEntriesAdded: performance.getEntriesByType("resource").length - resourcesBefore,
-      selected: selectedVariant()?.id,
+      selected: selectedVariant(),
     };
   },
 };

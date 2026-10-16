@@ -1,11 +1,4 @@
-import {
-  createRootRoute,
-  HeadContent,
-  Link,
-  Outlet,
-  Scripts,
-  useRouter,
-} from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Link, Outlet, Scripts } from "@tanstack/react-router";
 import { ButtonLabel } from "../components/ariakit/components/button.ariakit.react.tsx";
 import { ShellMain, ShellMainBody } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
@@ -13,7 +6,6 @@ import { ControlButton } from "../components/control-button.tsx";
 import { AppShell } from "../components/kit/shell.tsx";
 import { pageTitle } from "../page-title.ts";
 import "../styles.css";
-import { sidebarPreferenceScript } from "../review/sidebar-preference.ts";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -54,14 +46,9 @@ function NotFound() {
 }
 
 function Root() {
-  const router = useRouter();
   return (
-    <html lang="en" className="[font-synthesis:none]" suppressHydrationWarning>
+    <html lang="en" className="[font-synthesis:none]">
       <head>
-        <script
-          nonce={router.options.ssr?.nonce}
-          dangerouslySetInnerHTML={{ __html: sidebarPreferenceScript }}
-        />
         <HeadContent />
       </head>
       <body>

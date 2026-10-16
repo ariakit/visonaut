@@ -101,20 +101,21 @@ Promoted history is read-only, including human and automatic approvals. A correc
 
 ## Keyboard controls
 
-Review shortcuts work across the page while enabled, subject to the native input, menu, and dialog rules below. **Keyboard help** lists them in the app. **Shortcuts on/off** lets you disable them.
+Review shortcuts work across the page while enabled, subject to the native input, menu, and dialog rules below. **Keyboard help** lists them in the app. **Shortcuts on/off** lets you disable them. The browser keeps that choice, and the key hints hide while the shortcuts are off.
 
-| Key                   | Action                                     |
-| --------------------- | ------------------------------------------ |
-| Up / Down             | Previous or next item; stop at each end    |
-| Left / Right          | Previous or next variant in declared order |
-| `1` through `6`       | Select that variant position, if it exists |
-| `A` / `X`             | Approve or reject the current variant      |
-| `Shift+A` / `Shift+X` | Approve or reject the whole item           |
-| `S` / `D` / `F`       | Side by side, Pixel diff, or New only      |
-| `G`                   | Original only                              |
-| `Cmd/Ctrl+Z`          | Undo the last eligible saved command       |
-| Tab                   | Move through controls                      |
-| Escape                | Close help or a menu                       |
+| Key                   | Action                                                 |
+| --------------------- | ------------------------------------------------------ |
+| Up / Down             | Previous or next item; stop at each end                |
+| Left / Right          | Previous or next variant in declared order             |
+| Home / End            | On a variant mark: first or last variant               |
+| `1` through `6`       | Select that variant position, if it exists             |
+| `A` / `X`             | Approve or reject the current variant                  |
+| `Shift+A` / `Shift+X` | Approve or reject the whole item                       |
+| `S` / `D` / `F`       | Side by side, Pixel diff, or New only                  |
+| `G`                   | Original only                                          |
+| `Cmd/Ctrl+Z`          | Undo the last eligible saved command                   |
+| Tab                   | Move through controls, from **Skip to review actions** |
+| Escape                | Close help or a menu                                   |
 
 Each item remembers its last selected variant. A first visit opens the first variant that needs review. If no variant needs review, it opens the first variant. If a remembered variant is no longer available, the page selects the first and announces the change. Arrow keys and visible controls reach variants beyond the first six.
 

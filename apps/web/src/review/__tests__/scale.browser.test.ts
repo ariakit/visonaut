@@ -2,9 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type {} from "./fixture-api.ts";
 
-// The list renders a row for each change, with no virtual window. A run with
-// many changes is slow to step through (the bar glider of the list), so this
-// file uses 60 changed screenshots: more than a window shows.
+// 60 changed screenshots: more than a window shows. The list renders only the
+// rows in view, and `long-list.browser.test.ts` has a run of 1,000 changes.
 const count = 60;
 
 async function ready(page: Page) {
@@ -13,6 +12,18 @@ async function ready(page: Page) {
 
 function row(page: Page, index: number) {
   return page.locator(`a[data-row="item-${index}"]`);
+}
+
+// A row out of view is not in the document, so the test scrolls the list to
+// it with the wheel, as a person does.
+async function scrollToRow(page: Page, index: number) {
+  const target = row(page, index);
+  await row(page, 0).hover();
+  await expect(async () => {
+    if (await target.count()) return;
+    await page.mouse.wheel(0, 400);
+    throw new Error(`Row ${index} is not in the document yet.`);
+  }).toPass();
 }
 
 // The stepper of the variant control names the selected variant and its
@@ -99,6 +110,7 @@ test("approval and Undo keep the place in a long list", async ({ page }) => {
     }
     window.reviewFixture.update(model);
   });
+  await scrollToRow(page, 30);
   await row(page, 30).click();
   await page.getByLabel("Review workspace", { exact: true }).focus();
   await ready(page);

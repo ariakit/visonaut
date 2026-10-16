@@ -62,6 +62,8 @@ function RowLink({ item, selected, tabStop, name, onSelect, children }: RowLinkP
       aria-current={selected ? "true" : undefined}
       data-row={item.key}
       tabIndex={tabStop ? 0 : -1}
+      // The row window gives each row its list item (see RowWindow).
+      item={false}
       render={<PlaceLink itemKey={item.key} onClick={handleClick} />}
     >
       {children}

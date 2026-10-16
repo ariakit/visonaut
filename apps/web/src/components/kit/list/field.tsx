@@ -115,7 +115,11 @@ export function ListField({ list, disabled, onLeave, onSubmit }: ListFieldProps)
           value={query}
           onChange={(event) => list.setQuery(event.target.value)}
           onKeyDown={handleKeyDown}
-          className="min-w-0 flex-1"
+          // The input group gives a placeholder the faint ink of a disabled
+          // control. The placeholder of the search is its label, so it takes
+          // the tertiary ink (audit decision D-RES-01). The rule of the group is
+          // more specific, so the class needs the important flag.
+          className="min-w-0 flex-1 placeholder:ak-ink-60!"
         />
         {query && (
           <InputSlot $size="2xl" $square={false}>
