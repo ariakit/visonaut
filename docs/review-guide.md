@@ -55,17 +55,34 @@ Items with a new variant stay in the main list for inspection, including after a
 
 The picture of a row shows the first variant that needs review, else the first change, else the first variant: the current image with the mask on top, cropped around the largest changed region. A removed variant shows its baseline. Selecting another variant changes the viewer, not the picture.
 
-| Control            | Image shown                                  |
-| ------------------ | -------------------------------------------- |
-| Side by side, `S`  | Reference and candidate                      |
-| Pixel diff, `D`    | Differences in red                           |
-| New only, `F`      | Full candidate image in the viewer           |
-| Original only, `G` | Reference image in the viewer                |
-| Fit                | Image scaled to the available viewer width   |
-| 100% / 200%        | Original-size or enlarged inspection         |
-| Pan controls       | Move within a zoomed image with the keyboard |
+The viewer is one stage. It opens on the current image, with the red mask on top for a changed variant. The decision bar has the buttons of the modes, the mask, and the zoom, and most of them have a key:
 
-For an addition, there is no reference image; Original only says **New image, no reference**. For a removal, the old image remains visible in Side by side and Original only, and New only says **Removed, no new image**. Pixel diff is unavailable when either image is absent. An image that fails to load shows an error and **Retry**. It is not treated as an addition, removal, or unchanged result.
+| Control            | What the stage shows                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Current, `F`       | The current image. This is the first view.                                                                                                                                     |
+| Baseline, `G`      | The baseline image, in the same place as the current image.                                                                                                                    |
+| Two panes, `S`     | A baseline pane and a current pane. One pan and one zoom move both panes.                                                                                                      |
+| Swipe, `W`         | The baseline before a line and the current image after it. Drag the line to move it. The line has no key.                                                                      |
+| Overlay, `O`       | The current image at half strength on the baseline.                                                                                                                            |
+| Mask, `D`          | A switch for the red mask on the changed regions. It is on at first.                                                                                                           |
+| Zoom               | The percent and its menu: **Fit**, **Fit width**, 50%, 100%, 200%, 400%, 800%, and **Actual pixels**. The buttons **Zoom out** and **Zoom in** step the zoom. Zoom has no key. |
+| Drag, or the wheel | Move within an image that is larger than the stage. The arrow keys never pan.                                                                                                  |
+
+There is no held key for the baseline. Press `F`, then `G`, to blink between the two images in one place. The browser keeps the mode and the mask switch, and the next variant opens with them.
+
+The mask loads with the two images when they have one size. It is required evidence: **Approve** and **Reject** stay off until the baseline, the current image, and the mask, when the variant has one, are loaded and decoded. Turning the mask off only hides it.
+
+The stage says the state of the variant in a status row above the images, so the images do not move:
+
+| State of the variant | What the stage shows                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------- |
+| Added                | **Added** and **No baseline**. The stage shows the current image only.                         |
+| Removed              | **Removed** and **No current image**. The stage shows the baseline only.                       |
+| No visible change    | **No visible change** and **CI did not upload this image**. The stage shows the baseline only. |
+| Size changed         | **Size changed** with the two sizes, for example `600 × 400 → 600 × 420`. There is no mask.    |
+| Comparing            | **Comparing**, while the service compares the variant.                                         |
+
+An image that fails to load or to decode shows an error in the status row, with **Retry images** when a retry can help. The stage does not treat a failed image as an addition, removal, or unchanged result.
 
 Review actions wait for the current selection's required images to load and decode. This prevents a decision from using pixels left over from a different selection. The details panel provides the image dimensions, digests, profiles, the CLI version of the Submit, policy, and threshold when available.
 
@@ -111,8 +128,9 @@ Review shortcuts work across the page while enabled, subject to the native input
 | `1` through `6`       | Select that variant position, if it exists             |
 | `A` / `X`             | Approve or reject the current variant                  |
 | `Shift+A` / `Shift+X` | Approve or reject the whole item                       |
-| `S` / `D` / `F`       | Side by side, Pixel diff, or New only                  |
-| `G`                   | Original only                                          |
+| `F` / `G`             | Show the current image or the baseline                 |
+| `S` / `W` / `O`       | Show two panes, the swipe, or the overlay              |
+| `D`                   | Turn the mask on or off                                |
 | `Cmd/Ctrl+Z`          | Undo the last eligible saved command                   |
 | Tab                   | Move through controls, from **Skip to review actions** |
 | Escape                | Close help or a menu                                   |
