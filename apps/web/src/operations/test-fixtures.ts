@@ -487,6 +487,12 @@ export interface InventoryRunParams {
   kind: "main" | "pull_request";
   /** The image bytes of each item. Bytes equal to the baseline keep its image. */
   items: Record<string, string>;
+  /** The lineage of the run. A pull request run uses its own id by default. */
+  lineageKey?: string;
+  /** The earlier runs of the same lineage that the run verified. */
+  relatedRunIds?: string[];
+  /** Approve each row as a reviewer after the automatic decisions. */
+  approve?: boolean;
 }
 
 /**
@@ -497,7 +503,7 @@ export interface InventoryRunParams {
  */
 export async function inventoryRun(
   context: OperationsContext,
-  { id, kind, items }: InventoryRunParams,
+  { id, kind, items, lineageKey, relatedRunIds = [], approve = true }: InventoryRunParams,
 ) {
   const service = await projectService(context);
   const project = await service.project("project");
@@ -598,7 +604,7 @@ export async function inventoryRun(
     attempt: 1,
     kind,
     testedSha,
-    lineageKey: kind === "main" ? "main" : id,
+    lineageKey: lineageKey ?? (kind === "main" ? "main" : id),
     plan: {
       digest: planDigest,
       shards: [
@@ -614,7 +620,7 @@ export async function inventoryRun(
         },
       ],
     },
-    verifiedRelatedRunIds: [],
+    verifiedRelatedRunIds: relatedRunIds,
     verifiedAncestorShas: reference ? [reference.testedSha] : [],
     verificationDigest: "verified",
     rerunShardKeys: ["combined"],
@@ -660,17 +666,19 @@ export async function inventoryRun(
     now: context.now(),
   });
   await service.finalizeComparison({ comparisonId, now: context.now() });
-  for (const row of await service.comparisonRows(comparisonId)) {
-    await service.review({
-      commandId: `approve-${row.id}`,
-      actorId: "maintainer",
-      sessionId: "session",
-      comparisonId,
-      verdict: "approved",
-      targets: [{ id: row.id, expectedRevision: row.decision_revision }],
-      selection: { itemKey: row.item_key, variantKey: row.variant_key },
-      now: context.now(),
-    });
+  if (approve) {
+    for (const row of await service.comparisonRows(comparisonId)) {
+      await service.review({
+        commandId: `approve-${row.id}`,
+        actorId: "maintainer",
+        sessionId: "session",
+        comparisonId,
+        verdict: "approved",
+        targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+        selection: { itemKey: row.item_key, variantKey: row.variant_key },
+        now: context.now(),
+      });
+    }
   }
   return { service, inventory: pointer, inventoryKeys };
 }
