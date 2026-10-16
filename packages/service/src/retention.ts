@@ -7,7 +7,9 @@ import { affectedHistoryOwners, pruneArchivedImageMetadataStatements } from "./p
  * A retained candidate baseline does not indefinitely retain its earlier
  * reference. 30 days after a run closes, release the pins that keep the runs
  * whose images it names: its comparison pins and its inherited-by pins. The
- * baseline pins keep each run that the current baseline names.
+ * baseline pins keep each run that the current baseline names. The release
+ * waits for the closed summary of the run: until then, its page reads the
+ * live rows, which do not mark an image of a deleted run as expired.
  */
 export async function releaseExpiredComparisonReferences(
   database: Database,
@@ -18,6 +20,7 @@ export async function releaseExpiredComparisonReferences(
       database,
       `EXISTS(SELECT 1 FROM visonaut_runs run JOIN work_retained_runs retained ON retained.id=run.id
       WHERE run.id=? AND run.active=0 AND run.closed_at<=? AND retained.references_released_at IS NULL
+        AND EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=run.id AND summary.state='ready')
         AND NOT EXISTS(SELECT 1 FROM work_retention_pins pin WHERE pin.run_id=run.id
           AND pin.reason IN ('manual','review','command','recovery','promotion')))`,
       [input.runId, input.now - closedRunRetentionMs],

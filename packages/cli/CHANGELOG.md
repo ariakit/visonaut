@@ -1,5 +1,17 @@
 # visonaut
 
+## 0.6.7
+
+### Comparison with pixelmatch 8
+
+Submit now compares captures with pixelmatch 8, which measures color differences in the OKLab color space. Before, Submit used the YIQ metric of the pixelmatch that Playwright `1.63.0` bundles. pixelmatch 8 also blends semi-transparent pixels with a checkerboard pattern and not with white, so a change of transparency alone can count as a changed pixel. The comparison settings keep their meaning and their scale, but for the same images Submit can count other changed pixels than Playwright's `toHaveScreenshot`. If a capture depends on a tuned `threshold` or has transparent areas, examine its outcome after the upgrade.
+
+Submit no longer sends the names of its comparison engine and image codec, and it sends the CLI version in their place. The review shows this version. An approval does not depend on the engine, so an approval of a change copies to a run of this release when the images are the same.
+
+### Other updates
+
+- Retried the GitHub Actions OIDC token request after a temporary failure. Submit now repeats the request after an HTTP 500, 502, 503, or 504 answer, a network error, or a timeout, with the same backoff as the reference reads and the `Retry-After` header of GitHub. After the last attempt, a 5xx answer says that GitHub Actions could not issue the token and that a rerun of the job can work, and no longer names the `id-token: write` permission. An HTTP 401 or 403 answer is not repeated, and its message stays.
+
 ## 0.6.6
 
 - Changed the text of a job that waits at the capacity limit of the service. It now tells the reader to check the Status page, which is the new name of the page "Service attention".

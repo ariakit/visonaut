@@ -1,46 +1,16 @@
-import {
-  createGitHubClient,
-  numericId,
-  SecurityError,
-  verifyGitHubOidc,
-  type GitHubClient,
-  type VerifiedWebhook,
-} from "@visonaut/security";
+import { createGitHubClient, numericId, SecurityError, verifyGitHubOidc } from "@visonaut/security";
 import { assertConfiguredProject, loadVerifiedMergeGroup, type ApiContext } from "./context.js";
 import { integer, jsonBody, object, string } from "./input.js";
 import { jobExecutedInAttempt } from "./jobs.js";
 import { ensureSignedAttemptCheck } from "./pre-run-attempts.js";
-import { candidateForWebhook } from "./pre-run-candidates.js";
-import { attemptCheck, storeCandidateCheck, type Candidate } from "./pre-run-checks.js";
+import { attemptCheck } from "./pre-run-checks.js";
 import { completeNoVisualPlan, nativePlanJob } from "./pre-run-plan.js";
 import { readRestoreCutoff } from "../operations/recovery.ts";
 
 export { ensureSignedAttemptCheck, settlePreRunWorkflow } from "./pre-run-attempts.js";
 export { candidateForWebhook } from "./pre-run-candidates.js";
-export {
-  findPreRunCheck,
-  reconcileEquivalentPullRequestChecks,
-  recordPreRunCandidate,
-} from "./pre-run-checks.js";
+export { findPreRunCheck, recordPreRunCandidate } from "./pre-run-checks.js";
 export { recordRequiredVisualPlan, requireVisualPlan } from "./pre-run-plan.js";
-
-/** Keep this path for checks created after a signed submit is verified. */
-export async function ensurePreRunCheck(
-  context: ApiContext,
-  github: GitHubClient,
-  candidate: Candidate,
-  webhook: VerifiedWebhook,
-  currentCandidate: () => Promise<Candidate | null> = () => candidateForWebhook(github, webhook),
-) {
-  await storeCandidateCheck({
-    context,
-    github,
-    candidate,
-    currentCandidate,
-    validateBeforeCreation: false,
-    createCheck: true,
-  });
-}
 
 /** Native Plan submits only an explicit false after its calculator succeeds. */
 export async function reportVisualPlan(request: Request, context: ApiContext) {

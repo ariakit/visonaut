@@ -140,7 +140,6 @@ const otherTitles = [
   "Visual capture is not required",
   "Visual capture was superseded",
   "Visual capture did not complete",
-  "Equivalent merge check retired",
 ];
 
 it("gives no two states the same title, for each set of counts", () => {

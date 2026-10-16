@@ -1,5 +1,27 @@
 # @visonaut/service
 
+## 0.0.5
+
+### Approvals no longer depend on the comparison engine
+
+The review rows and the decisions no longer record the comparison engine or the image codec. An approval copies to a later run with the same two images, the same rendering profiles, and the same comparison policy, also when the CLI of that run compares with another engine. The engine decides only whether a run flags a pair of images.
+
+The review now shows the CLI version of the Submit in the details of a capture, in place of the engine and the codec. The service stores this version with the run as provenance only, and it checks no list of versions. Submit still accepts the engine and codec names that an earlier CLI sends, and it ignores them.
+
+The rows of runs from before this release keep their engine and codec names. So their approvals do not copy to the rows of later runs, one time: the next run of an open pull request needs a new review of each change that an earlier run of it approved.
+
+### Submit reads the capture lists one page at a time, and the capture limit is 20,000
+
+In the heap test of Submit in local workerd, one Submit of 11,000 captures with 4 changed captures held 3.2× less live heap (5.6 MB in place of 18.1 MB), and one of 50,000 captures held 7.2× less (11.4 MB in place of 81.5 MB). Submit validation, materialization, the reference selection, promotion, and the recovery check now read the pages of a capture list one at a time, and keep only a short value for each capture for the checks across the pages.
+
+The capture limit of a run is now 20,000 captures (before, 11,000). A Submit with more captures still gets the code `capture_limit_exceeded`. In the same heap test, a Submit of 20,000 captures held 7.3 MB with 4 changed captures, and 62.9 MB when each capture changed.
+
+The materialization of a run of 11,000 captures also makes fewer D1 requests (287 statements and 72 round trips in place of 493 and 174), and it writes the same rows.
+
+### Other updates
+
+- Removed the last code paths of the earlier list form of Submit. The retention pass no longer reads the staged evidence pages of that form, and the service now accepts the comparison and the capture proof of a run with a capture list only in the page form that Submit sends. A Submit does not change.
+
 ## 0.0.4
 
 - Fixed the delivery of check results to GitHub, so that a check is locked only when a PATCH request possibly reached GitHub. A D1 error, a stopped Worker, or a failed test of the check before the PATCH now sets no lock: the update waits and tries again, and after its last attempt it asks for attention. An update that GitHub already shows sends no PATCH and sets no lock.

@@ -276,7 +276,11 @@ describe("submit --shard transport", () => {
     const local = await localFixture();
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => json({ message: environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN }, 500)),
+      vi.fn(async (input: URL | string) =>
+        new URL(input).hostname.endsWith(".actions.githubusercontent.com")
+          ? json({ value: "oidc-secret" })
+          : json({ message: environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN }, 500),
+      ),
     );
     const result = await submit(local);
     expect(result.code).toBe(1);

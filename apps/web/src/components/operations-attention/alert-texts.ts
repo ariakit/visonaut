@@ -154,7 +154,6 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
       },
     },
   },
-  "check-aliases": stepText("pull request check"),
   checks: stepText("check delivery"),
   exports: stepText("export cleanup"),
   finalization: stepText("comparison finalization"),
