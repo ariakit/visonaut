@@ -13,7 +13,9 @@ export default defineConfig({
   use: {
     baseURL: origin,
     browserName: "chromium",
-    channel: "chrome",
+    // On Linux CI the default headless shell often opens no tab from a
+    // Control-click. The full Chromium of the same Playwright version does.
+    channel: "chromium",
     viewport: { width: 1280, height: 900 },
     screenshot: "only-on-failure",
   },
