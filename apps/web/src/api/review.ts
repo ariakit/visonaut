@@ -79,8 +79,8 @@ interface VariantView {
   maskExpected?: boolean;
   candidateOmitted?: boolean;
   ratio?: number;
-  engine?: string;
-  codec?: string;
+  /** The CLI version that the Submit job of the run reported. */
+  cli?: string;
   threshold?: string;
   policy?: string;
   referenceProfile?: string;
@@ -461,8 +461,7 @@ function reviewItems({
             ? { maskExpected: false }
             : {}),
       ...(typeof result.ratio === "number" ? { ratio: result.ratio } : {}),
-      ...(typeof result.engineVersion === "string" ? { engine: result.engineVersion } : {}),
-      ...(typeof result.codecVersion === "string" ? { codec: result.codecVersion } : {}),
+      ...(typeof result.cliVersion === "string" ? { cli: result.cliVersion } : {}),
       policy:
         typeof metadata.comparisonDigest === "string" ? metadata.comparisonDigest : policyDigest,
       threshold:

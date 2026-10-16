@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { realpath } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import {
   CAPTURE_PAGE_ROWS,
   canonicalJson,
@@ -7,8 +7,6 @@ import {
   capturePageUploads,
   captureRowProfile,
   createCapturePagesReceipt,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
   parseCapturePage,
   SCHEMA_VERSION,
   sha256,
@@ -663,7 +661,7 @@ async function submitPages({
     schemaVersion: SCHEMA_VERSION,
     producer: submission.producer,
     job: submission.job,
-    comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
+    cliVersion: await cliVersion(),
     reference: { snapshotId, baselineRevision, digest },
     sources: submission.sources,
     pages,
@@ -695,6 +693,18 @@ async function submitPages({
     throw new CliError("The service submitted a different run.");
   }
   return submitted.runId;
+}
+
+/** The version of this CLI, from the package file beside the source and the bundle. */
+async function cliVersion() {
+  const value: unknown = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  const version = record(value) ? value.version : undefined;
+  if (typeof version !== "string") {
+    throw new CliError("Cannot determine the CLI version.");
+  }
+  return version;
 }
 
 function runStatus(value: unknown, origin: URL, runId: string): RunStatus {

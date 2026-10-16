@@ -7,7 +7,6 @@ import {
   compareCaptureIdentity,
   FIXED_DIGEST,
   identityKey,
-  LOCAL_COMPARISON_CODEC,
   LOCAL_COMPARISON_MODE,
   parseCapturePage,
   ProtocolError,
@@ -20,7 +19,6 @@ import {
   type CaptureReferenceIdentity,
   type CaptureRowView,
   type LocalCaptureResult,
-  type LocalComparisonEngine,
   type LocalComparisonReceipt,
 } from "@visonaut/protocol";
 import { createGitHubClient, SecurityError } from "@visonaut/security";
@@ -806,8 +804,6 @@ interface CheckedComparisonParams {
   pages: AsyncIterable<CapturesPage>;
   reference: CaptureReferenceIdentity;
   references: ReferenceReader;
-  /** The engine of the page index that the Submit job sent. */
-  engineVersion: LocalComparisonEngine;
 }
 
 /**
@@ -817,12 +813,7 @@ interface CheckedComparisonParams {
  * lists only these, and `referenceCaptures` has only their references. The
  * field `checked` has the counts that the service compares with D1.
  */
-export async function checkedComparison({
-  pages,
-  reference,
-  references,
-  engineVersion,
-}: CheckedComparisonParams) {
+export async function checkedComparison({ pages, reference, references }: CheckedComparisonParams) {
   const results: LocalCaptureResult[] = [];
   const referenceCaptures: ReferenceCaptureInput[] = [];
   const settings: ComparisonSettingsCounts = { changed: 0, loose: 0 };
@@ -853,8 +844,6 @@ export async function checkedComparison({
   const localComparison: LocalComparisonReceipt = {
     mode: LOCAL_COMPARISON_MODE,
     reference: receiptReference(reference, references.captureCount),
-    engineVersion,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     captures: results,
     removals: removed.map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
   };

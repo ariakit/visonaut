@@ -1,8 +1,7 @@
 import type { ReviewImage, ReviewItem, ReviewModel, ReviewVariant } from "./model.ts";
 
 export interface ReviewMetadata {
-  engine?: string;
-  codec?: string;
+  cli?: string;
   policy?: string;
   threshold?: string;
   referenceProfile?: string;
@@ -89,8 +88,7 @@ export function compactReviewItems(
         reference,
         candidate,
         diff,
-        engine,
-        codec,
+        cli,
         policy,
         threshold,
         referenceProfile,
@@ -99,7 +97,7 @@ export function compactReviewItems(
         approveDisabledReason: _approveDisabledReason,
         ...fields
       } = variant;
-      const shared = { engine, codec, policy, threshold, referenceProfile, candidateProfile };
+      const shared = { cli, policy, threshold, referenceProfile, candidateProfile };
       const key = JSON.stringify(shared);
       let index = metadataIndexes.get(key);
       if (index === undefined) {

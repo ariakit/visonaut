@@ -41,6 +41,11 @@ export interface CaptureProfile {
   comparisonEngineVersion?: string;
 }
 
+/**
+ * The engine and codec names of the legacy server comparison. Only the
+ * conversion of legacy rendering profiles adds them, to the tuples of rows
+ * stored before the cutover. A tuple of a later row has no engine or codec.
+ */
 export const COMPARISON_ENGINE_VERSION = "rgba-visible-1";
 export const IMAGE_CODEC_VERSION = "jsquash-png-3.1.1-webp-1.5.0";
 
@@ -135,20 +140,6 @@ export interface Manifest {
 }
 
 export const LOCAL_COMPARISON_MODE = "local-v1";
-/**
- * The engines whose Submit the service accepts. Consumers pin the CLI, so keep
- * the engine of each released CLI here when a new CLI changes its engine.
- */
-export const LOCAL_COMPARISON_ENGINES = [
-  "pixelmatch-8.0.0",
-  // The pixelmatch that Playwright 1.63.0 bundles, which each CLI before
-  // pixelmatch 8 used.
-  "playwright-pixelmatch-1.63.0",
-] as const;
-export type LocalComparisonEngine = (typeof LOCAL_COMPARISON_ENGINES)[number];
-/** The engine of the current CLI. */
-export const LOCAL_COMPARISON_ENGINE = "pixelmatch-8.0.0" satisfies LocalComparisonEngine;
-export const LOCAL_COMPARISON_CODEC = "pngjs-7.0.0";
 
 export interface LocalReferenceBinding {
   /** Digest of the complete capture manifest without localComparison. */
@@ -173,8 +164,6 @@ export interface LocalCaptureResult extends CaptureIdentity {
 export interface LocalComparisonReceipt {
   mode: typeof LOCAL_COMPARISON_MODE;
   reference: LocalReferenceBinding;
-  engineVersion: LocalComparisonEngine;
-  codecVersion: typeof LOCAL_COMPARISON_CODEC;
   captures: LocalCaptureResult[];
   removals: CaptureIdentity[];
 }
@@ -307,10 +296,11 @@ export interface CapturePageIndex {
   producer: Manifest["producer"];
   /** The signed Submit job that made the pages. */
   job: { id: string; attempt: number };
-  comparison: {
-    engineVersion: LocalComparisonEngine;
-    codecVersion: typeof LOCAL_COMPARISON_CODEC;
-  };
+  /**
+   * The version of the CLI that sent the index. It is provenance only: the
+   * service does not check it, and a decision does not depend on it.
+   */
+  cliVersion?: string;
   reference: CaptureReferenceIdentity;
   /** One entry for each capture job. */
   sources: CaptureSource[];

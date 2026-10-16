@@ -67,7 +67,7 @@ The picture of a row shows the first variant that needs review, else the first c
 
 For an addition, there is no reference image; Original only says **New image, no reference**. For a removal, the old image remains visible in Side by side and Original only, and New only says **Removed, no new image**. Pixel diff is unavailable when either image is absent. An image that fails to load shows an error and **Retry**. It is not treated as an addition, removal, or unchanged result.
 
-Review actions wait for the current selection's required images to load and decode. This prevents a decision from using pixels left over from a different selection. The details panel provides the image dimensions, digests, profiles, comparison engine, policy, and threshold when available.
+Review actions wait for the current selection's required images to load and decode. This prevents a decision from using pixels left over from a different selection. The details panel provides the image dimensions, digests, profiles, the CLI version of the Submit, policy, and threshold when available.
 
 ## Save a decision
 

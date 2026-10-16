@@ -3,8 +3,6 @@ import {
   FIXED_DIGEST,
   canonicalJson,
   LOCAL_COMPARISON_MODE,
-  LOCAL_COMPARISON_ENGINE,
-  LOCAL_COMPARISON_CODEC,
   digestJson,
   digestEnvironmentProfile,
   identityKey,
@@ -311,8 +309,6 @@ it("accepts local results for matched, changed, and new captures", async () => {
   const manifestDigest = await digestJson(manifest);
   manifest.localComparison = {
     mode: LOCAL_COMPARISON_MODE,
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
       manifestDigest,
       snapshotId: "snapshot",
@@ -356,6 +352,13 @@ it("accepts local results for matched, changed, and new captures", async () => {
     removals: [],
   };
   expect(parseManifest(manifest).captures).toHaveLength(3);
+  // A stored receipt of an older CLI has engine and codec names, which no
+  // check reads.
+  const stored = {
+    ...manifest,
+    localComparison: { ...manifest.localComparison, engineVersion: "other", codecVersion: "other" },
+  };
+  expect(parseManifest(stored)).toBe(stored);
 });
 
 it("rejects duplicate local identities, overlapping removals, and masks on omitted captures", async () => {
@@ -373,8 +376,6 @@ it("rejects duplicate local identities, overlapping removals, and masks on omitt
   };
   manifest.localComparison = {
     mode: LOCAL_COMPARISON_MODE,
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
       manifestDigest: await digestJson(manifest),
       snapshotId: "snapshot",

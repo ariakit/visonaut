@@ -2,7 +2,6 @@ import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixt
 import {
   CAPTURE_PAGE_ROWS,
   digestJson,
-  LOCAL_COMPARISON_ENGINE,
   type CaptureProfile,
   type CaptureRowImage,
   type CaptureRowResult,
@@ -632,7 +631,6 @@ export async function inventoryRun(
     pages: (await openCaptureInventory(context.images, pointer)).pages(),
     reference: { snapshotId, baselineRevision: project.baseline_revision, digest: null },
     references: listReference(reference?.captures ?? []),
-    engineVersion: LOCAL_COMPARISON_ENGINE,
   });
   await service.createComparison({
     id: comparisonId,

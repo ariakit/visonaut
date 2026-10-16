@@ -7,8 +7,6 @@ import {
   captureRowView,
   parseCapturePage,
   TRANSPORT,
-  LOCAL_COMPARISON_ENGINE,
-  LOCAL_COMPARISON_CODEC,
   type LocalComparisonReceipt,
 } from "@visonaut/protocol";
 import { Service, type ReferenceCaptureInput, type ValidatedImage } from "@visonaut/service";
@@ -175,8 +173,6 @@ async function compareSparseRun(
   });
   const receipt: LocalComparisonReceipt = {
     mode: "local-v1",
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
       snapshotId: project.snapshot_id,
       baselineRevision: project.baseline_revision,
@@ -238,8 +234,6 @@ async function compareSparseRun(
           changedPixels: changed ? 1 : 0,
           ratio: changed ? 1 : 0,
           maskExpected: false,
-          engineVersion: LOCAL_COMPARISON_ENGINE,
-          codecVersion: LOCAL_COMPARISON_CODEC,
         },
       },
     });

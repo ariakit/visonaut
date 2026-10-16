@@ -256,8 +256,6 @@ function validateReceipt(inventory: CaptureInventory) {
       (local.outcome !== result.outcome && !(normalized && local.outcome === "unchanged")) ||
       local.changedPixels !== result.changedPixels ||
       local.ratio !== result.ratio ||
-      local.engineVersion !== receipt.engineVersion ||
-      local.codecVersion !== receipt.codecVersion ||
       local.maskExpected !== !!result.mask
     ) {
       throw new Error("Capture inventory comparison evidence differs.");
@@ -310,8 +308,6 @@ function receiptMetadata(manifest: Manifest) {
         outcome: result.outcome,
         changedPixels: result.changedPixels,
         ratio: result.ratio,
-        engineVersion: receipt.engineVersion,
-        codecVersion: receipt.codecVersion,
         maskExpected: !!result.mask,
       },
       ...saved,

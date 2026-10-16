@@ -7,8 +7,6 @@ import {
   digestEnvironmentProfile,
   digestJson,
   digestRenderingProfile,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
   LOCAL_COMPARISON_MODE,
   parseCapturePage,
   parseCapturePageIndex,
@@ -20,7 +18,6 @@ import {
   type CapturePageIndex,
   type CaptureRow,
   type CaptureRowView,
-  type LocalComparisonEngine,
   type ProfileRecord,
 } from "@visonaut/protocol";
 import {
@@ -356,8 +353,8 @@ interface RowFactsParams {
   stored: StoredPageFacts;
   storedImage: StoredRowImage;
   ordinal: number;
-  /** The engine that the Submit job compared the run with. */
-  engineVersion: LocalComparisonEngine;
+  /** The CLI version that the Submit job reported, when it reported one. */
+  cliVersion: string | undefined;
 }
 
 /** Build the capture of the list form from one row and its service facts. */
@@ -368,7 +365,7 @@ async function rowCapture({
   stored,
   storedImage,
   ordinal,
-  engineVersion,
+  cliVersion,
 }: RowFactsParams): Promise<InventoryCapture> {
   const [imageId, ownerAt, keySuffix, representative, maskImageId] = storedImage;
   const owner = stored.owners[ownerAt];
@@ -459,21 +456,13 @@ async function rowCapture({
         // A new capture has no reference, so each pixel of it is new.
         changedPixels: compared ? result.changedPixels : result === 1 ? pixels : 0,
         ratio: compared ? result.ratio : result === 1 ? 1 : 0,
-        engineVersion,
-        codecVersion: LOCAL_COMPARISON_CODEC,
+        // Provenance only: no tuple and no decision reads it.
+        ...(cliVersion === undefined ? {} : { cliVersion }),
         maskExpected: !!mask,
         ...(maskImageId === null ? {} : { maskImageId }),
       },
     },
   };
-}
-
-/**
- * The engine that the Submit job compared a run with. A list with no index of
- * a Submit job has the engine of this release.
- */
-function submitEngine(receipt: CapturePageIndex | null) {
-  return receipt?.comparison.engineVersion ?? LOCAL_COMPARISON_ENGINE;
 }
 
 interface PageCapturesParams {
@@ -484,8 +473,8 @@ interface PageCapturesParams {
   last: boolean;
   /** The entry of the page in the index of the Submit job, when a job sent the run. */
   sent: CapturePageIndex["pages"][number] | undefined;
-  /** The engine that the Submit job compared the run with. */
-  engineVersion: LocalComparisonEngine;
+  /** The CLI version that the Submit job reported, when it reported one. */
+  cliVersion: string | undefined;
   stored: StoredCapturePage;
   check: InventoryCheck;
   digests: SharedDigests;
@@ -506,7 +495,7 @@ async function pageCaptures({
   rows,
   last,
   sent,
-  engineVersion,
+  cliVersion,
   stored,
   check,
   digests,
@@ -541,7 +530,7 @@ async function pageCaptures({
         stored: stored.stored,
         storedImage,
         ordinal: firstOrdinal + rowAt,
-        engineVersion,
+        cliVersion,
       }),
     );
   }
@@ -603,7 +592,7 @@ function pagesBuilder(header: PagesHeader, check: InventoryCheck) {
       rows,
       last,
       sent: receipt?.pages[pageAt],
-      engineVersion: submitEngine(receipt),
+      cliVersion: receipt?.cliVersion,
       stored,
       check,
       digests: { profiles: new Map(), comparisons: new Map() },
@@ -816,7 +805,7 @@ function pageOfIndex(index: CapturePagesIndex, pageAt: number) {
     rows: entry.rows,
     last: pageAt === index.pages.length - 1,
     sent: index.receipt?.pages[pageAt],
-    engineVersion: submitEngine(index.receipt),
+    cliVersion: index.receipt?.cliVersion,
   };
 }
 

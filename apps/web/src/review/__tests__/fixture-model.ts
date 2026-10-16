@@ -27,8 +27,7 @@ function variant(key: string, kind: ReviewVariant["kind"] = "changed"): ReviewVa
     thumbnail: `data:image/svg+xml,${encodeURIComponent(thumbnail)}`,
     changedPixels: 120,
     ratio: 0.0005,
-    engine: "rgba-v1",
-    codec: "png-v1",
+    cli: "0.7.0",
     policy: "test-policy",
     threshold: "0.0005",
   };

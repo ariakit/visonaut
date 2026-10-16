@@ -3,8 +3,6 @@ import {
   canonicalJson,
   captureRowView,
   digestJson,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
   parseCapturePage as parseProtocolPage,
   sha256,
   type CapturePage,
@@ -300,7 +298,8 @@ describe("the second request of a run page, for a run in pages", () => {
       schemaVersion: "1.0",
       producer: { name: "visonaut", version: "1.0.0", nodeVersion: "24", playwrightVersion: "1" },
       job: { id: "789", attempt: 1 },
-      comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
+      // No CLI version, so the captures equal the captures of the run before
+      // it had this index.
       reference: { snapshotId: storedIndex.referenceSnapshotId, baselineRevision: 1, digest: null },
       sources: [
         {
