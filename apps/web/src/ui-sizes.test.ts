@@ -42,7 +42,13 @@ test("the style sheet that has the theme is imported once", () => {
 test("text and icons take their color from the text system", () => {
   // opacity-N dims the whole element. ak-ink-N changes only the text color.
   // The start state of a fade (`starting:opacity-0`) is motion, not a color.
-  expect(find(/(?<!starting:)\bopacity-/)).toEqual([]);
+  // The fade of a picture is the other motion. The row picture of the
+  // screenshot list has the two states of it: `data-[state=pending]:opacity-0`
+  // and `data-[state=faded]:opacity-50`. A fixed, a hover, or another state
+  // `opacity-N` still fails.
+  expect(find(/(?<!starting:)(?<!(?<![\w-])data-\[state=(?:pending|faded)\]:)\bopacity-/)).toEqual(
+    [],
+  );
   // A color-named ink class is not a rule: use $text. Only ak-ink-N exists.
   expect(find(/\bak-ink-[a-z]/)).toEqual([]);
 });

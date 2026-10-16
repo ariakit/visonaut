@@ -218,7 +218,11 @@ describe("public commands under temporary service backpressure", () => {
       });
       const result = await submitShard(prepared, [local], environment);
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain("HTTP 503, service_unavailable");
+      expect(result.stderr).toContain(
+        operation === "oidc"
+          ? "GitHub Actions refused the OIDC token request (HTTP 503)"
+          : "HTTP 503, service_unavailable",
+      );
       const paths = service.paths();
       // The refused request is the last one, and the CLI sent it one time.
       const steps = { oidc: 1, reserve: 2, page: 3, index: 5 }[operation];
