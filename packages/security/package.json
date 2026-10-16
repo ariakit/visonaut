@@ -19,7 +19,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "5.20260922.1",
     "@types/node": "24.13.6",
-    "miniflare": "5.20260921.0-alpha",
+    "miniflare": "5.20261006.2-beta",
     "rolldown": "1.2.14",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vitest": "5.0.4"
