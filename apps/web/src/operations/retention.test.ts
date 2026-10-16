@@ -29,7 +29,7 @@ import * as mainRetirement from "./main-retirement.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { expireComparisonReferences } from "./snapshot-retention.ts";
 import { expireRunImages, imagePrefix, type RetainedImageOwner } from "./retention.ts";
-import { readClosedSummary } from "./closed-summary.ts";
+import { readClosedSummary, summarizeClosedRuns } from "./closed-summary.ts";
 import {
   captured,
   context,
@@ -1088,6 +1088,8 @@ describe("the D1 writes of a release", () => {
     fixture.state.time = midRelease - 1;
     await runUntilIdle(fixture);
     fixture.state.time = midRelease;
+    // The release waits for the closed summary of the run.
+    expect((await summarizeClosedRuns(fixture.context)).completed).toEqual(["mid"]);
     measured.reset();
     const release = await expireComparisonReferences(fixture.context);
     expect(release.completed).toEqual(["mid"]);
@@ -1099,6 +1101,7 @@ describe("the D1 writes of a release", () => {
     expect(await idlePass()).toEqual([]);
 
     fixture.state.time = newRelease;
+    expect((await summarizeClosedRuns(fixture.context)).completed).toEqual(["new"]);
     measured.reset();
     expect((await expireComparisonReferences(fixture.context)).completed).toEqual(["new"]);
     // The inherited-by pin of "new" on "mid", and its comparison pins on
@@ -1686,6 +1689,38 @@ describe("the review of a run whose baseline images are deleted", () => {
     fixture.state.time += afterRetention;
     expect(await runUntilIdle(fixture)).toEqual({ deleted: ["older", "open"], attention: [] });
     expect(await byteStates(database)).toMatchObject({ current: "live", older: "deleted" });
+    const after = parseReviewModel(await reviewModel(api, "current"));
+    expect(after).toMatchObject({ evidenceState: "summary", imagesExpired: true });
+    expect(expiredSides(after.items)).toEqual([
+      { item: "x", reference: true, candidate: false },
+      { item: "y", reference: true, candidate: false },
+    ]);
+  });
+
+  it("keeps the images that a run names while the summary of that run fails", async () => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    // The history step fails for "current" only, as a failed summary does.
+    await database
+      .prepare(
+        "CREATE TRIGGER fail_current_summary BEFORE INSERT ON visonaut_closed_summaries WHEN NEW.run_id='current' BEGIN SELECT RAISE(ABORT,'The summary failed.'); END",
+      )
+      .run();
+    const api = await replacedBaseline(fixture);
+    fixture.state.time += afterRetention;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["open"], attention: ["current"] });
+    expect(await byteStates(database)).toMatchObject({ current: "live", older: "live" });
+    const late = parseReviewModel(await reviewModel(api, "current"));
+    expect(late.evidenceState).toBeUndefined();
+    expect(expiredSides(late.items)).toEqual([
+      { item: "x", reference: false, candidate: false },
+      { item: "y", reference: false, candidate: false },
+    ]);
+
+    await database.prepare("DROP TRIGGER fail_current_summary").run();
+    // The history step waits for the lease of its failure event to end.
+    fixture.state.time += day;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["older"], attention: [] });
     const after = parseReviewModel(await reviewModel(api, "current"));
     expect(after).toMatchObject({ evidenceState: "summary", imagesExpired: true });
     expect(expiredSides(after.items)).toEqual([
