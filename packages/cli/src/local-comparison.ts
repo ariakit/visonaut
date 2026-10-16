@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { lstat, mkdir, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdir, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { imageLimits } from "@visonaut/compare";
 import {
@@ -10,17 +10,17 @@ import {
   TRANSPORT,
 } from "@visonaut/protocol";
 import type { CapturePage, CaptureRowResult, CaptureRowView } from "@visonaut/protocol";
-import { captureLabel, CliError, protocolVersion, record } from "./errors.js";
+import { captureLabel, CliError, protocolVersion } from "./errors.js";
 import { readImageFile } from "./files.js";
 import { request } from "./http.js";
-import { comparePixels, decodePng } from "./png-comparison.js";
+import { ImagePool } from "./image-pool.js";
 import type { Session } from "./session.js";
 import { imagePath } from "./submission.js";
 import type { CaptureRecord } from "./submission.js";
 
 export const MASK_DIRECTORY = "local-masks";
 // Keep at most 32 reference requests and 16 MiB of encoded references beside
-// one decoded image pair.
+// one decoded image pair for each image worker.
 const REFERENCE_DOWNLOAD_CONCURRENCY = 32;
 const REFERENCE_DOWNLOAD_BYTES = 16 * 1024 * 1024;
 // Bound the captures that wait in the window when most need no download.
@@ -36,16 +36,27 @@ type Identity = [itemKey: string, variantKey: string];
 export interface ComparisonTimings {
   /** The time that the comparison waits for reference image downloads. */
   referenceImagesMs: number;
-  /** The time to decode and compare the images and to write the masks. */
+  /**
+   * The time that the comparison waits for the image workers to decode and
+   * compare the images, and to write the masks.
+   */
   comparisonMs: number;
   /** The time that the comparison waits for reference pages. */
   referencePagesMs: number;
   /** The time that the reference reads wait before they retry, summed over the parallel reads. */
   referenceRetryWaitMs: number;
+  /** The count of image workers that can decode and compare at the same time. */
+  workers: number;
 }
 
 export function comparisonTimings(): ComparisonTimings {
-  return { referenceImagesMs: 0, comparisonMs: 0, referencePagesMs: 0, referenceRetryWaitMs: 0 };
+  return {
+    referenceImagesMs: 0,
+    comparisonMs: 0,
+    referencePagesMs: 0,
+    referenceRetryWaitMs: 0,
+    workers: 0,
+  };
 }
 
 function identityOf(view: CaptureRowView): Identity {
@@ -130,6 +141,7 @@ export function referenceCursor(session: Session, timings = comparisonTimings())
 interface CompareCaptureParams {
   /** The prepared directory with the images of the run. */
   directory: string;
+  pool: ImagePool;
   capture: CaptureRecord;
   accepted: CaptureRowView | undefined;
   referenceBytes: Buffer | undefined;
@@ -190,10 +202,20 @@ interface PendingComparison extends ComparisonInput {
   download: Promise<Download>;
 }
 
+/** The end of a comparison. A failure is a value, so a running comparison never rejects. */
+type Comparison = { downloadedAt: number } & ({ result: CaptureRowResult } | { failure: unknown });
+
+interface RunningComparison {
+  capture: CaptureRecord;
+  comparison: Promise<Comparison>;
+}
+
 /**
  * Compare the captures in order. A window of reference downloads runs ahead of
- * the comparison, so the next downloads continue while a capture is decoded,
- * compared, and staged. Each failure drains the window before it is reported.
+ * the comparison, so the next downloads continue while the image workers
+ * decode and compare. Up to one capture for each worker is compared at a time,
+ * and the results come in the order of the captures. Each failure drains the
+ * downloads and the comparisons before it is reported.
  */
 export async function* compareCaptures({
   session,
@@ -201,9 +223,12 @@ export async function* compareCaptures({
   captures,
   timings = comparisonTimings(),
 }: CompareCapturesParams) {
+  await using pool = new ImagePool();
+  timings.workers = pool.size;
   const reference = referenceCursor(session, timings);
   const iterator = captures[Symbol.asyncIterator]();
   const window: PendingComparison[] = [];
+  const running: RunningComparison[] = [];
   let next: ComparisonInput | undefined;
   let done = false;
   let failed = false;
@@ -241,45 +266,71 @@ export async function* compareCaptures({
       next = undefined;
     }
   };
-  try {
-    while (true) {
-      await fill();
-      const pending = window.shift();
-      if (!pending) return;
-      const waitStarted = performance.now();
-      const download = await pending.download;
-      timings.referenceImagesMs += performance.now() - waitStarted;
-      if ("failure" in download) {
-        throw download.failure;
-      }
-      const comparisonStarted = performance.now();
+  const compare = async (pending: PendingComparison): Promise<Comparison> => {
+    const download = await pending.download;
+    const downloadedAt = performance.now();
+    if ("failure" in download) return { downloadedAt, failure: download.failure };
+    try {
       const result = await compareCapture({
         directory,
+        pool,
         capture: pending.capture,
         accepted: pending.accepted,
         referenceBytes: download.bytes,
       });
-      timings.comparisonMs += performance.now() - comparisonStarted;
+      return { downloadedAt, result };
+    } catch (failure) {
+      failed = true;
+      return { downloadedAt, failure };
+    } finally {
       if (pending.bytes) {
         requests--;
         reservedBytes -= pending.bytes;
       }
-      yield { capture: pending.capture, result };
+    }
+  };
+  try {
+    while (true) {
+      await fill();
+      while (running.length < pool.size) {
+        const pending = window.shift();
+        if (!pending) break;
+        running.push({ capture: pending.capture, comparison: compare(pending) });
+      }
+      const head = running.shift();
+      if (!head) return;
+      const waitStarted = performance.now();
+      const comparison = await head.comparison;
+      const waitEnded = performance.now();
+      // Split the wait at the end of the download, so that the two phases add
+      // up to the time that the results wait.
+      const downloaded = Math.min(Math.max(comparison.downloadedAt, waitStarted), waitEnded);
+      timings.referenceImagesMs += downloaded - waitStarted;
+      timings.comparisonMs += waitEnded - downloaded;
+      if ("failure" in comparison) {
+        throw comparison.failure;
+      }
+      yield { capture: head.capture, result: comparison.result };
     }
   } finally {
-    // Drain every request before a failure is reported or the command ends.
-    await Promise.all(window.map((pending) => pending.download));
+    // Drain every request and comparison before a failure is reported or the
+    // command ends.
+    await Promise.all([
+      ...window.map((pending) => pending.download),
+      ...running.map((entry) => entry.comparison),
+    ]);
     await iterator.return?.();
   }
 }
 
 /**
- * Compare one capture with its reference. Only one decoded pair and one mask
- * are in memory. `combineBundles` already decoded the capture, so a new
- * capture and a capture with the bytes of its reference are not decoded here.
+ * Compare one capture with its reference on an image worker. `combineBundles`
+ * already decoded the capture, so a new capture and a capture with the bytes
+ * of its reference are not decoded here.
  */
 export async function compareCapture({
   directory,
+  pool,
   capture,
   accepted,
   referenceBytes,
@@ -297,23 +348,22 @@ export async function compareCapture({
     }
     return 0;
   }
-  const candidate = await decodePng(
-    await readImageFile(directory, { ...image, path: imagePath(image.digest) }, label),
-    { ...image, mediaType: "image/png" },
+  const candidateBytes = await readImageFile(
+    directory,
+    { ...image, path: imagePath(image.digest) },
     label,
   );
   if (!referenceBytes) {
     throw new CliError("The service returned invalid reference bytes.");
   }
   // The decode also checks the bytes against the digest and the Submit bounds.
-  const reference = await decodePng(
-    referenceBytes,
-    { ...accepted.image, mediaType: "image/png" },
-    `reference of ${label}`,
-  );
-  const { mask, ...metrics } = comparePixels({
-    candidate,
-    reference,
+  const { mask, ...metrics } = await pool.compare({
+    candidate: { bytes: candidateBytes, metadata: { ...image, mediaType: "image/png" }, label },
+    reference: {
+      bytes: referenceBytes,
+      metadata: { ...accepted.image, mediaType: "image/png" },
+      label: `reference of ${label}`,
+    },
     comparison: capture.comparison,
     profileChanged: capture.profileDigest !== accepted.profileDigest,
   });
@@ -326,15 +376,13 @@ export async function compareCapture({
     throw new CliError("The local mask directory is not a regular private directory.");
   }
   const digest = createHash("sha256").update(mask).digest("hex");
-  try {
-    await writeFile(join(directory, maskPath(digest)), mask, { flag: "wx", mode: 0o600 });
-  } catch (error) {
-    if (!record(error) || error.code !== "EEXIST") {
-      throw error;
-    }
-  }
+  // Two comparisons at the same time can make the same mask. A rename puts the
+  // complete file in place, so a page never reads a mask that is half written.
+  const temporary = join(maskDirectory, `${digest}.${randomUUID()}.tmp`);
+  await writeFile(temporary, mask, { flag: "wx", mode: 0o600 });
+  await rename(temporary, join(directory, maskPath(digest)));
   return {
     ...result,
-    mask: { digest, bytes: mask.length, width: candidate.width, height: candidate.height },
+    mask: { digest, bytes: mask.length, width: image.width, height: image.height },
   };
 }
