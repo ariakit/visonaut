@@ -22,13 +22,7 @@ interface StagedCandidate {
 const stagedDeletionEligibility = `(
   (EXISTS (SELECT 1 FROM visonaut_runs run
       WHERE run.id = ingest_staged_runs.id
-        AND ((run.sealed_at IS NOT NULL AND (run.active = 0 OR (run.comparison_id IS NOT NULL
-            AND NOT EXISTS (SELECT 1 FROM ingest_staged_manifests staged_manifest
-              WHERE staged_manifest.run_id = ingest_staged_runs.id AND staged_manifest.evidence_version = 2
-                AND NOT EXISTS (SELECT 1 FROM ingest_manifests imported
-                  WHERE imported.run_id = run.id AND imported.job_id = staged_manifest.job_id
-                    AND imported.digest = staged_manifest.manifest_digest
-                    AND imported.storage_version = 2 AND imported.finalized = 1)))))
+        AND ((run.sealed_at IS NOT NULL AND (run.active = 0 OR run.comparison_id IS NOT NULL))
           OR (run.active = 0 AND run.closed_at IS NOT NULL)))
     OR (NOT EXISTS (SELECT 1 FROM visonaut_runs run WHERE run.id = ingest_staged_runs.id)
       AND NOT EXISTS (SELECT 1 FROM visonaut_images image
@@ -38,7 +32,6 @@ const stagedDeletionEligibility = `(
 
 const stagedChildTables = [
   "ingest_staged_images",
-  "ingest_staged_evidence_pages",
   "ingest_staged_manifests",
   "ingest_staged_bundles",
 ] as const;
@@ -255,7 +248,6 @@ export async function expireStagedAttempts(
             WHERE id = ? AND retention_state = 'deleting' AND deletion_token = ?
               AND deletion_until > ?
               AND NOT EXISTS (SELECT 1 FROM ingest_staged_images WHERE run_id = ingest_staged_runs.id)
-              AND NOT EXISTS (SELECT 1 FROM ingest_staged_evidence_pages WHERE run_id = ingest_staged_runs.id)
               AND NOT EXISTS (SELECT 1 FROM ingest_staged_manifests WHERE run_id = ingest_staged_runs.id)
               AND NOT EXISTS (SELECT 1 FROM ingest_staged_bundles WHERE run_id = ingest_staged_runs.id))`,
           [candidate.id, token, context.now()],

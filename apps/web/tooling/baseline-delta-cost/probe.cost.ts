@@ -7,6 +7,7 @@ import { gzipSync } from "node:zlib";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { expect, it } from "vitest";
 import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
+import { pageComparison } from "../../../../tooling/page-comparison-fixture.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import {
   LOCAL_COMPARISON_CODEC,
@@ -64,6 +65,7 @@ function sourceHashes() {
     "apps/web/tooling/baseline-delta-cost/probe.cost.ts",
     "apps/web/tooling/baseline-delta-cost/vitest.config.ts",
     "tooling/legacy-comparison-fixture.ts",
+    "tooling/page-comparison-fixture.ts",
     "tooling/test-migrations.ts",
   ];
   for (const directory of [
@@ -339,8 +341,9 @@ async function measure(scenario: Scenario): Promise<Measurement> {
         runId: "candidate",
         referenceSnapshotId: input.project.snapshot_id,
         expectedBaselineRevision: input.project.baseline_revision,
-        localComparison: input.localComparison,
-        ...(scenario.mode === "sparse" ? { referenceCaptures: input.references } : {}),
+        ...(scenario.mode === "sparse"
+          ? pageComparison(input.localComparison, input.references)
+          : { localComparison: input.localComparison }),
         now: 23,
       }),
     );

@@ -16,8 +16,9 @@ import {
   type Manifest,
 } from "@visonaut/protocol";
 import { Service, type Database, type ValidatedImage } from "@visonaut/service";
-import { comparisonReceipt, comparisonSettingsCounts } from "../../src/api/local-comparison.ts";
+import { checkedComparison, listReference } from "../../src/api/local-comparison.ts";
 import {
+  openCaptureInventory,
   readCaptureInventory,
   writeCapturePages,
   type InventoryCapture,
@@ -395,15 +396,6 @@ async function submit({ service, database, images, run, pictures, now, ...projec
     ? await readSnapshotInventoryHeader({ database, images }, snapshotId)
     : null;
   if (snapshotId && (!baseline || !header)) throw new Error("The seed baseline has no inventory.");
-  const references = (baseline?.captures ?? []).map((capture) => ({
-    id: capture.id,
-    itemKey: capture.itemKey,
-    variantKey: capture.variantKey,
-    profileDigest: capture.profileDigest,
-    renderingProfileDigest: capture.renderingProfileDigest,
-    image: capture.image,
-    metadata: capture.metadata,
-  }));
   const baselineCaptures = new Map(
     (baseline?.captures ?? []).map((capture) => [identityKey(capture), capture]),
   );
@@ -528,30 +520,27 @@ async function submit({ service, database, images, run, pictures, now, ...projec
       attempt: 1,
       testedSha: run.testedSha,
       tests: [test.id],
-      captures: captures.map(({ itemKey, variantKey }) => ({
-        itemKey,
-        variantKey,
-        testId: test.id,
-      })),
+      // The service checks each capture of the pages against the tests.
+      captures: [],
     },
     finalTestOutcomes: [{ testId: test.id, retry: test.retry, status: test.status }],
     now,
   });
   await service.sealRun({ runId: run.id, now });
   const comparisonId = crypto.randomUUID();
+  // The comparison input of a Submit, one page of the committed list at a time.
+  const comparison = await checkedComparison({
+    pages: (await openCaptureInventory(images, inventory)).pages(),
+    reference: index.reference,
+    references: listReference(baseline?.captures ?? []),
+    engineVersion: index.comparison.engineVersion,
+  });
   await service.createComparison({
     id: comparisonId,
     runId: run.id,
     referenceSnapshotId: snapshotId,
     expectedBaselineRevision: baselineRevision,
-    localComparison: comparisonReceipt({
-      captures,
-      reference: index.reference,
-      references,
-      engineVersion: index.comparison.engineVersion,
-    }),
-    referenceCaptures: references,
-    settings: comparisonSettingsCounts(captures, references),
+    ...comparison,
     now,
   });
   await service.finalizeComparison({ comparisonId, now });

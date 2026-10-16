@@ -4,6 +4,7 @@ import {
   seedLegacyResult,
   type ComparisonTask,
 } from "../../../tooling/legacy-comparison-fixture.ts";
+import { pageComparison } from "../../../tooling/page-comparison-fixture.ts";
 import { readTestMigrations } from "../../../tooling/test-migrations.ts";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -529,8 +530,7 @@ async function sparseFixture(service: Service, input: SparseFixtureParams) {
     runId: input.id,
     referenceSnapshotId: project.snapshot_id,
     expectedBaselineRevision: project.baseline_revision,
-    localComparison,
-    referenceCaptures: references,
+    ...pageComparison(localComparison, references),
     now: 23,
   };
   const complete = async () => {
@@ -539,7 +539,15 @@ async function sparseFixture(service: Service, input: SparseFixtureParams) {
     await service.createComparison(comparisonInput);
     await service.finalizeComparison({ comparisonId: comparisonInput.id, now: 24 });
   };
-  return { commit, comparisonInput, inventory, owners: [...owners], complete };
+  return {
+    commit,
+    comparisonInput,
+    inventory,
+    owners: [...owners],
+    complete,
+    localComparison,
+    references,
+  };
 }
 
 describe("complete R2 inventory with changed D1 rows", () => {
@@ -595,6 +603,32 @@ describe("complete R2 inventory with changed D1 rows", () => {
         .prepare("SELECT owner FROM work_retention_pins WHERE owner='comparison:comparison-retry'")
         .get(),
     ).toBeUndefined();
+  });
+
+  it("refuses the comparison of a run with a capture list without the checked counts", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service, ["one", "two"]);
+    const sparse = await sparseFixture(service, {
+      id: "unchecked",
+      items: ["one", "two"],
+      changed: ["one"],
+    });
+    await service.commitShard(sparse.commit);
+    await service.sealRun({ runId: "unchecked", now: 22 });
+    // The complete receipt of the list form: each result and each reference.
+    const complete = {
+      ...sparse.comparisonInput,
+      localComparison: sparse.localComparison,
+      referenceCaptures: sparse.references,
+      checked: undefined,
+    };
+    await expect(service.createComparison(complete)).rejects.toThrow(
+      "The complete local receipt and pinned reference are required.",
+    );
+    expect((await service.run("unchecked")).comparison_id).toBeNull();
+    await service.createComparison(sparse.comparisonInput);
+    expect((await service.run("unchecked")).comparison_id).toBe("comparison-unchecked");
   });
 
   it("pins every reference image owner, including an original removed from the new inventory", async () => {
@@ -4318,6 +4352,21 @@ describe("a shard with a capture list in pages", () => {
     await expect(
       service.commitShard({ ...shard, captures: pages([a, b], [{ ...c, testId: "other" }]) }),
     ).rejects.toThrow("final successful test attempt");
+    // A shard with an inventory is always in pages: its proof lists no capture.
+    await expect(
+      service.commitShard({
+        ...shard,
+        captures: pages([a, b], [c]),
+        verifiedDiscovery: {
+          ...shard.verifiedDiscovery,
+          captures: captures.map(({ itemKey, variantKey, testId }) => ({
+            itemKey,
+            variantKey,
+            testId,
+          })),
+        },
+      }),
+    ).rejects.toThrow("verified candidate inventory is empty, duplicated, or incomplete");
     await service.commitShard({ ...shard, captures: pages([a, b], [c]) });
     // The profile digest of the shard is the digest of the same captures in one list.
     expect(

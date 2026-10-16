@@ -1,36 +1,76 @@
 import type { CaptureComparison } from "@visonaut/protocol";
-import { digestJson } from "@visonaut/protocol";
-import type { ReferenceCaptureInput } from "@visonaut/service";
+import { digestJson, LOCAL_COMPARISON_ENGINE } from "@visonaut/protocol";
 import { expect, it } from "vitest";
 import type { InventoryCapture } from "../capture-inventory.ts";
-import { comparisonSettingsCounts } from "./local-comparison.ts";
+import { checkedComparison, listReference } from "./local-comparison.ts";
 
 const builtIn: CaptureComparison = { threshold: 0.2, maxDiffPixels: 0 };
 
 type Row = [itemKey: string, settings?: CaptureComparison, baseline?: CaptureComparison | null];
 
-/** The counts of a capture list and a baseline that have only the fields that the counts read. */
+/** One capture of a run or of its baseline. */
+function inventoryCapture(
+  runId: string,
+  itemKey: string,
+  metadata: Record<string, unknown>,
+): InventoryCapture {
+  return {
+    id: `${runId}-${itemKey}`,
+    itemKey,
+    variantKey: "light",
+    ordinal: 0,
+    imageId: `${runId}-${itemKey}`,
+    profileDigest: "profile",
+    renderingProfileDigest: "profile",
+    environmentProfileDigest: "profile",
+    testId: "test",
+    testRetry: 0,
+    image: {
+      id: `${runId}-${itemKey}`,
+      runId,
+      digest: `${runId}-${itemKey}`,
+      objectKey: `runs/${runId}/images/${itemKey}`,
+      contentType: "image/png",
+      bytes: 80,
+      width: 10,
+      height: 10,
+    },
+    metadata,
+  };
+}
+
+/** The settings counts of the comparison of a capture list and its baseline. */
 async function counts(rows: Row[]) {
-  const references = [];
-  const captures = [];
+  const references: InventoryCapture[] = [];
+  const captures: InventoryCapture[] = [];
   for (const [itemKey, comparison, baseline] of rows) {
-    captures.push({
-      itemKey,
-      variantKey: "light",
-      metadata: comparison ? { comparison, comparisonDigest: await digestJson(comparison) } : {},
-    });
+    // A changed result needs no reference capture.
+    captures.push(
+      inventoryCapture("run", itemKey, {
+        observedImage: { digest: `run-${itemKey}`, width: 10, height: 10 },
+        localResult: { outcome: "changed", changedPixels: 1, ratio: 0.01 },
+        ...(comparison ? { comparison, comparisonDigest: await digestJson(comparison) } : {}),
+      }),
+    );
     if (baseline === undefined) continue;
-    references.push({
-      itemKey,
-      variantKey: "light",
-      metadata: baseline ? { comparisonDigest: await digestJson(baseline) } : {},
-    });
+    references.push(
+      inventoryCapture(
+        "reference",
+        itemKey,
+        baseline ? { comparisonDigest: await digestJson(baseline) } : {},
+      ),
+    );
   }
-  // The counts read no other field, so the test gives no complete capture.
-  return comparisonSettingsCounts(
-    captures as InventoryCapture[],
-    references as ReferenceCaptureInput[],
-  );
+  const pages = async function* () {
+    yield { captures, profiles: [] };
+  };
+  const comparison = await checkedComparison({
+    pages: pages(),
+    reference: { snapshotId: "reference", baselineRevision: 1, digest: null },
+    references: listReference(references),
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+  });
+  return comparison.settings;
 }
 
 it("counts a capture as loose only when its settings permit more than threshold 0.2 and 0 pixels", async () => {

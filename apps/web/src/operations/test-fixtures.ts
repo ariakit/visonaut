@@ -2,12 +2,10 @@ import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixt
 import {
   CAPTURE_PAGE_ROWS,
   digestJson,
-  LOCAL_COMPARISON_CODEC,
   LOCAL_COMPARISON_ENGINE,
   type CaptureProfile,
   type CaptureRowImage,
   type CaptureRowResult,
-  type LocalComparisonReceipt,
   type Variant,
 } from "@visonaut/protocol";
 import { readTestMigrations } from "../../../../tooling/test-migrations.ts";
@@ -21,7 +19,12 @@ import {
   type Statement,
   type ValidatedImage,
 } from "@visonaut/service";
-import { readCaptureInventory, writeCapturePages } from "../capture-inventory.ts";
+import {
+  openCaptureInventory,
+  readCaptureInventory,
+  writeCapturePages,
+} from "../capture-inventory.ts";
+import { checkedComparison, listReference } from "../api/local-comparison.ts";
 import type { CapturePagesInput } from "../capture-pages.ts";
 import { readSnapshotInventory } from "../inventory-records.ts";
 import { storeCaptureProfiles } from "../profiles.ts";
@@ -496,7 +499,7 @@ export interface InventoryRunParams {
 
 /**
  * Build a sealed and approved run of the inventory form: capture pages and
- * their index, a local comparison receipt, and images only for the captures
+ * their index, the comparison of the pages, and images only for the captures
  * that differ from the project baseline. The baseline must have an inventory.
  * The first main run of a project has no baseline.
  */
@@ -517,23 +520,6 @@ export async function inventoryRun(
   const profileDigest = await digestJson(pageProfile);
   const profiles = [{ digest: profileDigest, profile: pageProfile }];
   const testedSha = digest(id).slice(0, 40);
-  const receipt: LocalComparisonReceipt = {
-    mode: "local-v1",
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
-    reference: {
-      snapshotId,
-      baselineRevision: project.baseline_revision,
-      // Only the Submit route verifies these two digests.
-      manifestDigest: "e".repeat(64),
-      inventoryDigest: "f".repeat(64),
-      captureCount: references.size,
-    },
-    captures: [],
-    removals: [...references.values()]
-      .filter((capture) => !Object.hasOwn(items, capture.itemKey))
-      .map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
-  };
   const pageCaptures: PageCapture[] = [];
   const uploads: { image: ValidatedImage; body: string }[] = [];
   // The rows of a page have the order of the item key.
@@ -573,13 +559,6 @@ export async function inventoryRun(
         : referenceImage
           ? { reference: referenceImage.digest, ...changed }
           : 1,
-    });
-    receipt.captures.push({
-      itemKey,
-      variantKey: pageVariant.key,
-      candidateDigest: image.digest,
-      referenceDigest: referenceImage?.digest ?? null,
-      ...(isChanged ? changed : { ...changed, outcome: "unchanged" }),
     });
   }
   const pointer = await writeCapturePages(context.images, {
@@ -648,20 +627,19 @@ export async function inventoryRun(
   });
   await service.sealRun({ runId: id, now: context.now() });
   const comparisonId = `comparison-${id}`;
+  // The comparison input of a Submit, one page of the committed list at a time.
+  const comparison = await checkedComparison({
+    pages: (await openCaptureInventory(context.images, pointer)).pages(),
+    reference: { snapshotId, baselineRevision: project.baseline_revision, digest: null },
+    references: listReference(reference?.captures ?? []),
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+  });
   await service.createComparison({
     id: comparisonId,
     runId: id,
     referenceSnapshotId: snapshotId,
     expectedBaselineRevision: project.baseline_revision,
-    localComparison: receipt,
-    referenceCaptures: [...references.values()].map((capture) => ({
-      id: capture.id,
-      itemKey: capture.itemKey,
-      variantKey: capture.variantKey,
-      profileDigest: capture.profileDigest,
-      renderingProfileDigest: capture.renderingProfileDigest,
-      image: capture.image,
-    })),
+    ...comparison,
     now: context.now(),
   });
   await service.finalizeComparison({ comparisonId, now: context.now() });
