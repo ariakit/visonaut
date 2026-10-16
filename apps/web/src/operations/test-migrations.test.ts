@@ -78,6 +78,67 @@ it("drops the unread staged manifest columns and keeps their rows", () => {
   ).toEqual([{ run_id: "run", manifest_digest: "digest", declared_bytes: 1 }]);
 });
 
+it("drops the staged evidence pages and keeps the evidence version and the image guards", () => {
+  using database = new DatabaseSync(":memory:");
+  for (const migration of readTestMigrations({ through: "0043_drop_staged_manifest_columns" })) {
+    database.exec(migration.sql);
+  }
+  database.exec("PRAGMA foreign_keys = OFF");
+  database.exec(`INSERT INTO ingest_staged_manifests
+    (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count,
+      created_at, evidence_version, declaration_complete)
+    VALUES ('run', 'job', 'digest', 'key', 1, 1, 1, 1, 1)`);
+  const schemaNames = (type: string, prefix: string) =>
+    database
+      .prepare("SELECT name FROM sqlite_schema WHERE type = ? AND name LIKE ? ORDER BY name")
+      .all(type, `${prefix}%`)
+      .map((row) => row.name);
+  const columns = () =>
+    database
+      .prepare("SELECT name FROM pragma_table_info('ingest_staged_manifests')")
+      .all()
+      .map((column) => column.name);
+  expect(schemaNames("table", "ingest_staged_evidence")).toEqual(["ingest_staged_evidence_pages"]);
+  expect(schemaNames("trigger", "ingest_staged_evidence")).toEqual([
+    "ingest_staged_evidence_admitted_delete",
+    "ingest_staged_evidence_update",
+  ]);
+  expect(columns()).toContain("evidence_version");
+
+  const migration = readTestMigrations().find(
+    ({ name }) => name === "0044_drop_staged_evidence_pages.sql",
+  );
+  database.exec(migration?.sql ?? "");
+
+  expect(schemaNames("table", "ingest_staged_evidence")).toEqual([]);
+  expect(schemaNames("trigger", "ingest_staged_evidence")).toEqual([]);
+  // The Worker of the previous release still writes the column until the deploy ends.
+  expect(columns()).toContain("evidence_version");
+  // The Worker of this release does not write it, so the default applies.
+  database.exec(`INSERT INTO ingest_staged_manifests
+    (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at)
+    VALUES ('run2', 'job', 'digest2', 'key2', 1, 1, 1)`);
+  expect(
+    database
+      .prepare("SELECT run_id, evidence_version FROM ingest_staged_manifests ORDER BY run_id")
+      .all(),
+  ).toEqual([
+    { run_id: "run", evidence_version: 1 },
+    { run_id: "run2", evidence_version: 1 },
+  ]);
+  expect(schemaNames("trigger", "ingest_staged_images")).toEqual([
+    "ingest_staged_images_admitted_delete",
+    "ingest_staged_images_admitted_insert",
+    "ingest_staged_images_admitted_update",
+  ]);
+  // The image guard of an admitted job still refuses a new image row.
+  expect(() =>
+    database.exec(`INSERT INTO ingest_staged_images
+      (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key)
+      VALUES ('run', 'job', 'd', 'image/png', 1, 1, 1, 'i', 'o', 'q')`),
+  ).toThrow("The admitted image set is immutable.");
+});
+
 it("keeps an explicit old schema before a migration regression", () => {
   using database = new DatabaseSync(":memory:");
   for (const migration of readTestMigrations({ through: "0013_promotion_scans" })) {

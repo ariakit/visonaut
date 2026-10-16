@@ -1067,9 +1067,9 @@ export async function stageIndex(request: Request, context: ApiContext, runId: s
       statement(
         context.database,
         `INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key,
-          declared_bytes, capture_count, created_at, evidence_version, evidence_bytes,
+          declared_bytes, capture_count, created_at, evidence_bytes,
           complete, declaration_complete, local_receipt_validated)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 1, 1, 1) ON CONFLICT(run_id, job_id) DO NOTHING`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1) ON CONFLICT(run_id, job_id) DO NOTHING`,
         [
           run.id,
           job.job_id,

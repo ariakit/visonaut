@@ -3490,12 +3490,6 @@ describe("staged pages and images of a Submit", () => {
     expect(
       (await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId)).complete,
     ).toBe(1);
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ count: 0 });
     const recovered = await materializeWorkflowRun(test.context, test.runId);
     const current = await test.context.service.run(recovered.id);
     expect(current.comparison_id).not.toBeNull();
@@ -3506,12 +3500,6 @@ describe("staged pages and images of a Submit", () => {
       report = await expireStagedAttempts(retention(now, 1));
     }
     expect(report.completed).toContain(test.runId);
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ count: 0 });
     expect(await images.head(imageKey)).not.toBeNull();
     // Recovery after retirement uses the durable comparison, without pages.
     expect((await materializeWorkflowRun(test.context, test.runId)).comparison_id).toBe(
@@ -3568,11 +3556,6 @@ describe("staged pages and images of a Submit", () => {
         .bind(test.runId)
         .first(),
     ).toEqual({ retention_state: "live" });
-    expect(
-      await prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ count: 0 });
   });
 });
 
