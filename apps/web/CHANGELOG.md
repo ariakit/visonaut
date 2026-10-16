@@ -1,5 +1,49 @@
 # @visonaut/web
 
+## 0.3.4
+
+### The review page keeps its keys, focus, and layout choices
+
+- **Stored shortcut switch.** **Shortcuts on/off** stays as the reviewer left it after a reload, and the key hints of the page hide while the shortcuts are off.
+- **Skip link.** The first Tab stop is **Skip to review actions**, which moves the focus to the decision bar. The page root is no longer a Tab stop.
+- **Home and End.** On a variant mark, Home selects the first variant and End the last one.
+- **Narrow layout.** The page shows the list and the details in dialogs when the page is narrower than 64rem. Before, a window of 1,024 to 1,038 px with a classic scrollbar showed no list.
+- **Search.** The placeholder of the screenshot search has more contrast.
+
+### The review page has no Recompare control
+
+- **No Recompare.** The footer button **Recompare stored run** and the button **Recompare now** on a failed comparison are gone. The service has retired server comparison, so a new comparison always needs a new complete run through trusted local Submit.
+- **Expired images.** A screenshot picture whose image has expired no longer sends a request that fails. The row shows its empty picture mark, and the stage shows **Image history expired**.
+
+### The review page has the screenshot list of the settled design
+
+- **Rows of the changes.** The list shows the screenshots with a change, in run order. Each row has a picture of the change, the name, the family, one status mark for each variant, and the largest change.
+- **Status select.** A status select replaces the group **Accepted**: **Changes**, **Needs review**, **Rejected**, **Approved**, and **Unchanged**, which loads the unchanged screenshots by family.
+- **Visible order.** Up, Down, and the move to the next variant after a decision follow the screenshots that the list shows, also with a search or a status.
+- **Direct links.** A link to a screenshot brings its row into view, and a link to an unchanged screenshot with no variant opens it.
+- **Long lists.** The list puts only the rows in view in the page, so one arrow key costs about the same with 1,000 changed screenshots as with 41.
+
+### Repaired small points of the Queue and History pages
+
+- A read of the run list that gets no answer now ends after 30 seconds. The page keeps its list, and the next read of the interval can start.
+- A later read of the interval that works no longer moves the focus to the page content after a "Try again" that failed.
+- The build keeps each font as a file, so the policy of the page does not block a font.
+- A failed read of the run list for a document request now writes one log line with the safe cause.
+- The text that tells a maintainer to check the database size limit now names the Status page and not "Service attention".
+- Sign-in uses three routes of the sign-in library. The error route of the library is closed, because a failed sign-in already returns to the app.
+
+### Other updates
+
+- Fixed three kinds of Status page alerts that stayed open when no action could close them. The alert of an exhausted webhook redelivery now closes 3 days after it opened, because GitHub no longer lists the delivery then. The alert of an expired capture attempt now closes when retention deletes the staged images of the attempt, which normally happens in the pass that expires it, or when a newer run of the same pull request or branch is complete. The alert of a locked GitHub check whose run is closed or replaced now closes after the lock is removed.
+- Fixed the run list answer (`GET /api/runs`) to give a closed run the review counts that its closed summary stored, and `null` for each count before the summary runs, instead of 0.
+- Fixed the run page to show "Image history expired", with no Retry, when an image of another run has no bytes any more, for example on the closed summary of the current baseline after the release of the baseline before it.
+- Removed the updates of the second check that Visonaut kept on the head commit of a pull request whose check is on its merge commit, which is the form from before 2026-10-02. That check keeps the text of its last update, and the operations pass no longer reads such a pull request from GitHub. The service closes the open alerts of that check at the deploy.
+- Fixed the reference page route and the reference image route to refuse a run that is already submitted. They now answer `409 closed_shard`, as the other ingest routes do. The CLI reads the reference before it submits, so a Submit of the CLI is not affected.
+- Fixed the header of a run page and of the Status page that opens by its URL. The account menu now names the signed-in account in place of "Account", the run page links the Status page with the count of open alerts, and the Status link of the Status page has its count.
+- Fixed Submit to check the repository claims of the GitHub token before it reads the database. A Submit request with a valid GitHub token of another repository, or of another repository owner, now gets the same `403 untrusted_run` answer for each workflow run number, also for a run that has no staged attempt, which got `404 not_found` before.
+- Fixed Submit to check the signature of the GitHub token before it reads the database. A Submit request with a token that has no valid signature of GitHub now gets the same `401 invalid_oidc` answer for each workflow run number, also for a run that has no staged attempt, which got `404 not_found` before.
+- Updated dependencies: `@visonaut/security@0.1.2`
+
 ## 0.3.3
 
 ### The run page has the frame of the settled review design

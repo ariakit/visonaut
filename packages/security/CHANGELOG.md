@@ -1,5 +1,10 @@
 # @visonaut/security
 
+## 0.1.2
+
+- Fixed Submit to check the repository claims of the GitHub token before it reads the database. A Submit request with a valid GitHub token of another repository, or of another repository owner, now gets the same `403 untrusted_run` answer for each workflow run number, also for a run that has no staged attempt, which got `404 not_found` before.
+- Fixed Submit to check the signature of the GitHub token before it reads the database. A Submit request with a token that has no valid signature of GitHub now gets the same `401 invalid_oidc` answer for each workflow run number, also for a run that has no staged attempt, which got `404 not_found` before.
+
 ## 0.1.1
 
 - Fixed the delivery of check results to GitHub, so that a check is locked only when a PATCH request possibly reached GitHub. A D1 error, a stopped Worker, or a failed test of the check before the PATCH now sets no lock: the update waits and tries again, and after its last attempt it asks for attention. An update that GitHub already shows sends no PATCH and sets no lock.
