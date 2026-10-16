@@ -1,5 +1,38 @@
 # @visonaut/web
 
+## 0.3.7
+
+### The decision bar of the review page has one status line
+
+- **One bar.** Undo, the view controls of the stage (the view modes, the mask switch, and the zoom), the status line, **Reject**, **Approve**, and a **More** menu are in one raised bar at the bottom of the stage. The **More** menu has **Approve all N** and **Reject all N** for a screenshot with more than one change, and **Copy link**.
+- **Whole screenshot with no dialog.** A decision for the whole screenshot saves at once with **Shift+A** or **Shift+X** and with its item in the **More** menu. The confirmation dialog is gone. The status line shows the number of variants, for example "Saved. 7 variants approved.", and one **Undo** reverses the whole command.
+- **One status line.** Each save state, each refusal, and each recovery text shows in the status line, with a mark for its tone. The line has a reserved height, so **Approve** stays in its place when a text shows. A refused key, for example **Shift+X** on a protected variant, and the text for a remembered variant that a screenshot no longer has are on screen and no longer only in a hidden live region.
+- **Recovery.** A failed save shows only its text and its recovery buttons in the bar. **Retry same command**, **Retry Undo**, **Refresh current state**, **Sign in again**, and **Go to the Queue** are outside the live region, and the focus goes back to the review page after a recovery button. A refusal that comes after a failed save, a conflict, or a closed run follows its text and does not hide it.
+- **Approve off.** A disabled **Approve** has no brand fill, so it no longer looks active while images load or on a read-only run.
+- **Closed runs.** The bar names the stored cause of a closed run, for example "The pull request of this run closed.", and not "A newer run replaced this run." for each closed run.
+- **Fewer reads.** The receipt of a decision by a person with no stored name no longer makes the page read the run model again, and the state read of a run reads the project row one time.
+- **Return to the tab.** A conflict stays on screen when the tab becomes visible again, also when the session ended in another tab.
+
+### Marks, texts, and states on the review stage
+
+The stage of the review page now points to each change and says the state of its images in one place:
+
+- **Marks of the changes.** A box marks each changed region on the current image, and a click on a box zooms to its region. A size change has no mask: a band marks the rows and the columns that only one image has, and the stage says "Size changed" with the two sizes. <kbd>D</kbd> turns the boxes off and on with the mask.
+- **States inside the stage.** The state of a variant (added, removed, not uploaded, size changed, comparing), a load that takes more than 400 ms, and each image error with Retry images show in one row at the top of the stage, so the stage does not move. When the browser is online again, the images that failed to load load again.
+- **The pixel line.** The line above the stage says "1 changed pixel" for one pixel and "< 0.01%" for a ratio that rounds to zero. A size change says "Size changed" with the two sizes, and an added or a removed variant has no pixel line. The screenshot list also prints "< 0.01%".
+
+### Other updates
+
+- Loaded the images of the next variant to review while the current variant is on the review stage. When the images of the current variant are ready, the page loads the baseline, the current image, and the mask of the variant that a decision opens next, so that variant shows from the cache and with no loading chip.
+- Dropped the unused D1 tables `operations_run_archives`, `operations_comparison_archives`, `visonaut_summary_conversion_pages`, `visonaut_closed_summary_rows`, and `visonaut_closed_summary_decisions`, and the view `operations_ready_history_archives`, with migration 0046. No code read or wrote them any more, and production held no archive.
+- Made the read of one stored capture page about 2 times faster. In local workerd, a page of 2,000 captures where each capture has its own clip rectangle took about 57 ms to read, and now takes about 23 to 27 ms. Submit and the run page read these pages.
+- Fixed the materialization and the promotion of a run where many captures changed, which read rows for each pair of a capture and a changed capture to record the identity history. In local D1, one materialization of a run of 20,000 captures where each capture changed now reads 601,382 rows in place of 400,621,386 (about 666× fewer), and 120,424 in place of 16,124,418 at 4,000 captures. The run writes the same rows.
+- Made the conversion of a Submit into a run about 20% faster. The conversion now reads each staged page one time, not two times, and each reference page two times, not three times. In local workerd, the conversion of a run of 2 pages (4,000 captures) took about 536 ms and now takes about 426 ms, and a run of 10 pages (20,000 captures) took about 2,697 ms and now takes about 2,080 ms.
+- The 413 answer of the page step names the limit that caused it. A page that takes the images of its job above the limit of the job, or an image that differs from a staged image, keeps the code `upload_limit`, and its text names the cause. A page that takes the staged images of all runs above their byte limit now gets the code `staged_limit`, so that the CLI shows the cause in `HTTP 413, staged_limit`. The text never gives the value of another run.
+- Fixed an image error with Retry on the page of a closed run whose closed summary is late. The scheduled pass deleted the images of an older run that this page names, and Retry could not load them. The pass now keeps these images until the closed summary of the run is ready, and the page then shows "Image history expired".
+- Removed the archive writer of closed runs and of historical comparisons, the converter of their archives, and the deletion of the old closed summary copies. No code called the writer after 2026-09-30, and production holds no archive. The scheduled pass now writes only the closed summary of a closed run whose detail is still in D1, and the Status page no longer has the alert kind `historical-archive`.
+- Updated dependencies: `@visonaut/service@0.0.6`
+
 ## 0.3.6
 
 ### Approvals no longer depend on the comparison engine
