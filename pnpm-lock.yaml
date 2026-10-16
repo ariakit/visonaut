@@ -211,9 +211,6 @@ importers:
       '@visonaut/compare':
         specifier: workspace:*
         version: link:../../packages/compare
-      '@visonaut/service':
-        specifier: workspace:*
-        version: link:../../packages/service
     devDependencies:
       '@cloudflare/containers':
         specifier: 0.3.7

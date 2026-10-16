@@ -101,7 +101,7 @@ export async function runOperations(
         now: context.now(),
         limit: context.budget.tasksPerStep,
       });
-      await reportComparisonRecovery(context, { published: [], failed: [] }, finalized);
+      await reportComparisonRecovery(context, finalized);
       const report: OperationReport = {
         completed: finalized.completed,
         deferred: [],
