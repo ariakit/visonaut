@@ -216,6 +216,29 @@ it("matches an unexpected API failure to exactly one safe request log", async ()
       code: "service_unavailable",
       correlationId,
       elapsedMilliseconds: 25,
+      // A name that is not on the list of safe names is "other".
+      cause: { errorName: "other" },
+    }),
+  );
+});
+
+it("names the class of an unexpected API failure in its log", async () => {
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(crypto, "randomUUID").mockReturnValue(correlationId);
+  vi.spyOn(Date, "now").mockReturnValue(startedAt);
+  vi.spyOn(preRun, "reportVisualPlan").mockRejectedValueOnce(
+    new TypeError("private-type-error-sentinel"),
+  );
+  const response = await server.fetch(request(), env, { waitUntil() {} });
+  expect(response.status).toBe(503);
+  expect(output).toHaveBeenCalledExactlyOnceWith(
+    JSON.stringify({
+      event: "operation-failed",
+      operation: "api",
+      code: "service_unavailable",
+      correlationId,
+      elapsedMilliseconds: 0,
+      cause: { errorName: "TypeError" },
     }),
   );
 });
