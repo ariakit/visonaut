@@ -96,8 +96,8 @@ export async function pullAnswer({ context, pullNumber, check }: PullParams): Pr
   const { projectId, github } = context.configuration;
   // One statement finds the check, the run of its workflow attempt, and the title.
   // Among the checks of one head commit, a check that is bound to a workflow
-  // attempt comes first, as for the review link (`review-links.ts`): an unbound
-  // regenerated merge must not replace the attempt that actually ran.
+  // attempt comes first: an unbound regenerated merge must not replace the
+  // attempt that actually ran.
   // The title lookup compares with `+0`: a bare integer column there hides the
   // pull request number from the index `github_webhook_delivery_pr_title`.
   const row = await context.database

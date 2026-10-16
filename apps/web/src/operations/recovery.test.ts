@@ -9,58 +9,7 @@ import { archiveClosedRuns, readRunHistory } from "./history.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import { expireRunImages } from "./retention.ts";
 import { expireSnapshotImages } from "./snapshot-retention.ts";
-import { publishReviewLinks } from "./review-links.ts";
 import { dashboard } from "../api/dashboard.ts";
-
-it("keeps an accepted restored PR read-only without preventing a fresh capture", async () => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  await captured(fixture.context, "restored-pr");
-  database.connection.exec(`
-    UPDATE visonaut_runs SET state='accepted',lineage_key='pr:7' WHERE id='restored-pr';
-    INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at)
-      VALUES('${"a".repeat(40)}',0,'123','${"b".repeat(40)}','${"c".repeat(40)}','pull_request','refs/pull/7/merge',7,0,'old-check','active','restored-pr',1,1,1);
-  `);
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  fixture.context.github.request = async (path, init) => {
-    if (path === "/repos/owner/repo/pulls/7") {
-      return {
-        state: "open",
-        head: { sha: "b".repeat(40), repo: { id: 123 } },
-        base: { ref: "main", repo: { id: 123 } },
-      };
-    }
-    return request(path, init);
-  };
-  await publishReviewLinks(fixture.context);
-  const originalPosts = fixture.state.posts;
-  const originalPatches = fixture.state.patches;
-  expect(originalPosts).toBe(1);
-  await sanitizeRestoredDatabase(database, fixture.state.time);
-  await publishReviewLinks(fixture.context);
-  expect(fixture.state.posts).toBe(originalPosts);
-  expect(fixture.state.patches).toBe(originalPatches);
-  expect(await database.prepare("SELECT state,active FROM visonaut_runs").first()).toEqual({
-    state: "accepted",
-    active: 0,
-  });
-  fixture.state.time += 1;
-  await captured(fixture.context, "fresh-pr");
-  await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='fresh-pr'").run();
-  await database
-    .prepare(
-      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at) VALUES(?,1,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'new-check','active','fresh-pr',1,?,?)",
-    )
-    .bind("a".repeat(40), "b".repeat(40), "c".repeat(40), fixture.state.time, fixture.state.time)
-    .run();
-  await publishReviewLinks(fixture.context);
-  expect(fixture.state.posts).toBe(originalPosts + 1);
-  expect(
-    await database.prepare("SELECT target_external_id FROM operations_review_links").first(),
-  ).toEqual({
-    target_external_id: "new-check",
-  });
-});
 
 it("retains the latest cutoff and permits a fresh capture with readable history and verified images", async () => {
   using database = new TestDatabase();

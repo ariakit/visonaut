@@ -2,7 +2,7 @@
 
 The [current guide](../../../../docs/current-contract.md) owns current requirements and the issue #204 targets. Apply all numbered web D1 migrations in order. Preserve applied migrations as history, including both `0030_*` files and the narrow zero-pixel correction. The live service uses one D1 database, IMAGES, QUARANTINE, and the existing queues. The web Worker owns comparison recovery.
 
-Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs checks, review links, and promotion without scanning closed history or retention.
+Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs review decisions, checks, and promotion without scanning closed history or retention.
 
 ```ts
 await operationsQueue.send({ kind: "status", comparisonId });
@@ -31,16 +31,13 @@ Closed runs keep their identity, status, all actor decisions, exact tuples, expl
 
 The service sends the result of a run to GitHub as the text of one required check. Each change of that result is one PATCH request. A check is locked when the service cannot know if such a PATCH reached GitHub. A locked check gets no update. It keeps the title and the conclusion of the last update that reached GitHub, also after a Reject or a new decision. The two tables that hold the lock are `work_checks` and `work_status_outbox`.
 
-This section covers the check of a run. A mirror check of a pull request head uses the same tables and the same alert, and it has another sender. This guide has no procedure for it: do not run the unlock commands for it. The first read command below finds a mirror check.
-
 A restore of the database also sets `ambiguous = 1` for each check and makes its unfinished updates `obsolete`. Do not use this section for that state: follow step 5 of "Native database recovery".
 
 ### See the lock
 
-The Status page lists the alert "A GitHub check needs attention". Open the alert: its last line has the kind `check-delivery`, the code `ambiguous`, and the ID of the check on GitHub as its subject. Replace `CHECK_ID` with that ID. It has digits only. Run these three commands from the root of the repository, with the Cloudflare account of the production Worker. They only read. The first one finds a mirror check: it returns a row for such a check and none for the check of a run.
+The Status page lists the alert "A GitHub check needs attention". Open the alert: its last line has the kind `check-delivery`, the code `ambiguous`, and the ID of the check on GitHub as its subject. Replace `CHECK_ID` with that ID. It has digits only. Run these two commands from the root of the repository, with the Cloudflare account of the production Worker. They only read.
 
 ```sh
-pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT check_id FROM operations_review_links WHERE check_id = 'CHECK_ID'"
 pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT id, desired_revision, delivered_revision, ambiguous, request_started, lease_until FROM work_checks WHERE id = 'CHECK_ID'"
 pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT revision, state, attempts, max_attempts, last_error FROM work_status_outbox WHERE check_id = 'CHECK_ID' ORDER BY revision DESC LIMIT 3"
 ```
@@ -74,7 +71,7 @@ The first command changes nothing for a check that has a lease and no lock: a se
 
 ### Check the result
 
-The first status or recovery pass after the change sends the update. A pass runs at least every 5 minutes. When many checks are due, a check can wait for more than one pass. Run the second and the third read command again. `delivered_revision` equals `desired_revision`, the newest update has the state `complete`, and the alert is closed. The check on GitHub shows the text of the run. If the check is locked again, read `last_error`: the cause is still there.
+The first status or recovery pass after the change sends the update. A pass runs at least every 5 minutes. When many checks are due, a check can wait for more than one pass. Run the two read commands again. `delivered_revision` equals `desired_revision`, the newest update has the state `complete`, and the alert is closed. The check on GitHub shows the text of the run. If the check is locked again, read `last_error`: the cause is still there.
 
 ## Native database recovery
 

@@ -4,14 +4,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, expect, it } from "vitest";
 import { applyTestMigrations, readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { deliverGitHubStatuses } from "../operations/checks.ts";
-import { publishReviewLinks } from "../operations/review-links.ts";
-import {
-  addUndecidedChange,
-  captured,
-  context,
-  reserve,
-  TestDatabase,
-} from "../operations/test-fixtures.ts";
+import { captured, context, reserve, TestDatabase } from "../operations/test-fixtures.ts";
 import { measureD1 } from "./test-d1-costs.ts";
 
 const runtime = new Miniflare(
@@ -19,13 +12,13 @@ const runtime = new Miniflare(
     modules: true,
     script: "export default { fetch() { return new Response('ok'); } }",
     compatibilityDate: "2026-09-22",
-    d1Databases: ["DB", "STEP", "STORED", "MIRROR", "BEFORE"],
+    d1Databases: ["DB", "STEP", "STORED", "BEFORE"],
   }),
 );
 // The fixtures need the object stores and the GitHub client of a test context.
 const memory = new TestDatabase();
 
-async function measuredFixture(name: "DB" | "STEP" | "STORED" | "MIRROR") {
+async function measuredFixture(name: "DB" | "STEP" | "STORED") {
   const native = await runtime.getD1Database(name);
   await applyTestMigrations(native);
   const measured = measureD1(native);
@@ -183,61 +176,9 @@ it("sends a waiting update with its stored review values and no status read", as
   expect(await waitingUpdateCosts()).toEqual({
     writingStatements: 5,
     rowsWritten: 7,
-    roundTrips: 27,
+    roundTrips: 26,
     patches: 1,
   });
-});
-
-// Only a pull request from before migration 0031 has a mirror check. Before
-// the counts were in the text, a decision that changed no conclusion cost the
-// mirror what a pass with no decision costs.
-it("measures the update of a mirror check for a decision that changes only a count", async () => {
-  const fixture = await measuredFixture("MIRROR");
-  const service = await captured(fixture.operations, "run");
-  await addUndecidedChange(fixture.native, "comparison-run");
-  const run = await service.run("run");
-  await fixture.native.batch([
-    fixture.native.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'"),
-    fixture.native
-      .prepare(`INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,
-        base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,
-        workflow_attempt,plan_visual_required,plan_reported_at,plan_job_id,created_at,updated_at)
-        VALUES (?,0,'123',?,'d','pull_request','refs/pull/7/merge',7,0,?,'active','run',1,1,1,
-          'plan-job',1,1)`)
-      .bind(run.tested_sha, "b".repeat(40), `visonaut:pre:${run.tested_sha}`),
-  ]);
-  const requests: string[] = [];
-  const request = fixture.operations.github.request.bind(fixture.operations.github);
-  fixture.operations.github.request = async (path, init) => {
-    requests.push(init?.method ?? "GET");
-    if (path.endsWith("/pulls/7")) {
-      return {
-        state: "open",
-        head: { sha: "b".repeat(40), repo: { id: 123 } },
-        base: { ref: "main", repo: { id: 123 } },
-      };
-    }
-    return request(path, init);
-  };
-  const measurePass = async () => {
-    fixture.measured.reset();
-    requests.length = 0;
-    await publishReviewLinks(fixture.operations);
-    return { ...writes(fixture), requests: [...requests] };
-  };
-  await publishReviewLinks(fixture.operations);
-  await reject(fixture.service, "run", 0);
-  await publishReviewLinks(fixture.operations);
-  // The second Reject changes no state and no conclusion: only two counts.
-  await reject(fixture.service, "run", 1);
-
-  expect(await measurePass()).toEqual({
-    writingStatements: 10,
-    rowsWritten: 15,
-    requests: ["GET", "GET", "GET", "PATCH"],
-  });
-  // A pass with no decision.
-  expect(await measurePass()).toEqual({ writingStatements: 0, rowsWritten: 0, requests: [] });
 });
 
 it("adds the four columns without a write to a status update row", async () => {

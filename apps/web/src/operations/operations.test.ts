@@ -655,7 +655,6 @@ it.each([
           "finalization",
           "review-decisions",
           "checks",
-          "review-links",
           "promotion",
           "history",
           "reference-retention",

@@ -301,12 +301,6 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
         });
         return "attention" as const;
       }
-      // The per-PR head publisher uses the same outbox with signed workflow IDs.
-      const headCheck = await database
-        .prepare("SELECT 1 FROM operations_review_links WHERE check_id=?")
-        .bind(delivery.id)
-        .first();
-      if (headCheck) return "skipped" as const;
       if (!(await isCurrentPreRunCheck(database, delivery.id))) return "skipped" as const;
       const token = crypto.randomUUID();
       const intent = await claimStatus(database, {

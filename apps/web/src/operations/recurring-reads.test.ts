@@ -6,8 +6,6 @@ import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { measureD1 } from "../api/test-d1-costs.ts";
 import { recoverGitHubDeliveries } from "./github-deliveries.ts";
 import { resolveSupersededStagedAlerts } from "./staged-alerts.ts";
-import { afterRestoreSql } from "./recovery.ts";
-import { publishReviewLinks } from "./review-links.ts";
 import { context, TestDatabase } from "./test-fixtures.ts";
 
 const runtime = new Miniflare(
@@ -33,20 +31,6 @@ beforeAll(async () => {
   await run(
     "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','123','policy'),('other','456','policy')",
   );
-  // 1,000 pull requests of the present form: the check is on the head commit.
-  await run(`${numbers(1000)} INSERT INTO pre_run_checks
-    (tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,
-      external_id,state,workflow_run_id,workflow_attempt,plan_visual_required,plan_reported_at,
-      plan_job_id,check_head_sha,created_at,updated_at)
-    SELECT 'merge-'||i,0,'123','head-'||i,'base','pull_request','refs/pull/'||i||'/merge',i,0,
-      'visonaut:pre:merge-'||i,'docs_complete','workflow-'||i,1,0,1,'plan-job','head-'||i,i,i FROM n`);
-  // One pull request of the old form after them: its check is on the merge commit.
-  await run(`INSERT INTO pre_run_checks
-    (tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,
-      external_id,state,workflow_run_id,workflow_attempt,plan_visual_required,plan_reported_at,
-      plan_job_id,check_head_sha,created_at,updated_at)
-    VALUES('merge-old',0,'123','${oldHeadSha}','base','pull_request','refs/pull/2000/merge',2000,0,
-      'visonaut:pre:merge-old','docs_complete','workflow-old',1,0,1,'plan-job',NULL,1,1)`);
   // Unrelated alerts and receipts, so that each statement has rows to pass.
   await run(`${numbers(200)} INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at)
     SELECT 'storage:object-'||i||':missing','storage','object-'||i,'missing',1,1 FROM n`);
@@ -55,126 +39,6 @@ beforeAll(async () => {
     SELECT printf('%08d-0000-4000-8000-000000000000',i),'workflow_run','digest','{}',1,1 FROM n`);
 });
 afterAll(async () => runtime.dispose());
-
-// The page statement of the review links before the rewrite. The loop then
-// skipped each row whose check was on the head of the pull request.
-const formerReviewLinkPageSql = `WITH ranked AS (
-  SELECT source.repository_id AS repositoryId,source.pull_request_number AS pullRequestNumber,
-    source.source_sha AS sourceSha,source.external_id AS externalId,source.tested_sha AS testedSha,
-    source.workflow_run_id AS workflowRunId,source.workflow_attempt AS workflowAttempt,
-    source.check_head_sha AS checkHeadSha,
-    source.state,source.plan_visual_required AS visualRequired,source.plan_job_id AS planJobId,
-    project.id AS projectId,project.revision AS projectRevision,
-    ROW_NUMBER() OVER (PARTITION BY source.repository_id,source.pull_request_number
-      ORDER BY source.created_at DESC,source.generation DESC,source.tested_sha DESC) AS position
-  FROM pre_run_checks source JOIN visonaut_projects project ON project.repository_id=source.repository_id
-  WHERE source.kind='pull_request' AND source.repository_id=?
-    AND source.workflow_run_id IS NOT NULL AND source.workflow_attempt IS NOT NULL
-    AND NOT EXISTS (SELECT 1 FROM pre_run_checks newer WHERE newer.repository_id=source.repository_id
-      AND newer.workflow_run_id=source.workflow_run_id AND newer.workflow_attempt>source.workflow_attempt AND ${afterRestoreSql("newer.created_at")})
-    AND ${afterRestoreSql("source.created_at")})
-  SELECT * FROM ranked WHERE position=1 AND pullRequestNumber>? ORDER BY pullRequestNumber LIMIT ?`;
-
-const oldHeadSha = "f".repeat(40);
-
-interface PageRow {
-  pullRequestNumber: number;
-  sourceSha: string;
-  checkHeadSha: string | null;
-}
-
-/** Walk every page as a pass does, and return the rows that the loop works on. */
-async function reviewLinkLap(sql: string, pageSize: number, loopRule: (row: PageRow) => boolean) {
-  const worked: PageRow[] = [];
-  let cursor = 0;
-  let pages = 0;
-  while (pages < 500) {
-    pages += 1;
-    const page = await database.prepare(sql).bind("123", cursor, pageSize).all<PageRow>();
-    worked.push(...page.results.filter(loopRule));
-    const last = page.results.at(-1);
-    if (page.results.length < pageSize || !last) break;
-    cursor = last.pullRequestNumber;
-  }
-  return { worked, pages };
-}
-
-it("needs one pass for 1,000 pull requests whose check is on the head", async () => {
-  using memory = new TestDatabase();
-  const fixture = context(memory);
-  const measured = measureD1(database);
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  const operations = {
-    ...fixture.context,
-    database: measured.database,
-    budget: { ...fixture.context.budget, tasksPerStep: 25 },
-    github: {
-      ...fixture.context.github,
-      request: async (path: string, init?: RequestInit) => {
-        if (path === "/repos/owner/repo/pulls/2000") {
-          return {
-            state: "open",
-            head: { sha: oldHeadSha, repo: { id: 123 } },
-            base: { ref: "main", repo: { id: 123 } },
-          };
-        }
-        return request(path, init);
-      },
-    },
-  };
-  const completed: string[] = [];
-  let passes = 0;
-  let hasMore = true;
-  while (hasMore && passes < 60) {
-    passes += 1;
-    const report = await publishReviewLinks(operations);
-    completed.push(...report.completed);
-    hasMore = report.hasMore;
-  }
-  measured.report("review-links-1000");
-  expect(completed).toEqual([`visonaut:review:2000:${oldHeadSha}`]);
-  expect(passes).toBe(1);
-  expect(
-    measured.costs.filter((cost) => cost.sql.includes("ORDER BY pullRequestNumber")),
-  ).toHaveLength(1);
-});
-
-it("returns the same rows for the review links as the former statement and its loop rule", async () => {
-  // More attempts for some pull requests: only the newest attempt decides.
-  await run(`${numbers(40)} INSERT INTO pre_run_checks
-    (tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,
-      external_id,state,workflow_run_id,workflow_attempt,plan_visual_required,plan_reported_at,
-      plan_job_id,check_head_sha,created_at,updated_at)
-    SELECT 'again-'||i,0,'123','again-head-'||i,'base','pull_request','refs/pull/'||(i*20)||'/merge',i*20,0,
-      'visonaut:pre:again-'||i,'active','again-workflow-'||i,1,1,1,'plan-job',
-      CASE i%4 WHEN 0 THEN NULL WHEN 1 THEN 'again-head-'||i WHEN 2 THEN 'another-head' ELSE NULL END,
-      CASE WHEN i%4=3 THEN 0 ELSE 5000+i END,1 FROM n`);
-  const measured = measureD1(database);
-  using memory = new TestDatabase();
-  await publishReviewLinks({
-    ...context(memory).context,
-    database: measured.database,
-    github: {
-      ...context(memory).context.github,
-      // No pull request is open here, so the pass sends nothing to GitHub.
-      request: async () => ({ state: "closed" }),
-    },
-  });
-  const current = measured.costs.find((cost) => cost.sql.includes("ORDER BY pullRequestNumber"));
-  if (!current) {
-    throw new Error("Expected the page statement of the review links.");
-  }
-  const formerRule = (row: PageRow) => row.checkHeadSha !== row.sourceSha;
-  const former = await reviewLinkLap(formerReviewLinkPageSql, 25, formerRule);
-  const rewritten = await reviewLinkLap(current.sql, 25, () => true);
-  // The fixture has each form: a check on the head, on another commit, and none.
-  expect(new Set(former.worked.map((row) => row.checkHeadSha === null)).size).toBe(2);
-  expect(former.worked.some((row) => row.checkHeadSha === "another-head")).toBe(true);
-  expect(former.worked.length).toBeGreaterThan(20);
-  expect(rewritten.worked).toEqual(former.worked);
-  expect(former.pages).toBeGreaterThan(40);
-  expect(rewritten.pages).toBeLessThan(4);
-});
 
 // The filter for eligible runs before the rewrite. SQLite scanned every
 // snapshot for each closed accepted run.

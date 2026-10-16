@@ -29,6 +29,7 @@ const removedTargets = [
   "docs/history/simplification-implementation.md -> apps/compare/test/container-probe.test.ts",
   "docs/history/simplification-implementation.md -> apps/compare/test/process.test.ts",
   "docs/history/simplification-implementation.md -> apps/compare/wrangler.jsonc",
+  "docs/history/simplification-implementation.md -> apps/web/src/operations/review-links.test.ts",
   "docs/history/simplification-implementation.md -> apps/web/src/review/item-list.tsx",
   "docs/history/simplification-implementation.md -> apps/web/src/review/item-list.tsx",
   "docs/history/simplification-implementation.md -> apps/web/src/review/item-list.tsx",

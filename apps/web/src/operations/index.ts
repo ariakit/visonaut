@@ -8,7 +8,6 @@ import {
 } from "./snapshot-retention.ts";
 import { Service } from "@visonaut/service";
 import { deliverGitHubStatuses } from "./checks.ts";
-import { publishReviewLinks } from "./review-links.ts";
 import type { AlertKind } from "./alert-kinds.ts";
 import { eventId, recordEvent, resolveEventIds, validateBudget } from "./common.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
@@ -118,7 +117,6 @@ export async function runOperations(
   const steps: [AlertKind, () => Promise<OperationReport>][] = [
     ["review-decisions", () => processReviewQueue(context)],
     ["checks", () => deliverGitHubStatuses(context)],
-    ["review-links", () => publishReviewLinks(context)],
     ["promotion", () => promoteBaselines(context)],
     ["history", () => summarizeClosedRuns(context)],
     ["reference-retention", () => expireComparisonReferences(context)],
@@ -130,7 +128,7 @@ export async function runOperations(
       () => pruneCaptureProfiles(context.database, context.budget.objectsPerStep),
     ],
   ];
-  const statusNames = new Set(["review-decisions", "checks", "review-links", "promotion"]);
+  const statusNames = new Set(["review-decisions", "checks", "promotion"]);
   const familyNames = {
     history: new Set(["history"]),
     retention: new Set([

@@ -486,11 +486,7 @@ async function runPass({ env, message, delivery, pass }: RunPassParams) {
             delaySeconds: 1,
           });
       }
-      if (
-        ["review-decisions", "checks", "review-links", "promotion"].some(
-          (name) => result.reports[name]?.hasMore,
-        )
-      )
+      if (["review-decisions", "checks", "promotion"].some((name) => result.reports[name]?.hasMore))
         await env.OPERATIONS.send({ kind: "status" } satisfies OperationsMessage, {
           delaySeconds: 1,
         });
