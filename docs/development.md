@@ -4,17 +4,15 @@ Use the [current system guide](current-contract.md) for requirements, selected t
 
 ## Check scope
 
-| Command                      | Scope                                                                   | Additional requirements                                                |
-| ---------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `pnpm check`                 | Lint, types, build, unit tests, and the existing review browser fixture | Google Chrome and local Worker test runtime                            |
-| `pnpm test`                  | Unit, SQLite, and native D1/R2 fixture tests                            | Local loopback access for Miniflare                                    |
-| `pnpm test:browser`          | Review interactions and client route fixtures                           | Google Chrome                                                          |
-| `pnpm test:release-guards`   | Private changelog, deployment guard, and audit helper tests             | Node only; no cloud login                                              |
-| `pnpm check:packages`        | Built public package contents and installation smoke checks             | Run `pnpm build` first                                                 |
-| `pnpm test:container`        | On-demand diagnostic comparison Container tests                         | Install `apps/compare/container` dependencies for the current platform |
-| `pnpm check:container-image` | On-demand diagnostic Container image build using the root Node version  | Docker with Linux amd64 support                                        |
+| Command                    | Scope                                                                   | Additional requirements                     |
+| -------------------------- | ----------------------------------------------------------------------- | ------------------------------------------- |
+| `pnpm check`               | Lint, types, build, unit tests, and the existing review browser fixture | Google Chrome and local Worker test runtime |
+| `pnpm test`                | Unit, SQLite, and native D1/R2 fixture tests                            | Local loopback access for Miniflare         |
+| `pnpm test:browser`        | Review interactions and client route fixtures                           | Google Chrome                               |
+| `pnpm test:release-guards` | Private changelog, deployment guard, and audit helper tests             | Node only; no cloud login                   |
+| `pnpm check:packages`      | Built public package contents and installation smoke checks             | Run `pnpm build` first                      |
 
-CI calls the same named commands. Its Gate remains fail-closed for every required job. Diagnostic Container checks remain available on demand; C04 removes their infrastructure from the normal production path. Read the [CI guide](../.github/workflows/README.md) for the current job set and deployment rules.
+CI calls the same named commands. Its Gate remains fail-closed for every required job. Read the [CI guide](../.github/workflows/README.md) for the current job set and deployment rules.
 
 ## Browser server ownership
 
@@ -65,7 +63,6 @@ The command builds the app and serves the built Worker at `http://127.0.0.1:4184
 | Session       | A signed Better Auth session of `local-maintainer`. Each start makes a new signing secret, and each visit of the local sign-in route stores the session again.                                                     |
 | GitHub        | A stub answers the installation token, the maintainer, the permission of the maintainer, and the check runs of the service. It keeps the check runs in the data folder. Each other GitHub request gets status 404. |
 | Queue         | A local OPERATIONS queue with a consumer, so a review decision is saved as in production. No cron trigger runs.                                                                                                    |
-| Compare       | The comparator service answers 503. The seed runs have their results already.                                                                                                                                      |
 | Other network | Each other request that the Worker sends gets status 502.                                                                                                                                                          |
 
 The data stays in `apps/web/.wrangler/state` between starts. Delete that folder to start again from the seed. The same folder holds the data of each other Wrangler command with `--local` in `apps/web`.

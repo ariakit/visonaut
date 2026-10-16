@@ -66,11 +66,6 @@ const bindings: ApiBindings = {
     async put() {},
     async delete() {},
   },
-  comparator: {
-    async fetch() {
-      throw new Error("Unexpected comparator call");
-    },
-  },
   operations: {
     async send() {
       throw new Error("Unexpected operations continuation");

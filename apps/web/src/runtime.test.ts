@@ -60,7 +60,6 @@ beforeAll(async () => {
       d1Databases: ["DB"],
       r2Buckets: ["IMAGES", "QUARANTINE"],
       queueProducers: ["OPERATIONS"],
-      serviceBindings: { COMPARATOR: async () => new Response() },
     }),
   );
   env = await runtime.getBindings<BackendEnv>();
@@ -537,7 +536,6 @@ it("keeps preview scheduling and recovery independent of live credentials or D1"
     DB: undefined,
     IMAGES: undefined,
     QUARANTINE: undefined,
-    COMPARATOR: undefined,
     OPERATIONS: undefined,
   };
   await expect(runScheduledOperations(preview)).resolves.toMatchObject({ hasMore: false });

@@ -149,7 +149,6 @@ const runtime = new Miniflare(
     queueProducers: { OPERATIONS: queue },
     queueConsumers: { [queue]: { maxBatchSize: 1, maxBatchTimeout: 0 } },
     serviceBindings: {
-      COMPARATOR: () => new Response("The local backend has no comparator.", { status: 503 }),
       // A sign-out in the app deletes the session, so each visit of the local
       // sign-in route stores it again.
       LOCAL_SESSION: async () => {

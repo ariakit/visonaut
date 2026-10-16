@@ -188,21 +188,11 @@ jobs:
           export-type: env
       - name: Require both independent credentials
         run: node .github/workflows/scripts/deploy-credentials.mjs
-      - name: Require current Container drain evidence before class retirement
-        run: node .github/workflows/scripts/deploy-infrastructure.mjs
-        env:
-          VISONAUT_CONTAINER_RETIREMENT_VERIFIED: ${{ vars.VISONAUT_CONTAINER_RETIREMENT_VERIFIED }}
-      - name: Require detached comparison consumers before handler retirement
-        run: node .github/workflows/scripts/deploy-comparison-retirement.mjs
-        env:
-          VISONAUT_COMPARISON_RETIREMENT_TARGET: production
       - name: Apply production schema migrations
         working-directory: apps/web
         run: pnpm exec wrangler d1 migrations apply DB --remote --env production
         env:
           CLOUDFLARE_API_TOKEN: ${{ env.CLOUDFLARE_MIGRATIONS_API_TOKEN }}
-      - name: Deploy production comparator
-        run: pnpm exec wrangler deploy --config apps/compare/wrangler.jsonc --env production
       - name: Deploy production web worker
         # /health returns this tag as the version.
         run: pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json --tag "$GITHUB_SHA"
@@ -431,9 +421,7 @@ jobs:
             { binding: 'IMAGES', bucket_name: 'visonaut-images' },
             { binding: 'QUARANTINE', bucket_name: 'visonaut-quarantine' }
           ]);
-          assert.deepEqual(configuration.services.map(({ binding, service }) => ({ binding, service })), preview ? [] : [
-            { binding: 'COMPARATOR', service: 'visonaut-compare' }
-          ]);
+          assert.deepEqual(configuration.services, []);
           assert.deepEqual(configuration.queues.consumers, []);
           assert.deepEqual(configuration.triggers.crons, preview ? [] : ['*/5 * * * *']);
           assert.equal(configuration.observability.enabled, true);

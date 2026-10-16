@@ -464,17 +464,6 @@ async function fixture(
     quarantine: nativeTestStorage(quarantine),
     configuration,
     operations: { async send() {} },
-    comparator: {
-      async fetch() {
-        return Response.json({
-          digest: image.digest,
-          bytes: png.byteLength,
-          width: image.width,
-          height: image.height,
-          contentType: "image/png",
-        });
-      },
-    },
   });
   await context.service.createPolicy({
     digest: strictPolicyDigest,
@@ -2612,9 +2601,8 @@ describe("trusted local Submit", () => {
     });
   });
 
-  it("admits a complete new capture without calling the comparison Worker or creating pixel tasks", async () => {
+  it("admits a complete new capture without creating pixel tasks", async () => {
     const test = await fixture();
-    const compare = vi.spyOn(test.context.comparator, "fetch");
     const session = await localSession(test);
     expect(session.reference.snapshotId).toBeNull();
     const body = await stageLocal(test, session);
@@ -2622,7 +2610,6 @@ describe("trusted local Submit", () => {
     const run = await materializeWorkflowRun(test.context, test.runId);
     const comparison = await test.context.service.comparison(run.comparison_id!);
     expect(comparison.state).toBe("ready");
-    expect(compare).not.toHaveBeenCalled();
     expect(
       await database
         .prepare(
@@ -5461,21 +5448,6 @@ describe("workflow-owned upload staging", () => {
       { bytes: profiledPng, validated: profiledImage },
       ...extra,
     ];
-    test.context.comparator = {
-      async fetch(_input, options) {
-        if (!(options?.body instanceof Uint8Array)) {
-          throw new Error("Expected an original image body.");
-        }
-        const validated = await validateImage(new Uint8Array(options.body));
-        return Response.json({
-          digest: validated.digest,
-          bytes: validated.original.byteLength,
-          width: validated.width,
-          height: validated.height,
-          contentType: validated.format === "png" ? "image/png" : "image/webp",
-        });
-      },
-    };
     const original = test.manifest.captures[0];
     if (!original) throw new Error("Expected the fixture capture.");
     test.manifest.captures = assets.map(({ validated }, index) => ({

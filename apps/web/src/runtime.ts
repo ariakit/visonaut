@@ -44,11 +44,10 @@ export interface BackendEnv extends Env {
   IMAGES: R2Bucket;
   QUARANTINE: R2Bucket;
   OPERATIONS: Queue;
-  COMPARATOR: Fetcher;
 }
 
 export function requireBackendBindings(env: Env): asserts env is BackendEnv {
-  for (const binding of ["DB", "IMAGES", "QUARANTINE", "OPERATIONS", "COMPARATOR"] as const) {
+  for (const binding of ["DB", "IMAGES", "QUARANTINE", "OPERATIONS"] as const) {
     if (!env[binding]) {
       throw new Error(`${binding} is not configured.`);
     }
@@ -246,7 +245,6 @@ export function apiBindings(env: BackendEnv): ApiBindings {
     database: env.DB,
     images: env.IMAGES,
     quarantine: env.QUARANTINE,
-    comparator: { fetch: (request, init) => env.COMPARATOR.fetch(request, init) },
     operations: {
       async send(message) {
         await env.OPERATIONS.send(message);
