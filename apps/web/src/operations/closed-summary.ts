@@ -311,11 +311,6 @@ function finishClosedSummary(database: Database, runId: string, owners: string) 
       .bind(runId),
     database
       .prepare(
-        "DELETE FROM work_tasks WHERE state='complete' AND id IN(SELECT row.id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)",
-      )
-      .bind(runId),
-    database
-      .prepare(
         "DELETE FROM work_tasks WHERE kind='review' AND json_extract(payload, '$.comparisonId') IN (SELECT id FROM visonaut_comparisons WHERE run_id=?)",
       )
       .bind(runId),

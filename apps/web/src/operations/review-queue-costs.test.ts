@@ -50,18 +50,21 @@ it("reads only open tasks in the poll and writes one row less for each task stat
   expect(report.completed).toEqual(["review:measured"]);
   const written = (fragment: string) =>
     measured.costs.filter((cost) => cost.sql.includes(fragment)).map((cost) => cost.rows_written);
-  expect(written("INSERT INTO work_tasks")).toEqual([4]);
-  expect(written("SET state = 'leased'")).toEqual([3]);
-  expect(written("SET state = 'complete'")).toEqual([3]);
+  expect(written("INSERT INTO work_tasks")).toEqual([3]);
+  expect(written("SET state = 'leased'")).toEqual([2]);
+  expect(written("SET state = 'complete'")).toEqual([2]);
   // With the index of migration 0030, the three statements wrote 5, 4, and 4
-  // rows, and the decision wrote 28. The other 15 rows are the decision itself.
-  expect(measured.totals().rows_written).toBe(25);
+  // rows, and the decision wrote 28. Before migration 0041 dropped
+  // work_tasks_publication, they wrote 4, 3, and 3, and the decision wrote 25.
+  // The other 15 rows are the decision itself.
+  expect(measured.totals().rows_written).toBe(22);
   const polls = measured.costs.filter((cost) =>
     cost.sql.startsWith("SELECT task.id FROM work_tasks task"),
   );
   // The first poll finds the queued task. The second one finds no open task.
   // With no state list, each poll read the 2,000 complete tasks too: 2,002 rows.
-  expect(polls.map((cost) => cost.rows_read)).toEqual([4, 3]);
+  // With work_tasks_publication, the polls read 4 and 3 rows.
+  expect(polls.map((cost) => cost.rows_read)).toEqual([2, 2]);
 });
 
 it("reads the targets of a decision by their key, not each row of the comparison", async () => {

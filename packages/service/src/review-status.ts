@@ -73,7 +73,6 @@ export interface ReviewCounts {
 interface ReviewStatusInput {
   run: Pick<RunRow, "kind" | "active" | "state" | "comparison_id" | "sealed_at">;
   comparison?: Pick<ComparisonRow, "state" | "baseline_revision">;
-  failures?: boolean;
   pending?: number;
   rejected?: number;
   approved?: number;
@@ -90,7 +89,6 @@ export interface ReviewStatusSummary extends ReviewCounts {
 export function reviewStatus({
   run,
   comparison,
-  failures = false,
   pending = 0,
   rejected = 0,
   approved = 0,
@@ -103,7 +101,6 @@ export function reviewStatus({
   if (!run.active) return empty(run.state === "accepted" ? "passed" : "superseded");
   if (!run.comparison_id || run.sealed_at === null) return empty("incomplete");
   if (comparison?.state === "invalidated") return empty("needs-recompare");
-  if (failures) return empty("failed");
   if (comparison?.state !== "ready") return empty("comparing");
   if (
     run.kind !== "pull_request" &&

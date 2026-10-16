@@ -112,8 +112,6 @@ export async function dashboard(context: DashboardContext): Promise<Omit<RunsAns
       EXISTS(SELECT 1 FROM visonaut_promotions promotion
         WHERE promotion.id=project.promotion_id AND promotion.comparison_id=run.comparison_id
           AND promotion.revoked=0) AS currentPromotion,
-      EXISTS(SELECT 1 FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id=task.id
-        WHERE row.comparison_id=run.comparison_id AND task.state='dead') AS failures,
       COALESCE(counts.pending,0) AS pending,COALESCE(counts.rejected,0) AS rejected,
       COALESCE(counts.approved,0) AS approved,
       CASE WHEN run.kind='pull_request' THEN CAST(substr(run.lineage_key,4) AS INTEGER) END AS pullRequestNumber,
@@ -181,7 +179,6 @@ export async function dashboard(context: DashboardContext): Promise<Omit<RunsAns
         pending: integer(row.pending),
         rejected: integer(row.rejected),
         approved: integer(row.approved),
-        failures: integer(row.failures) !== 0,
         baselineRevision: integer(row.baselineRevision),
         currentPromotion: integer(row.currentPromotion) !== 0,
       };

@@ -191,7 +191,6 @@ async function seed(service: Service, items: string[]) {
     runId: "seed",
     referenceSnapshotId: null,
     now: 4,
-    maxAttempts: 3,
   });
   await service.finalizeComparison({ comparisonId: "comparison-seed", now: 6 });
   const copies = await service.preparePromotion({

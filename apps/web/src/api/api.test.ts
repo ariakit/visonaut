@@ -428,7 +428,6 @@ async function fixture({ duplicateOriginal = false }: FixtureOptions = {}) {
       runId,
       referenceSnapshotId: (await service.project(bindings.configuration.projectId)).snapshot_id,
       now: Date.now(),
-      maxAttempts: 3,
     });
     await finalizeSubmittedComparison(apiContext(bindings), comparison.id);
   };
@@ -1067,8 +1066,8 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     });
     // The access check makes 3 of the round trips. The run and its comparison
     // are read one time each: the status reader gets the rows of this read.
-    expect(costs.roundTrips()).toBe(8);
-    expect(costs.costs).toHaveLength(8);
+    expect(costs.roundTrips()).toBe(7);
+    expect(costs.costs).toHaveLength(7);
     expect(costs.totals().rows_written).toBe(0);
   });
   it("ends review polling when an accepted main run becomes history", async () => {

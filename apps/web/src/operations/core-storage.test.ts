@@ -468,7 +468,6 @@ it("keeps expired current-baseline originals while closing its review evidence",
     runId: "later",
     referenceSnapshotId: snapshotId,
     now: fixture.state.time,
-    maxAttempts: 2,
   });
   const taskId = "comparison-later:capture-later";
   await seedLegacyResult(service, {
@@ -565,7 +564,6 @@ it("keeps a completed native historical comparison readable before the retention
     referenceSnapshotId: null,
     purpose: "historical",
     now: fixture.state.time + 1,
-    maxAttempts: 2,
   });
   await service.finalizeComparison({ comparisonId: "native-history", now: fixture.state.time + 2 });
   expect(await service.comparisonRows("native-history")).toEqual([

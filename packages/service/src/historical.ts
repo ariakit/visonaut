@@ -62,10 +62,10 @@ export async function finalizeHistoricalComparison(database: Database, compariso
     WHERE comparison.id = ? AND snapshot.reference_eligible != 1`)
     .bind(comparisonId)
     .first();
-  const failedTask = await database
-    .prepare(`SELECT 1 FROM visonaut_comparison_rows row
-    LEFT JOIN work_tasks task ON task.id = row.id
-    WHERE row.comparison_id = ? AND (row.outcome = 'error' OR (row.outcome = 'pending' AND task.state = 'dead')) LIMIT 1`)
+  const failedRow = await database
+    .prepare(
+      "SELECT 1 FROM visonaut_comparison_rows WHERE comparison_id = ? AND outcome = 'error' LIMIT 1",
+    )
     .bind(comparisonId)
     .first();
   const pending = await database
@@ -74,7 +74,7 @@ export async function finalizeHistoricalComparison(database: Database, compariso
     )
     .bind(comparisonId)
     .first();
-  const failed = Boolean(failedTask || unavailableReference);
+  const failed = Boolean(failedRow || unavailableReference);
   if (pending && !failed) {
     throw new IncompleteError("Required historical comparisons have not completed.");
   }
@@ -96,12 +96,6 @@ export async function finalizeHistoricalComparison(database: Database, compariso
           statement(
             database,
             "UPDATE visonaut_comparison_rows SET outcome = 'error' WHERE comparison_id = ? AND outcome = 'pending'",
-            [comparisonId],
-          ),
-          statement(
-            database,
-            `UPDATE work_tasks SET state = 'dead', lease_token = NULL, lease_until = NULL,
-      last_error = 'Historical comparison failed' WHERE id IN (SELECT id FROM visonaut_comparison_rows WHERE comparison_id = ?) AND state IN ('queued', 'leased')`,
             [comparisonId],
           ),
         ]
@@ -211,17 +205,8 @@ export async function compactHistoricalComparison(
       WHERE archive.comparison_id = ? AND archive.generation = ? AND archive.state = 'building'
         AND archive.lease_token = ? AND archive.lease_until > ? AND archive.object_key = ?
         AND comparison.purpose = 'historical' AND comparison.state IN ('ready', 'invalidated')
-        AND comparison.run_id = archive.run_id)
-      AND NOT EXISTS (SELECT 1 FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id = task.id
-        WHERE row.comparison_id = ? AND task.state IN ('queued', 'leased'))`,
-      [
-        input.comparisonId,
-        input.generation,
-        input.token,
-        input.now,
-        input.objectKey,
-        input.comparisonId,
-      ],
+        AND comparison.run_id = archive.run_id)`,
+      [input.comparisonId, input.generation, input.token, input.now, input.objectKey],
     ),
     statement(
       database,

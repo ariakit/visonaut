@@ -174,7 +174,6 @@ async function compare(runId: string, id = `comparison-${runId}`) {
     runId,
     referenceSnapshotId: null,
     now: operations.now(),
-    maxAttempts: 2,
   });
   return service.comparisonRows(id);
 }
