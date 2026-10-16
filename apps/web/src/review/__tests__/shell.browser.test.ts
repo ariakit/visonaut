@@ -111,19 +111,20 @@ test("a header link on the run page asks before it leaves while a decision is no
     messages.push(dialog.message());
     void (accept ? dialog.accept() : dialog.dismiss());
   });
-  const history = page.getByRole("banner").getByRole("link", { name: "History" });
+  // The run page has its own header. Its first control leads to the Queue.
+  const queue = page.getByRole("banner").getByRole("link", { name: "Queue" });
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Not saved.");
   // The save moved the selection, which changes the search of the same path.
   // That change does not ask.
   expect(messages).toEqual([]);
-  await history.click();
+  await queue.click();
   await expect.poll(() => messages).toEqual(["A decision is not saved. Leave this run?"]);
   // The person stays: the run page and its decision are still there.
   await expect(page.getByRole("button", { name: "Retry same command" })).toBeVisible();
   accept = true;
-  await history.click();
-  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
+  await queue.click();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   expect(messages).toHaveLength(2);
 });
 
@@ -148,8 +149,8 @@ test("a header link on the run page leaves with no question when each decision i
     messages.push(dialog.message());
     void dialog.dismiss();
   });
-  await page.getByRole("banner").getByRole("link", { name: "History" }).click();
-  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
+  await page.getByRole("banner").getByRole("link", { name: "Queue" }).click();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   expect(messages).toEqual([]);
 });
 
@@ -179,9 +180,9 @@ test("a header link on the run page asks before it leaves while a decision is be
   const command = page.waitForRequest("**/commands");
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await command;
-  await page.getByRole("banner").getByRole("link", { name: "History" }).click();
+  await page.getByRole("banner").getByRole("link", { name: "Queue" }).click();
   await expect.poll(() => messages).toEqual(["A decision is not saved. Leave this run?"]);
-  await expect(page.getByRole("heading", { name: "History", level: 1 })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toHaveCount(0);
 });
 
 test("the pull request page gives the header its repository", async ({ page }) => {
@@ -301,4 +302,25 @@ test("a failed sign-out does not open the account menu of the next page", async 
   await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
     "Sign-out failed. Please try again.",
   );
+});
+
+test("the header of the run page has the height of the header of a list page", async ({ page }) => {
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/review-sessions") {
+      return route.fulfill({ json: { reviewSessionId: "session-header" } });
+    }
+    if (path === "/api/runs") {
+      return route.fulfill({ json: runList() });
+    }
+    return route.fulfill({ json: compactReviewModel(fixtureModel()) });
+  });
+  await page.goto(entry("/history"));
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
+  const listHeader = await page.getByRole("banner").boundingBox();
+  await page.goto(entry("/runs/run-42"));
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+  const runHeader = await page.getByRole("banner").boundingBox();
+  expect(listHeader?.height).toBeGreaterThan(0);
+  expect(runHeader?.height).toBe(listHeader?.height);
 });

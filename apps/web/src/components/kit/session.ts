@@ -82,7 +82,7 @@ export const variantAxisOrder: readonly VariantAxisName[] = [
 ];
 
 /** `segmented-control` gives `Segmented control`. */
-function formatKeySegment(segment: string): string {
+export function formatKeySegment(segment: string): string {
   const words = segment.replaceAll("-", " ").replaceAll("_", " ").trim();
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
@@ -101,7 +101,11 @@ const axisWords: Partial<Record<VariantAxisName, Record<string, string>>> = {
 
 function formatAxisValue(axis: VariantAxisName, value: string | undefined): string {
   if (value == null) return "";
-  return axisWords[axis]?.[value] ?? formatKeySegment(value);
+  // A value of a key can be a property name of every object, such as
+  // `constructor`, so only own words count.
+  const words = axisWords[axis];
+  if (words && Object.hasOwn(words, value)) return words[value] ?? "";
+  return formatKeySegment(value);
 }
 
 /**

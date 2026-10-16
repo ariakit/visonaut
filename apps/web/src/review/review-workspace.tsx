@@ -1,41 +1,12 @@
 import * as ak from "@ariakit/react";
-import {
-  ArrowLeft,
-  ArrowUp,
-  ArrowDown,
-  Check,
-  ChevronDown,
-  GitCommitHorizontal,
-  GitBranch,
-  Keyboard,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Settings2,
-  Undo2,
-  X,
-  Columns2Icon,
-  ScanIcon,
-  ImageIcon,
-  ImageMinusIcon,
-  DiffIcon,
-} from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Settings2, X } from "lucide-react";
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { KeyboardEvent, ReactNode } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
-import {
-  Button as FlatButton,
-  ButtonGroup,
-  ButtonGlider,
-  ButtonSlot,
-  ButtonLabel,
-} from "../components/ariakit/components/button.ariakit.react.tsx";
+import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
 import {
   Shell,
   ShellMain,
-  ShellMainHeader,
   ShellMainFull,
-  ShellMainIntro,
   ShellMainBody,
   ShellFooter,
   ShellSidebar,
@@ -44,33 +15,27 @@ import {
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
-import { Heading } from "../components/ariakit/components/heading.ariakit.react.tsx";
+import { Heading, HeadingLevel } from "../components/ariakit/components/heading.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
-import { ReviewStatus } from "./review-status.tsx";
-import { sidebarStorageKey } from "./sidebar-preference.ts";
-import { Nav, NavLink } from "../components/ariakit/components/nav.ariakit.react.tsx";
-import { ScreenshotViewer } from "../components/screenshot-viewer.tsx";
+import { shellRadius } from "../components/kit/tokens.ts";
+import { VariantNav } from "../components/kit/variants/variant-nav.tsx";
+import { BarHost, useBarHost } from "./bar-host.tsx";
+import { CaptureDetails } from "./capture-details.tsx";
 import { ItemList } from "./item-list.tsx";
-import type {
-  ReviewCommands,
-  ReviewModel,
-  ReviewMode,
-  ReviewSelection,
-  ReviewVerdict,
-  ReviewZoom,
-} from "./model.ts";
-import { needsReview, partitionItems, reviewTargets, verdictLabel } from "./navigation.ts";
-import { useEvidence } from "./use-evidence.ts";
+import type { ReviewCommands, ReviewModel, ReviewSelection } from "./model.ts";
+import { partitionItems } from "./navigation.ts";
+import { RunHeader, ScreenshotStepper, getRunIdentity } from "./run-header.tsx";
+import { getSessionItem, pickVariant } from "./session-items.ts";
+import { ShortcutHelp } from "./shortcut-help.tsx";
+import { sidebarStorageKey } from "./sidebar-preference.ts";
+import { StageHost, useStageHost } from "./stage-host.tsx";
 import { useReviewSession } from "./use-review-session.ts";
 import { useUnchangedScreenshots } from "./use-unchanged-screenshots.ts";
-import { VariantSummary } from "./variant-summary.tsx";
 
 export interface ReviewWorkspaceProps {
   model: ReviewModel;
   commands: ReviewCommands;
   route?: ReviewRoute;
-  /** The header of the app, from the layout route. */
-  header?: ReactNode;
   /** Tells the route when a decision is not sent or not saved. */
   onUnsentDecisionsChange?(unsent: boolean): void;
 }
@@ -78,14 +43,12 @@ export interface ReviewWorkspaceProps {
 export interface ReviewRoute {
   runId: string;
   comparisonId?: string;
-  selection?: ReviewSelection;
+  /**
+   * The place of the link. A link with a screenshot and no variant opens the
+   * variant of a row click.
+   */
+  selection?: { itemKey: string; variantKey?: string };
   onSelect(selection: ReviewSelection): void;
-}
-
-interface BatchReviewScope {
-  comparisonId: string;
-  selection: ReviewSelection;
-  targetIds: string[];
 }
 
 function excludesShortcuts(event: globalThis.KeyboardEvent) {
@@ -99,45 +62,10 @@ function excludesShortcuts(event: globalThis.KeyboardEvent) {
   );
 }
 
-// Scroll only the strip. `scrollIntoView` also moves the page.
-function revealSelectedVariant(strip: HTMLElement) {
-  const chip = strip.querySelector<HTMLElement>('[aria-current="page"]');
-  if (!chip) return;
-  const stripBox = strip.getBoundingClientRect();
-  const chipBox = chip.getBoundingClientRect();
-  if (chipBox.left >= stripBox.left && chipBox.right <= stripBox.right) return;
-  const centered = (stripBox.width - chipBox.width) / 2;
-  strip.scrollLeft += chipBox.left - stripBox.left - centered;
-}
-
-function followVariantLink(event: KeyboardEvent<HTMLElement>) {
-  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-  const links = Array.from(event.currentTarget.querySelectorAll<HTMLAnchorElement>("a"));
-  const index = links.findIndex((link) => link === event.target);
-  if (index < 0) return;
-  const nextIndex =
-    event.key === "ArrowLeft"
-      ? index - 1
-      : event.key === "ArrowRight"
-        ? index + 1
-        : event.key === "Home"
-          ? 0
-          : event.key === "End"
-            ? links.length - 1
-            : undefined;
-  if (nextIndex === undefined) return;
-  event.preventDefault();
-  const next = links[nextIndex];
-  if (!next) return;
-  next.focus({ preventScroll: true });
-  next.scrollIntoView({ block: "nearest", inline: "nearest" });
-  next.click();
-}
-
 function initialSelection(model: ReviewModel): ReviewSelection {
   for (const index of partitionItems(model.items).order) {
     const item = model.items[index];
-    const variant = item?.variants.find(needsReview) ?? item?.variants[0];
+    const variant = item && pickVariant(item);
     if (item && variant) {
       return { itemKey: item.key, variantKey: variant.key };
     }
@@ -145,77 +73,23 @@ function initialSelection(model: ReviewModel): ReviewSelection {
   return { itemKey: "", variantKey: "" };
 }
 
-function terminalEvidenceMessage(model: ReviewModel) {
-  switch (model.run.status) {
-    case "superseded":
-      return "A newer attempt replaced this comparison. Its evidence cannot be reviewed.";
-    case "needs-recompare":
-      return "This comparison is out of date. Run the trusted workflow again to submit a fresh comparison.";
-    case "failed":
-      return "This capture or comparison failed. Its evidence cannot be reviewed.";
-    default:
-      return "This comparison was invalidated. Its evidence cannot be reviewed.";
-  }
-}
-
-function ShortcutHelp() {
-  return (
-    <ak.DialogProvider>
-      <ak.DialogDisclosure render={<Button $p={1.5} aria-label="Keyboard help" />}>
-        <ButtonSlot>
-          <Keyboard />
-        </ButtonSlot>
-      </ak.DialogDisclosure>
-      <ak.Dialog
-        render={<Frame $layer="canvas" $border $rounded="lg" $p={5} />}
-        className="review-help-dialog fixed inset-[50%_auto_auto_50%] -translate-x-1/2 -translate-y-1/2 w-[min(540px,calc(100vw-32px))] max-h-[calc(100dvh-32px)] overflow-auto z-50 text-sm"
-        backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
-      >
-        <ak.DialogHeading>Review with the keyboard</ak.DialogHeading>
-        <ak.DialogDescription>
-          Shortcuts work across this page. Text fields, tabs, menus, and dialogs keep their own
-          keys. Use the visible pan buttons to move zoomed images.
-        </ak.DialogDescription>
-        <dl className="grid grid-cols-[auto_1fr] gap-3 my-5">
-          <dt>↑ / ↓</dt>
-          <dd>Previous or next item. Stop at either end.</dd>
-          <dt>← / → · 1–6</dt>
-          <dd>Select a variant.</dd>
-          <dt>A / X</dt>
-          <dd>Approve or reject, then move to the next pending variant.</dd>
-          <dt>Shift+A / Shift+X</dt>
-          <dd>Review all changed variants in this item as one command.</dd>
-          <dt>S / D / F / G</dt>
-          <dd>Side by side, red pixel diff, new image only, or original only.</dd>
-          <dt>Cmd/Ctrl+Z</dt>
-          <dd>Undo your last saved command in this session.</dd>
-          <dt>[</dt>
-          <dd>Collapse or expand the screenshot sidebar.</dd>
-          <dt>Tab / Escape</dt>
-          <dd>Move to controls or close this help.</dd>
-        </dl>
-        <ak.DialogDismiss render={<Button $size="xs" />}>
-          <ButtonLabel>Close help</ButtonLabel>
-        </ak.DialogDismiss>
-      </ak.Dialog>
-    </ak.DialogProvider>
-  );
-}
-
 export function ReviewWorkspace(props: ReviewWorkspaceProps) {
   return <ReviewSession key={props.model.run.id} {...props} />;
 }
 
+/**
+ * The frame of the review page: the header with the run progress, the list
+ * of the screenshots, the variant control, the stage, and the decision bar.
+ * The stage and the bar are hosts in their own files (`stage-host.tsx` and
+ * `bar-host.tsx`), so a new stage or a new bar changes one file.
+ */
 function ReviewSession({
   model: suppliedModel,
   commands,
   route,
-  header,
   onUnsentDecisionsChange,
 }: ReviewWorkspaceProps) {
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
-  const [mode, setMode] = useState<ReviewMode>("side");
-  const [zoom, setZoom] = useState<ReviewZoom>("fit");
   const [shortcuts, setShortcuts] = useState(true);
   const [retry, setRetry] = useState(0);
   const [announcement, setAnnouncement] = useState("");
@@ -226,17 +100,12 @@ function ReviewSession({
   );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(false);
-  const [batchScope, setBatchScope] = useState<BatchReviewScope | null>(null);
   const [order, setOrder] = useState(() => partitionItems(suppliedModel.items).order);
   const [narrow, setNarrow] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches,
   );
-  const sidebarTrigger = useRef<HTMLButtonElement>(null);
   const detailsTrigger = useRef<HTMLButtonElement>(null);
-  const toggleSidebar = () => {
-    setSidebarOpen((open) => !open);
-    sidebarTrigger.current?.focus();
-  };
+  const toggleSidebar = () => setSidebarOpen((open) => !open);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
     const update = () => setNarrow(media.matches);
@@ -259,13 +128,16 @@ function ReviewSession({
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
   }, []);
+  // The variant that the reviewer selected last in each screenshot. Up, Down,
+  // and the two screenshot buttons open it. A row click and a decision do not
+  // change it. It is state of the page: a reload forgets it.
   const remembered = useRef(
     new Map<string, string>(
-      route?.selection ? [[route.selection.itemKey, route.selection.variantKey]] : [],
+      route?.selection?.variantKey ? [[route.selection.itemKey, route.selection.variantKey]] : [],
     ),
   );
   const workspace = useRef<HTMLDivElement>(null);
-  const variantStrip = useRef<HTMLElement>(null);
+  const variantRow = useRef<HTMLDivElement>(null);
   const focusWorkspace = () => workspace.current?.focus({ preventScroll: true });
   const select = (next: ReviewSelection) => {
     if (route) route.onSelect(next);
@@ -283,16 +155,11 @@ function ReviewSession({
     model: changedModel,
     saveState,
     busy,
-    reviewBlocked,
-    canUndo,
     pendingComparison,
     awaitingComparison,
     terminalComparison,
     unsentDecisions,
     runStatus,
-    save,
-    undo,
-    refresh,
     recompare,
   } = session;
   useEffect(() => {
@@ -303,7 +170,11 @@ function ReviewSession({
   const unchanged = useUnchangedScreenshots({
     model: changedModel,
     commands,
-    selection: routedSelection,
+    // The page of an unchanged screenshot is found by its variant.
+    selection:
+      routedSelection?.variantKey === undefined
+        ? undefined
+        : { itemKey: routedSelection.itemKey, variantKey: routedSelection.variantKey },
   });
   // The page shows the items of the first response with each unchanged
   // screenshot that is loaded. The session keeps the first response.
@@ -315,63 +186,27 @@ function ReviewSession({
   const routedVariant = routedItem?.variants.find(
     (entry) => entry.key === routedSelection?.variantKey,
   );
-  const routedFallback = routedItem?.variants.find(needsReview) ?? routedItem?.variants[0];
+  const routedFallback = routedItem && pickVariant(routedItem);
   const selection = route
-    ? routedFallback
-      ? { itemKey: routedItem?.key ?? "", variantKey: routedVariant?.key ?? routedFallback.key }
+    ? routedItem && routedFallback
+      ? { itemKey: routedItem.key, variantKey: routedVariant?.key ?? routedFallback.key }
       : initialSelection(model)
     : localSelection;
   const item = model.items.find((entry) => entry.key === selection.itemKey) ?? model.items[0];
   const variant =
     item?.variants.find((entry) => entry.key === selection.variantKey) ?? item?.variants[0];
-  const effectiveMode =
-    mode === "diff" && (!variant?.reference || !variant.candidate) ? "side" : mode;
-  const evidence = useEvidence({
-    comparisonId: model.comparisonId,
-    variant: model.evidenceState === "summary" ? undefined : variant,
-    mode: effectiveMode,
-    retry,
-  });
+  const stage = useStageHost({ model, variant, retry, onAnnounce: setAnnouncement });
   const ready =
     !model.archived &&
     !pendingComparison &&
     !terminalComparison &&
     model.reviewReady &&
-    evidence.status === "ready";
-  const targets = item ? reviewTargets(item) : [];
-  const batchValid =
-    batchScope !== null &&
-    batchScope.comparisonId === model.comparisonId &&
-    batchScope.selection.itemKey === selection.itemKey &&
-    batchScope.selection.variantKey === selection.variantKey &&
-    batchScope.targetIds.length === targets.length &&
-    targets.every((target, index) => target.id === batchScope.targetIds[index]);
-  if (batchScope && !batchValid) setBatchScope(null);
-  const counts = useMemo(
-    () => ({
-      pending: changedModel.items.reduce(
-        (count, entry) => count + entry.variants.filter(needsReview).length,
-        0,
-      ),
-      // The total does not grow when a page of unchanged screenshots loads.
-      total:
-        changedModel.unchanged.count +
-        changedModel.items.reduce((count, entry) => count + entry.variants.length, 0),
-    }),
-    [changedModel],
-  );
-  const { pending, total } = counts;
+    stage.ready;
+  const bar = useBarHost({ session, model, item, variant, selection, ready });
   const recompareAllowed = !model.archived && (model.recompareAllowed ?? true);
   const recompareDisabledReason =
     model.recompareDisabledReason ??
     (model.archived ? "This closed review is read-only. Capture a new complete run." : undefined);
-  const retryImages =
-    !terminalComparison && (evidence.failure === "load" || evidence.failure === "decode");
-  const recompareEvidence =
-    terminalComparison ||
-    evidence.failure === "comparison" ||
-    evidence.failure === "missing" ||
-    evidence.failure === "dimensions";
 
   if (
     !route &&
@@ -390,27 +225,20 @@ function ReviewSession({
     onRouteSelect({ itemKey: item.key, variantKey: variant.key });
   }, [item, variant, routedSelection, onRouteSelect, unchanged.locating]);
 
-  const selectedVariantId = variant?.id;
-  useLayoutEffect(() => {
-    if (variantStrip.current) {
-      revealSelectedVariant(variantStrip.current);
-    }
-  }, [selectedVariantId]);
-
+  // Up, Down, and the two screenshot buttons: the remembered variant, else
+  // the variant of a row click.
   const selectItem = (index: number) => {
     const next = model.items[index];
     if (!next) return;
     const previous = remembered.current.get(next.key);
-    const selected =
-      next.variants.find((entry) => entry.key === previous) ??
-      next.variants.find(needsReview) ??
-      next.variants[0];
+    const selected = next.variants.find((entry) => entry.key === previous) ?? pickVariant(next);
     if (!selected) return;
     select({ itemKey: next.key, variantKey: selected.key });
     if (previous && previous !== selected.key) {
       setAnnouncement(`The remembered variant is unavailable. Selected ${selected.label}.`);
     }
   };
+  // Left, Right, 1 to 6, and the variant control. The memory holds it.
   const selectVariant = (index: number) => {
     if (!item) return;
     const next = item.variants[index];
@@ -418,25 +246,11 @@ function ReviewSession({
     remembered.current.set(item.key, next.key);
     select({ itemKey: item.key, variantKey: next.key });
   };
-  const setView = (next: ReviewMode) => {
-    if (next === "diff" && (!variant?.reference || !variant.candidate)) {
-      setAnnouncement(
-        "Pixel diff requires both a reference and a new image. The current view has not changed.",
-      );
-      return;
-    }
-    setMode(next);
-  };
-  const review = (verdict: ReviewVerdict, wholeItem = false) => {
-    if (!ready) return;
-    if (reviewBlocked) return;
-    session.review(verdict, selection, wholeItem);
-  };
-  const reviewBatch = (verdict: ReviewVerdict) => {
-    if (!batchValid || !batchScope || !ready || reviewBlocked) return;
-    session.review(verdict, batchScope.selection, true);
-    setBatchScope(null);
-  };
+  const itemIndex = item ? model.items.indexOf(item) : -1;
+  const itemPosition = order.indexOf(itemIndex);
+  const variantIndex = item && variant ? item.variants.indexOf(variant) : -1;
+  const stepItem = (step: 1 | -1) => selectItem(order[itemPosition + step] ?? -1);
+  const stepVariant = (step: 1 | -1) => selectVariant(variantIndex + step);
   const onKeyDown = useEffectEvent((event: globalThis.KeyboardEvent) => {
     if (event.defaultPrevented || event.repeat || !shortcuts) return;
     if (excludesShortcuts(event)) return;
@@ -445,7 +259,7 @@ function ReviewSession({
     if (event.metaKey || event.ctrlKey) {
       if (key === "z" && !event.shiftKey) {
         event.preventDefault();
-        void undo();
+        bar.undo();
       }
       return;
     }
@@ -455,42 +269,23 @@ function ReviewSession({
       return;
     }
     if (!item || !variant) return;
-    const itemIndex = model.items.indexOf(item);
-    const itemPosition = order.indexOf(itemIndex);
-    const variantIndex = item.variants.indexOf(variant);
-    const selectsByKey = key.startsWith("arrow") || /^[1-6]$/.test(key);
+    const action = bar.keys[key] ?? stage.keys[key];
     if (key === "arrowup") {
-      selectItem(order[itemPosition - 1] ?? -1);
+      stepItem(-1);
     } else if (key === "arrowdown") {
-      selectItem(order[itemPosition + 1] ?? -1);
+      stepItem(1);
     } else if (key === "arrowleft") {
-      selectVariant(variantIndex - 1);
+      stepVariant(-1);
     } else if (key === "arrowright") {
-      selectVariant(variantIndex + 1);
+      stepVariant(1);
     } else if (/^[1-6]$/.test(key)) {
       selectVariant(Number(key) - 1);
-    } else if (key === "a") {
-      review("approved", event.shiftKey);
-    } else if (key === "x") {
-      review("rejected", event.shiftKey);
-    } else if (key === "s") {
-      setView("side");
-    } else if (key === "d") {
-      setView("diff");
-    } else if (key === "f") {
-      setView("new");
-    } else if (key === "g") {
-      setView("original");
+    } else if (action) {
+      action(event);
     } else {
       return;
     }
     event.preventDefault();
-    // A selection key can change the selection while a chip has focus. Move
-    // focus away so that the strip does not step from the stale chip. The
-    // target is a node here, because excludesShortcuts checked it.
-    if (selectsByKey && variantStrip.current?.contains(event.target as Node)) {
-      focusWorkspace();
-    }
   });
   useEffect(() => {
     const document = workspace.current?.ownerDocument;
@@ -499,861 +294,310 @@ function ReviewSession({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  // An arrow key or a number key on a focused mark moves the focus to the
+  // mark of the new variant, so Enter does not select the old one again.
+  const selectedVariantKey = variant?.key;
+  useLayoutEffect(() => {
+    const row = variantRow.current;
+    if (!row) return;
+    const active = row.ownerDocument.activeElement;
+    if (!active || !row.contains(active)) return;
+    const marks = active.closest('[aria-label="Variants"]');
+    if (!marks) return;
+    const current = marks.querySelector<HTMLElement>('a[aria-current="true"]');
+    if (!current || current === active) return;
+    current.focus({ preventScroll: true });
+  }, [selectedVariantKey]);
+
+  const sessionItem = item ? getSessionItem(item) : null;
+  const sessionVariant =
+    sessionItem && variantIndex >= 0 ? sessionItem.variants[variantIndex] : null;
+  const identity = getRunIdentity(model.run);
   const itemNavigation = (
     <ItemList
       items={model.items}
       onOrderChange={setOrder}
-      selectedIndex={item ? model.items.indexOf(item) : -1}
+      selectedIndex={itemIndex}
       selectItem={selectItem}
       route={route}
       unchanged={unchanged}
-      variantKeyForItem={(entry) => entry.variants.find(needsReview)?.key ?? entry.variants[0]?.key}
+      variantKeyForItem={(entry) => pickVariant(entry)?.key}
     />
   );
-  const captureDetails = variant && (
-    <div className="grid gap-3 text-xs">
-      {" "}
-      <p className="text-xs wrap-anywhere">
-        {variant.label} · {verdictLabel(variant)}
-        {variant.reviewer ? ` · ${variant.reviewer}` : ""}
-      </p>
-      <p className="text-xs">{runStatus}</p>
-      <p className="review-run-identity text-xs">
-        Run {model.run.id} · Attempt {model.run.attempt} · Commit{" "}
-        <code>{model.run.testedSha.slice(0, 12)}</code> ·{" "}
-        <span>Comparison {model.comparisonRevision}</span>
-      </p>
-      <nav aria-label="Comparison history" className="flex flex-wrap gap-3 text-xs">
-        <a href={`/runs/${encodeURIComponent(model.run.id)}`}>Original comparison</a>
-        {model.historicalComparisons?.map((comparison) => (
-          <a
-            key={comparison.id}
-            href={`/runs/${encodeURIComponent(model.run.id)}?comparison=${encodeURIComponent(comparison.id)}`}
-            aria-current={comparison.id === model.comparisonId ? "page" : undefined}
-          >
-            Historical comparison {comparison.ordinal} ·{" "}
-            {comparison.state === "ready"
-              ? "Complete"
-              : comparison.state === "invalidated"
-                ? "Failed"
-                : "Comparing"}
-          </a>
-        ))}
-      </nav>
-      <dl className="grid grid-cols-1 gap-2 my-5 [&>dt]:mt-2 [&>dt]:ak-ink-50 [&>dd]:wrap-anywhere">
-        <dt>Changed pixels</dt>
-        <dd>
-          {variant.changedPixels?.toLocaleString() ?? "—"}
-          {variant.ratio != null ? ` (${(variant.ratio * 100).toFixed(4)}%)` : ""}
-        </dd>
-        <dt>Dimensions</dt>
-        <dd>
-          {variant.reference
-            ? `${variant.reference.width} × ${variant.reference.height}`
-            : "Absent"}{" "}
-          →{" "}
-          {variant.candidate
-            ? `${variant.candidate.width} × ${variant.candidate.height}`
-            : "Absent"}
-        </dd>
-        <dt>Engine / codec</dt>
-        <dd>
-          {variant.engine ?? "—"} / {variant.codec ?? "—"}
-        </dd>
-        <dt>Policy / threshold</dt>
-        <dd>
-          {variant.policy ?? "—"} / {variant.threshold ?? "—"}
-        </dd>
-        <dt>Capture profiles</dt>
-        <dd>
-          {variant.referenceProfile ?? "Absent"} → {variant.candidateProfile ?? "Absent"}
-        </dd>
-        <dt>Comparison</dt>
-        <dd>
-          {model.comparisonId} · {variant.id} · decision revision {variant.revision}
-        </dd>
-      </dl>
-    </div>
-  );
-  const itemPosition = item ? order.indexOf(model.items.indexOf(item)) : -1;
+  const stepperProps = {
+    item: sessionItem,
+    position: itemPosition,
+    count: order.length,
+    onStep: stepItem,
+    shortcuts,
+  };
 
   return (
-    <Shell
-      className="review-workspace text-sm [--shell-header-step:calc(48px/14)]"
-      ref={workspace}
-      tabIndex={0}
-      aria-label="Review workspace"
-      $layer="canvas"
-    >
-      {header}
-      <ShellSidebar
-        id="review-screenshots"
-        $show="5xl"
-        $from="main"
-        $width="md"
-        $border
-        open={sidebarOpen}
-        render={<aside />}
-        className="review-sidebar"
-        aria-label="Review navigation"
+    <HeadingLevel level={1}>
+      <Shell
+        className="review-workspace text-sm"
+        ref={workspace}
+        tabIndex={0}
+        aria-label="Review workspace"
+        $layer="canvas"
+        $rounded={shellRadius}
       >
-        <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-          <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
-            Screenshots
-          </Text>
-          <Text className="text-xs ak-ink-50">
-            {model.items.length} {model.items.length === 1 ? "item" : "items"}
-          </Text>
-        </ShellSidebarHeader>
-        <ShellSidebarBody
-          $p={5}
-          className="review-sidebar-body min-h-0 flex flex-col overflow-hidden! pt-0!"
+        <RunHeader
+          model={changedModel}
+          stepper={
+            <HeadingLevel>
+              <ScreenshotStepper
+                {...stepperProps}
+                listOpen={narrow ? itemsOpen : sidebarOpen}
+                onListOpenChange={narrow ? setItemsOpen : setSidebarOpen}
+                listId={narrow ? undefined : "review-screenshots"}
+                className="w-[min(36em,36cqi)]"
+              />
+            </HeadingLevel>
+          }
+        />
+        <ShellSidebar
+          id="review-screenshots"
+          $show="5xl"
+          $from="main"
+          $width="md"
+          $border
+          open={sidebarOpen}
+          render={<aside />}
+          className="review-sidebar"
+          aria-label="Review navigation"
         >
-          {!narrow && itemNavigation}
-        </ShellSidebarBody>
-      </ShellSidebar>
-      <ShellMain $maxWidth="100%" $p="clamp(1rem,2.5vw,2rem)" className="review-main">
-        <ShellMainHeader $height="sm" $border>
-          <ShellMainFull>
-            <div className="flex min-w-0 items-center justify-between gap-3 px-4 sm:px-8">
-              <div className="flex min-w-0 items-center gap-3">
-                <Button
-                  ref={sidebarTrigger}
-                  $p={2}
-                  className="@max-5xl/shell:hidden"
-                  aria-label={sidebarOpen ? "Collapse screenshots" : "Expand screenshots"}
-                  aria-expanded={sidebarOpen}
-                  aria-controls="review-screenshots"
-                  aria-keyshortcuts={shortcuts ? "[" : undefined}
-                  title="Toggle screenshots ([)"
-                  onClick={toggleSidebar}
-                >
-                  <ButtonSlot>{sidebarOpen ? <PanelLeftClose /> : <PanelLeftOpen />}</ButtonSlot>
-                </Button>
-                <Button $p={1} render={<a href="/" />}>
-                  <ButtonSlot>
-                    <ArrowLeft />
-                  </ButtonSlot>
-                  <ButtonLabel>Queue</ButtonLabel>
-                </Button>
-                <Text className="truncate text-xs font-medium">
-                  {model.run.title ??
-                    (model.run.kind === "main"
-                      ? "Main visual review"
-                      : model.run.kind === "merge_group"
-                        ? "Merge queue visual review"
-                        : "Pull request visual review")}
-                </Text>
-              </div>
-              <div className="review-run-progress flex shrink-0 items-center gap-3">
-                <Text className="text-xs ak-ink-60">
-                  {pending} of {total} need review
-                </Text>
-                <progress
-                  aria-label="Review progress"
-                  max={Math.max(total, 1)}
-                  value={total - pending}
-                  className="hidden sm:block h-1.5 w-16 accent-brand"
+          <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
+            <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
+              Screenshots
+            </Text>
+            <Text className="text-xs ak-ink-50">
+              {model.items.length} {model.items.length === 1 ? "item" : "items"}
+            </Text>
+          </ShellSidebarHeader>
+          <ShellSidebarBody
+            $p={5}
+            className="review-sidebar-body min-h-0 flex flex-col overflow-hidden! pt-0!"
+          >
+            {!narrow && itemNavigation}
+          </ShellSidebarBody>
+        </ShellSidebar>
+        <ShellMain $maxWidth="100%" $p="clamp(1rem,2.5vw,2rem)" className="review-main">
+          <ShellMainBody className="pb-0!">
+            <Heading className="sr-only">{`Review of ${identity.full}`}</Heading>
+            <HeadingLevel>
+              <div className="grid min-w-0 gap-3 mb-3">
+                <ScreenshotStepper
+                  {...stepperProps}
+                  listOpen={narrow ? itemsOpen : sidebarOpen}
+                  onListOpenChange={narrow ? setItemsOpen : setSidebarOpen}
+                  className="@3xl/shell:hidden"
                 />
-              </div>
-            </div>
-          </ShellMainFull>
-        </ShellMainHeader>
-        <ShellMainIntro className="py-0! border-b border-(--ak-edge)">
-          <div className="flex flex-wrap items-center gap-4 py-2 text-xs ak-ink-50">
-            <span className="flex items-center gap-1">
-              <GitCommitHorizontal size={12} />
-              {model.run.testedSha.slice(0, 7)}
-            </span>
-            <span>Attempt {model.run.attempt}</span>
-            <span className="flex items-center gap-1">
-              <GitBranch size={12} />
-              Baseline revision {model.baselineRevision}
-            </span>
-            <span className="ml-auto">{runStatus}</span>
-          </div>
-        </ShellMainIntro>
-        <ShellMainBody className="pb-0!">
-          <div className="min-w-0">
-            {narrow && (
-              <Button $border className="mb-4" onClick={() => setItemsOpen(true)}>
-                <ButtonLabel>Screenshots</ButtonLabel>
-                <ButtonSlot>
-                  <ChevronDown />
-                </ButtonSlot>
-              </Button>
-            )}
-            <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
-              <div className="review-result-heading min-w-0">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Heading
-                    render={<h1 />}
-                    $level={2}
-                    className="mb-0 font-semibold tracking-tight wrap-anywhere"
+                {model.run.error && (
+                  <Frame $layer="warning" $mix={15} $p={3} role="alert" render={<p />}>
+                    {model.run.error}
+                  </Frame>
+                )}
+                {model.archived && (
+                  <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
+                    {model.readOnlyReason ??
+                      "This closed run is read-only. Its review history remains available."}
+                  </Frame>
+                )}
+                {!model.archived && !model.reviewReady && !terminalComparison && (
+                  <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
+                    Review is unavailable until the run is sealed and all comparisons are complete.
+                  </Frame>
+                )}
+                {pendingComparison && (
+                  <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
+                    A new comparison is being prepared from stored captures. The previous comparison
+                    remains visible until the new evidence is ready.
+                  </Frame>
+                )}
+                {sessionItem && sessionVariant && variant && (
+                  <div
+                    ref={variantRow}
+                    className="review-variant-row @container flex flex-wrap items-center gap-x-3 gap-y-2"
                   >
-                    {item?.name ?? "Visual review"}
-                  </Heading>
-                  {variant && <ReviewStatus variant={variant} />}
-                </div>
-                {variant && (
-                  <Text render={<p />} className="mt-2 text-xs ak-ink-55">
-                    {variant.ratio != null ? (variant.ratio * 100).toFixed(2) + "% changed · " : ""}
-                    {variant.changedPixels?.toLocaleString() ?? "—"} changed pixels
-                  </Text>
+                    <div className="flex min-w-[min(100%,27.5em)] flex-1">
+                      <VariantNav
+                        item={sessionItem}
+                        variant={sessionVariant}
+                        onStep={stepVariant}
+                        onSelect={(variantKey) =>
+                          selectVariant(
+                            sessionItem.variants.findIndex((entry) => entry.key === variantKey),
+                          )
+                        }
+                      />
+                    </div>
+                    {variant.changedPixels != null && (
+                      <Text className="flex-none text-xs ak-ink-60 @max-[44rem]:hidden">
+                        {variant.ratio != null
+                          ? (variant.ratio * 100).toFixed(2) + "% changed · "
+                          : ""}
+                        {variant.changedPixels.toLocaleString()} changed pixels
+                      </Text>
+                    )}
+                    <Button
+                      $border
+                      ref={detailsTrigger}
+                      className="ms-auto flex-none"
+                      aria-label="Details"
+                      aria-expanded={detailsOpen}
+                      aria-controls="capture-details"
+                      onClick={() => setDetailsOpen((open) => !open)}
+                    >
+                      <ButtonSlot>
+                        <Settings2 />
+                      </ButtonSlot>
+                      <ButtonLabel>Details</ButtonLabel>
+                    </Button>
+                  </div>
                 )}
               </div>
-              <div className="flex items-center gap-1">
-                <Button
-                  $p={2}
-                  aria-label="Previous screenshot"
-                  title="Previous screenshot (↑)"
-                  disabled={itemPosition <= 0}
-                  onClick={() => selectItem(order[itemPosition - 1] ?? -1)}
-                >
-                  <ButtonSlot>
-                    <ArrowUp />
-                  </ButtonSlot>
-                </Button>
-                <Button
-                  $p={2}
-                  aria-label="Next screenshot"
-                  title="Next screenshot (↓)"
-                  disabled={!order.length || itemPosition >= order.length - 1}
-                  onClick={() => selectItem(order[itemPosition + 1] ?? -1)}
-                >
-                  <ButtonSlot>
-                    <ArrowDown />
-                  </ButtonSlot>
-                </Button>
-                <Button
-                  $border
-                  ref={detailsTrigger}
-                  aria-label="Details"
-                  aria-expanded={detailsOpen}
-                  aria-controls="capture-details"
-                  onClick={() => setDetailsOpen((open) => !open)}
-                >
-                  <ButtonSlot>
-                    <Settings2 />
-                  </ButtonSlot>
-                  <ButtonLabel>Details</ButtonLabel>
-                </Button>
-              </div>
-            </div>
-            {model.run.error && (
-              <Frame $layer="warning" $mix={15} $p={3} role="alert" render={<p />}>
-                {model.run.error}
-              </Frame>
-            )}
-            {model.archived && (
-              <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
-                {model.readOnlyReason ??
-                  "This closed run is read-only. Its review history remains available."}
-              </Frame>
-            )}
-            {!model.archived && !model.reviewReady && !terminalComparison && (
-              <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
-                Review is unavailable until the run is sealed and all comparisons are complete.
-              </Frame>
-            )}
-            {pendingComparison && (
-              <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
-                A new comparison is being prepared from stored captures. The previous comparison
-                remains visible until the new evidence is ready.
-              </Frame>
-            )}
-
-            {item && variant && (
-              <Nav
-                $layout="horizontal"
-                $rounded="full"
-                $forceRounded
-                $p={1}
-                $gap={1.5}
-                glider={{ $kind: "bar", $barOffset: "frame" }}
-                aria-label="Variants"
-                className="review-variants max-w-full mb-4"
-                ref={variantStrip}
-                onKeyDown={followVariantLink}
-              >
-                {item.variants.map((entry, index) => (
-                  <NavLink
-                    $kind="flat"
-                    $rounded="full"
-                    $forceRounded
-                    $size="xs"
-                    $border
-                    $selectedPush={false}
-                    $p={2}
-                    $px="0.75rem"
-                    aria-current={entry.id === variant.id ? "page" : undefined}
-                    href={route ? undefined : `#variant-${encodeURIComponent(entry.key)}`}
-                    key={entry.id}
-                    id={entry.id}
-                    className="review-variant min-w-0"
-                    title={`${entry.label} · ${verdictLabel(entry)}`}
-                    render={
-                      route ? (
-                        <Link
-                          to="/runs/$runId"
-                          params={{ runId: route.runId }}
-                          search={{
-                            comparison: route.comparisonId,
-                            item: item.key,
-                            variant: entry.key,
-                          }}
-                        />
-                      ) : undefined
+              {item && variant ? (
+                <ShellMainFull>
+                  <StageHost
+                    stage={stage}
+                    model={model}
+                    variant={variant}
+                    terminal={terminalComparison}
+                    busy={busy}
+                    onRetryImages={() => setRetry((value) => value + 1)}
+                    recompare={
+                      commands.recompare && recompareAllowed
+                        ? {
+                            offered: true,
+                            disabled: busy || awaitingComparison || saveState.status === "error",
+                            onRecompare: () => void recompare(),
+                          }
+                        : undefined
                     }
-                    onClick={(event) => {
-                      if (
-                        event.button !== 0 ||
-                        event.altKey ||
-                        event.ctrlKey ||
-                        event.metaKey ||
-                        event.shiftKey
-                      )
-                        return;
-                      remembered.current.set(item.key, entry.key);
-                      if (!route) {
-                        event.preventDefault();
-                        selectVariant(index);
-                      }
-                    }}
-                    aria-label={`${index + 1}. ${entry.label}. ${verdictLabel(entry)}`}
-                  >
-                    <VariantSummary variant={entry} index={index} />
-                  </NavLink>
-                ))}
-              </Nav>
-            )}
-          </div>
-          {item && variant ? (
-            <>
-              <ShellMainFull>
-                <Frame
-                  $cover
-                  $border
-                  $borderType="border"
-                  $rounded="none"
-                  $orientation="vertical"
-                  $p={0}
-                  className="review-result"
-                  render={<section />}
-                  aria-label="Selected variant"
-                  tabIndex={-1}
-                >
-                  {!model.archived &&
-                    (variant.approveDisabledReason || variant.rejectDisabledReason) && (
-                      <p className="text-xs ak-ink-60 px-3 py-2">
-                        {variant.rejectDisabledReason ?? variant.approveDisabledReason}
-                      </p>
-                    )}
-                  {model.evidenceState === "summary" ? (
-                    <Frame $p={4} $layer $border>
-                      <h3 className="text-sm font-semibold">
-                        {model.imagesExpired ? "Image history expired" : "Closed review summary"}
-                      </h3>
-                      <p className="text-sm ak-ink-60 mt-2">
-                        Review results and capture identity remain available. This view does not
-                        contain image bytes.
-                      </p>
-                    </Frame>
-                  ) : (
-                    <>
-                      <Frame
-                        $cover
-                        $border
-                        $borderType="border"
-                        $layer="canvas"
-                        $p={3}
-                        className="review-view-controls flex flex-wrap items-center justify-between gap-2"
-                      >
-                        <ButtonGroup
-                          $p={0.5}
-                          $gap="xs"
-                          $rounded="md"
-                          $forceRounded
-                          $layer
-                          className="min-w-0 max-w-full overflow-x-auto"
-                          aria-label="Image view"
-                        >
-                          <FlatButton
-                            $size="xs"
-                            className="whitespace-nowrap"
-                            $p={1.5}
-                            $rounded="md"
-                            aria-pressed={effectiveMode === "side"}
-                            $lightnessOffset={effectiveMode === "side"}
-                            onClick={() => setView("side")}
-                          >
-                            <ButtonSlot aria-hidden>
-                              <Columns2Icon />
-                            </ButtonSlot>
-                            <ButtonLabel>Compare</ButtonLabel>{" "}
-                            <ButtonSlot $kind="shortcut">S</ButtonSlot>
-                          </FlatButton>
-                          <FlatButton
-                            $size="xs"
-                            className="whitespace-nowrap"
-                            $p={1.5}
-                            $rounded="md"
-                            aria-pressed={effectiveMode === "diff"}
-                            $lightnessOffset={effectiveMode === "diff"}
-                            aria-disabled={!variant.reference || !variant.candidate}
-                            onClick={() => setView("diff")}
-                          >
-                            <ButtonSlot aria-hidden>
-                              <DiffIcon />
-                            </ButtonSlot>
-                            <ButtonLabel>Difference</ButtonLabel>{" "}
-                            <ButtonSlot $kind="shortcut">D</ButtonSlot>
-                          </FlatButton>
-                          <FlatButton
-                            $size="xs"
-                            className="whitespace-nowrap"
-                            $p={1.5}
-                            $rounded="md"
-                            aria-pressed={effectiveMode === "new"}
-                            $lightnessOffset={effectiveMode === "new"}
-                            onClick={() => setView("new")}
-                          >
-                            <ButtonSlot aria-hidden>
-                              <ImageIcon />
-                            </ButtonSlot>
-                            <ButtonLabel>Current</ButtonLabel>{" "}
-                            <ButtonSlot $kind="shortcut">F</ButtonSlot>
-                          </FlatButton>
-                          <FlatButton
-                            $size="xs"
-                            className="whitespace-nowrap"
-                            $p={1.5}
-                            $rounded="md"
-                            aria-pressed={effectiveMode === "original"}
-                            $lightnessOffset={effectiveMode === "original"}
-                            onClick={() => setView("original")}
-                          >
-                            <ButtonSlot aria-hidden>
-                              <ImageMinusIcon />
-                            </ButtonSlot>
-                            <ButtonLabel>Baseline</ButtonLabel>{" "}
-                            <ButtonSlot $kind="shortcut">G</ButtonSlot>
-                          </FlatButton>
-                          <ButtonGlider $rounded="md" />
-                        </ButtonGroup>
-                        <ButtonGroup
-                          $p={0.5}
-                          $gap="xs"
-                          $rounded="md"
-                          $forceRounded
-                          $border={false}
-                          aria-label="Image zoom"
-                        >
-                          {(["fit", 1, 2] as const).map((value) => (
-                            <FlatButton
-                              key={value}
-                              $size="xs"
-                              $p={1.5}
-                              $rounded="md"
-                              aria-pressed={zoom === value}
-                              $lightnessOffset={zoom === value}
-                              onClick={() => setZoom(value)}
-                            >
-                              {value === "fit" && (
-                                <ButtonSlot aria-hidden>
-                                  <ScanIcon />
-                                </ButtonSlot>
-                              )}
-                              <ButtonLabel>
-                                {value === "fit" ? "Fit" : `${value * 100}%`}
-                              </ButtonLabel>
-                            </FlatButton>
-                          ))}
-                          <ButtonGlider $rounded="md" />
-                        </ButtonGroup>
-                      </Frame>
-                      {(!variant.reference || !variant.candidate) && (
-                        <p className="text-xs ak-ink-60 px-3 pb-3">
-                          {variant.candidateOmitted
-                            ? "Matched locally. The new image was not uploaded."
-                            : "Pixel diff requires both a reference and a new image."}
-                        </p>
-                      )}
-                      <Frame
-                        $layer="canvas"
-                        $border
-                        $p={0}
-                        $rounded="none"
-                        $forceRounded
-                        className="review-evidence"
-                        data-evidence={terminalComparison ? "terminal" : evidence.status}
-                      >
-                        {evidence.status === "loading" && !terminalComparison && (
-                          <div
-                            className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
-                            role="status"
-                          >
-                            {variant.kind === "pending"
-                              ? "Comparison is still running…"
-                              : "Loading this comparison’s images…"}
-                          </div>
-                        )}
-                        {(terminalComparison || evidence.status === "error") && (
-                          <div
-                            className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
-                            role={terminalComparison ? "status" : "alert"}
-                          >
-                            <strong>
-                              {terminalComparison
-                                ? model.run.status === "superseded"
-                                  ? "Comparison superseded"
-                                  : model.run.status === "needs-recompare"
-                                    ? "Comparison needs fresh Submit"
-                                    : "Comparison failed"
-                                : retryImages
-                                  ? "Image evidence unavailable"
-                                  : "Comparison evidence incomplete"}
-                            </strong>
-                            <p>
-                              {terminalComparison ? terminalEvidenceMessage(model) : evidence.error}
-                            </p>
-                            {terminalComparison && variant.error && <p>{variant.error}</p>}
-                            {retryImages && (
-                              <Button
-                                $size="xs"
-                                disabled={busy}
-                                onClick={() => setRetry((value) => value + 1)}
-                              >
-                                Retry images
-                              </Button>
-                            )}
-                            {recompareEvidence && commands.recompare && recompareAllowed && (
-                              <Button
-                                $size="xs"
-                                disabled={
-                                  busy || awaitingComparison || saveState.status === "error"
-                                }
-                                onClick={() => void recompare()}
-                              >
-                                Recompare now
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                        <ScreenshotViewer
-                          variant={variant}
-                          mode={effectiveMode}
-                          zoom={zoom}
-                          ready={evidence.status === "ready"}
-                          images={evidence.images}
-                          identity={evidence.identity}
-                          report={evidence.report}
-                        />
-                      </Frame>
-                    </>
-                  )}
+                  />
+                </ShellMainFull>
+              ) : (
+                <Frame $p={6} $border $rounded="xl">
+                  <Text render={<h2 />}>No comparison items</Text>
+                  <Text render={<p />}>
+                    {model.reviewReady
+                      ? "This run contains no review items."
+                      : "Images will appear after the complete run is processed."}
+                  </Text>
                 </Frame>
-              </ShellMainFull>
-            </>
-          ) : (
-            <Frame $p={6} $border $rounded="xl">
-              <Text render={<h2 />}>No comparison items</Text>
-              <Text render={<p />}>
-                {model.reviewReady
-                  ? "This run contains no review items."
-                  : "Images will appear after the complete run is processed."}
-              </Text>
-            </Frame>
-          )}
-          <ShellMainFull className="sticky bottom-0 z-20">
-            <Frame
-              $cover
-              $layer="canvas"
-              $lighten={2}
-              $border
-              $borderType="border"
-              $rounded="none"
-              $p={2}
-              role="region"
-              aria-label="Review actions"
-              className="review-actions flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
-            >
-              <div className="flex items-center gap-2">
-                <Button
-                  $p={1.5}
-                  disabled={model.archived || !canUndo || busy || saveState.status === "error"}
-                  onClick={() => void undo()}
-                >
-                  <ButtonSlot>
-                    <Undo2 />
-                  </ButtonSlot>
-                  <ButtonLabel>Undo</ButtonLabel>
-                </Button>
-                <div className="h-5 w-px bg-current/10" />
-                <Button
-                  $p={1.5}
-                  disabled={
-                    !ready || reviewBlocked || saveState.status === "error" || !targets.length
-                  }
-                  onClick={() =>
-                    setBatchScope({
-                      comparisonId: model.comparisonId,
-                      selection: { ...selection },
-                      targetIds: targets.map((target) => target.id),
-                    })
-                  }
-                >
-                  <ButtonLabel>All {targets.length} changed views…</ButtonLabel>
-                  <ButtonSlot>
-                    <ChevronDown />
-                  </ButtonSlot>
-                </Button>
-              </div>
-              <ButtonGroup $gap="sm">
-                <Button
-                  $border
-                  disabled={
-                    !ready ||
-                    reviewBlocked ||
-                    saveState.status === "error" ||
-                    !targets.some((entry) => entry.id === variant?.id) ||
-                    !!variant?.rejectDisabledReason
-                  }
-                  title={variant?.rejectDisabledReason}
-                  onClick={() => review("rejected")}
-                >
-                  <ButtonSlot>
-                    <X />
-                  </ButtonSlot>
-                  <ButtonLabel>Reject view</ButtonLabel>
-                  <ButtonSlot $kind="shortcut">X</ButtonSlot>
-                </Button>
-                <Button
-                  $layer="brand"
-                  disabled={
-                    !ready ||
-                    reviewBlocked ||
-                    saveState.status === "error" ||
-                    !targets.some((entry) => entry.id === variant?.id) ||
-                    !!variant?.approveDisabledReason
-                  }
-                  title={variant?.approveDisabledReason}
-                  onClick={() => review("approved")}
-                >
-                  <ButtonSlot>
-                    <Check />
-                  </ButtonSlot>
-                  <ButtonLabel>Approve &amp; next</ButtonLabel>
-                  <ButtonSlot $kind="shortcut">A</ButtonSlot>
-                </Button>
-              </ButtonGroup>
-              {(saveState.message ||
-                busy ||
-                saveState.status === "error" ||
-                saveState.status === "conflict") && (
-                <div className="basis-full px-1.5">
-                  <div
-                    className="review-save-state flex flex-wrap items-center gap-2 text-xs ak-ink-60 empty:hidden"
-                    role={
-                      saveState.status === "error" || saveState.status === "conflict"
-                        ? "alert"
-                        : "status"
-                    }
-                  >
-                    {saveState.message}
-                    {!model.archived && saveState.status === "error" && saveState.failed && (
-                      <Button
-                        onClick={() => {
-                          if (saveState.failed) void save(saveState.failed);
-                        }}
-                      >
-                        <ButtonLabel>Retry same command</ButtonLabel>
-                      </Button>
-                    )}
-                    {!model.archived && saveState.status === "error" && saveState.failedUndo && (
-                      <Button onClick={() => void undo(saveState.failedUndo)}>
-                        <ButtonLabel>Retry Undo</ButtonLabel>
-                      </Button>
-                    )}
-                    {saveState.link === "sign-in" && (
-                      // The sign-in opens in a new tab: this page holds the
-                      // decision, and a sign-in in this tab loads a new document.
-                      <Button render={<a href="/" target="_blank" rel="noopener" />}>
-                        <ButtonLabel>Sign in again</ButtonLabel>
-                      </Button>
-                    )}
-                    {saveState.link === "queue" && (
-                      <Button render={<a href="/" />}>
-                        <ButtonLabel>Go to the Queue</ButtonLabel>
-                      </Button>
-                    )}
-                    {(saveState.status === "conflict" || saveState.status === "error") && (
-                      <Button onClick={() => void refresh()}>
-                        <ButtonLabel>Refresh current state</ButtonLabel>
-                      </Button>
-                    )}
-                  </div>
-                </div>
               )}
-            </Frame>
-          </ShellMainFull>
-        </ShellMainBody>
-      </ShellMain>
-      <ShellSidebar
-        id="capture-details"
-        $side="end"
-        $from="intro"
-        $width="md"
-        $show="5xl"
-        $border
-        open={detailsOpen && !narrow}
-        render={<aside />}
-        aria-label="Capture details"
-      >
-        <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-          <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
-            Capture details
-          </Text>
-          <Button
-            $p={1}
-            aria-label="Close capture details"
-            onClick={() => {
-              setDetailsOpen(false);
-              detailsTrigger.current?.focus();
-            }}
-          >
-            <ButtonSlot>
-              <X />
-            </ButtonSlot>
-          </Button>
-        </ShellSidebarHeader>
-        <ShellSidebarBody $p={5}>{!narrow && captureDetails}</ShellSidebarBody>
-      </ShellSidebar>
-      <ShellFooter
-        $height="sm"
-        $p={3}
-        className="flex! flex-wrap items-center gap-x-3 gap-y-0 min-h-10!"
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <ShortcutHelp />
-          <Button
-            $size="xs"
-            aria-pressed={shortcuts}
-            onClick={() => setShortcuts((value) => !value)}
-          >
-            <ButtonLabel>Shortcuts {shortcuts ? "on" : "off"}</ButtonLabel>
-          </Button>
-          {commands.recompare && !model.preview && (
+              <BarHost bar={bar} />
+            </HeadingLevel>
+          </ShellMainBody>
+        </ShellMain>
+        <ShellSidebar
+          id="capture-details"
+          $side="end"
+          $from="intro"
+          $width="md"
+          $show="5xl"
+          $border
+          open={detailsOpen && !narrow}
+          render={<aside />}
+          aria-label="Capture details"
+        >
+          <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
+            <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
+              Capture details
+            </Text>
+            <Button
+              $p={1}
+              aria-label="Close capture details"
+              onClick={() => {
+                setDetailsOpen(false);
+                detailsTrigger.current?.focus();
+              }}
+            >
+              <ButtonSlot>
+                <X />
+              </ButtonSlot>
+            </Button>
+          </ShellSidebarHeader>
+          <ShellSidebarBody $p={5}>
+            {!narrow && variant && (
+              <CaptureDetails model={model} variant={variant} runStatus={runStatus} />
+            )}
+          </ShellSidebarBody>
+        </ShellSidebar>
+        <ShellFooter
+          $height="sm"
+          $p={3}
+          className="flex! flex-wrap items-center gap-x-3 gap-y-0 min-h-10!"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <ShortcutHelp />
             <Button
               $size="xs"
-              disabled={
-                !recompareAllowed || busy || awaitingComparison || saveState.status === "error"
-              }
-              title={!recompareAllowed ? recompareDisabledReason : undefined}
-              onClick={() => void recompare()}
+              aria-pressed={shortcuts}
+              onClick={() => setShortcuts((value) => !value)}
             >
-              <ButtonLabel>Recompare stored run</ButtonLabel>
+              <ButtonLabel>Shortcuts {shortcuts ? "on" : "off"}</ButtonLabel>
             </Button>
+            {commands.recompare && !model.preview && (
+              <Button
+                $size="xs"
+                disabled={
+                  !recompareAllowed || busy || awaitingComparison || saveState.status === "error"
+                }
+                title={!recompareAllowed ? recompareDisabledReason : undefined}
+                onClick={() => void recompare()}
+              >
+                <ButtonLabel>Recompare stored run</ButtonLabel>
+              </Button>
+            )}
+          </div>
+          {commands.recompare && !model.preview && !recompareAllowed && recompareDisabledReason && (
+            <p>{recompareDisabledReason}</p>
           )}
-        </div>
-        {commands.recompare && !model.preview && !recompareAllowed && recompareDisabledReason && (
-          <p>{recompareDisabledReason}</p>
-        )}
-        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-          {announcement}
-        </p>
-      </ShellFooter>
-      <ak.Dialog
-        open={itemsOpen && narrow}
-        onClose={() => setItemsOpen(false)}
-        render={<Frame $layer="canvas" $border $p={5} $rounded="2xl" />}
-        className="fixed inset-4 z-50 flex flex-col gap-4 text-sm"
-        backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
-      >
-        <div className="flex items-center justify-between">
-          <ak.DialogHeading className="text-base">Screenshots</ak.DialogHeading>
-          <ak.DialogDismiss render={<Button aria-label="Close screenshots" />}>
-            <ButtonSlot>
-              <X />
-            </ButtonSlot>
-          </ak.DialogDismiss>
-        </div>
-        {narrow && itemNavigation}
-      </ak.Dialog>
-      <ak.Dialog
-        open={detailsOpen && narrow}
-        onClose={() => setDetailsOpen(false)}
-        unmountOnHide
-        finalFocus={detailsTrigger}
-        render={<Frame $layer="canvas" $border $p={5} $rounded="2xl" />}
-        className="fixed inset-4 z-50 overflow-auto text-sm"
-        backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
-      >
-        <div className="flex items-center justify-between mb-5">
-          <ak.DialogHeading className="text-base">Capture details</ak.DialogHeading>
-          <ak.DialogDismiss render={<Button aria-label="Close capture details" />}>
-            <ButtonSlot>
-              <X />
-            </ButtonSlot>
-          </ak.DialogDismiss>
-        </div>
-        {narrow && captureDetails}
-      </ak.Dialog>
-      <ak.Dialog
-        open={batchValid}
-        onClose={() => setBatchScope(null)}
-        unmountOnHide
-        render={<Frame $layer="canvas" $border $p={6} $rounded="2xl" />}
-        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[min(30rem,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-auto text-sm"
-        backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
-      >
-        <ak.DialogHeading className="text-lg font-semibold">
-          Review all changed views
-        </ak.DialogHeading>
-        <ak.DialogDescription className="text-sm ak-ink-60 mt-2">
-          This decision applies to all {targets.length} changed views in {item?.name}, including
-          views with a previous decision.
-        </ak.DialogDescription>
-        <ul className="my-5 grid gap-2">
-          {targets.map((target) => (
-            <li key={target.id} className="text-xs flex items-center justify-between gap-3">
-              <span>{target.label}</span>
-              <ReviewStatus variant={target} />
-            </li>
-          ))}
-        </ul>
-        <div className="flex flex-wrap gap-2 justify-end">
-          <ak.DialogDismiss render={<Button />}>
-            <ButtonLabel>Cancel</ButtonLabel>
-          </ak.DialogDismiss>
-          <Button
-            $border
-            disabled={
-              !batchValid ||
-              !ready ||
-              reviewBlocked ||
-              saveState.status === "error" ||
-              !targets.length
-            }
-            onClick={() => reviewBatch("rejected")}
-          >
-            <ButtonLabel>Reject whole item ({targets.length})</ButtonLabel>
-          </Button>
-          <Button
-            $layer="brand"
-            disabled={
-              !batchValid ||
-              !ready ||
-              reviewBlocked ||
-              saveState.status === "error" ||
-              !targets.length
-            }
-            onClick={() => reviewBatch("approved")}
-          >
-            <ButtonLabel>Approve whole item ({targets.length})</ButtonLabel>
-          </Button>
-        </div>
-      </ak.Dialog>
-    </Shell>
+          <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+            {announcement}
+          </p>
+        </ShellFooter>
+        <ak.Dialog
+          open={itemsOpen && narrow}
+          onClose={() => setItemsOpen(false)}
+          render={<Frame $layer="canvas" $border $p={5} $rounded="2xl" />}
+          className="fixed inset-4 z-50 flex flex-col gap-4 text-sm"
+          backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
+        >
+          <div className="flex items-center justify-between">
+            <ak.DialogHeading className="text-base">Screenshots</ak.DialogHeading>
+            <ak.DialogDismiss render={<Button aria-label="Close screenshots" />}>
+              <ButtonSlot>
+                <X />
+              </ButtonSlot>
+            </ak.DialogDismiss>
+          </div>
+          {narrow && itemNavigation}
+        </ak.Dialog>
+        <ak.Dialog
+          open={detailsOpen && narrow}
+          onClose={() => setDetailsOpen(false)}
+          unmountOnHide
+          finalFocus={detailsTrigger}
+          render={<Frame $layer="canvas" $border $p={5} $rounded="2xl" />}
+          className="fixed inset-4 z-50 overflow-auto text-sm"
+          backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <ak.DialogHeading className="text-base">Capture details</ak.DialogHeading>
+            <ak.DialogDismiss render={<Button aria-label="Close capture details" />}>
+              <ButtonSlot>
+                <X />
+              </ButtonSlot>
+            </ak.DialogDismiss>
+          </div>
+          {narrow && variant && (
+            <CaptureDetails model={model} variant={variant} runStatus={runStatus} />
+          )}
+        </ak.Dialog>
+      </Shell>
+    </HeadingLevel>
   );
 }

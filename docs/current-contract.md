@@ -230,7 +230,7 @@ Production uses the existing Cloudflare Workers, with one D1 database and separa
 
 ## Later approved review changes
 
-[PR #184](https://github.com/ariakit/visonaut/pull/184) implements the maintainer's later review feedback. Run views and variants use navigation links with a bar glider; variant links replace the original U03 tabs. The UI can show the requested verdict and advance while saving. Only server-confirmed decisions count as saved, and failed writes restore prior local state.
+[PR #184](https://github.com/ariakit/visonaut/pull/184) implements the maintainer's later review feedback. Run views use navigation links with a bar glider. Variant links replaced the original U03 tabs, and the variant row of D-PRE-07 now replaces those links: a stepper and one status mark for each variant. The UI can show the requested verdict and advance while saving. Only server-confirmed decisions count as saved, and failed writes restore prior local state.
 
 On 2026-10-02, the maintainer requested that items with a new variant stay in the main sidebar list for manual inspection, including after approval. Automatically accepted additions remain approved and do not add pending review work. Ordinary accepted and unchanged items stay under **Accepted**. List placement does not change review actions or GitHub readiness.
 

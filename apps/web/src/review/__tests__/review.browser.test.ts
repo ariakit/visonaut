@@ -14,8 +14,15 @@ async function callCount(page: Page, count: number) {
   await expect.poll(() => page.evaluate(() => window.reviewFixture.calls.length)).toBe(count);
 }
 
+// The stepper of the variant control names the selected variant and its
+// state: `Variant: Solid. Needs review. 2 of 7`.
 function selected(page: Page) {
-  return page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]');
+  return page.getByRole("combobox", { name: /^Variant: / });
+}
+
+/** The name of the stepper when the variant is selected. */
+function variantNamed(name: string) {
+  return new RegExp(`^Variant: ${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\. `);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -65,117 +72,18 @@ test("review surfaces remain dark when the system uses dark mode", async ({ page
   }
 });
 
-test("valid prototype names stay visible in compact variant labels", async ({ page }) => {
-  await page.evaluate(() => {
-    const model = window.reviewFixture.model();
-    const variant = model.items[0]?.variants[0];
-    if (!variant) throw new Error("Missing variant fixture");
-    variant.label = "constructor · toString";
-    window.reviewFixture.update(model);
-  });
-  await expect(page.locator(".review-variant").first().locator(".review-variant-title")).toHaveText(
-    "constructor · toString",
-  );
-});
-
-test("variant icons use brand marks and explain display preferences", async ({ page }) => {
-  const variants = page.getByRole("navigation", { name: "Variants" });
-  for (const name of ["React", "Solid", "Firefox", "WebKit"]) {
-    await expect(
-      variants
-        .getByRole("link", { name: new RegExp(name) })
-        .first()
-        .locator(`.review-variant-icons > span[title="${name}"] img`),
-    ).toBeVisible();
-  }
-  await expect(
-    variants.locator('.review-variant-icons > span[title="Chromium"] img').first(),
-  ).toBeVisible();
-  const brandImages = variants.locator(".review-variant-icons img");
-  await expect
-    .poll(() =>
-      brandImages.evaluateAll((images) =>
-        images.every((image) => image instanceof HTMLImageElement && image.naturalWidth > 0),
-      ),
-    )
-    .toBe(true);
-
-  await page.evaluate(() => {
-    const model = window.reviewFixture.model();
-    const variant = model.items[0]?.variants[0];
-    if (!variant) throw new Error("Missing variant fixture");
-    variant.label = "React · Chromium · no-preference · no-preference · none · 1280 × 720";
-    variant.labelParts = [
-      { kind: "framework", value: "React" },
-      { kind: "browser", value: "Chromium" },
-      { kind: "colorScheme", value: "no-preference" },
-      { kind: "contrast", value: "no-preference" },
-      { kind: "forcedColors", value: "none" },
-      { kind: "key", value: "1280 × 720" },
-    ];
-    window.reviewFixture.update(model);
-  });
-  const icons = variants.getByRole("link").first().locator(".review-variant-icons > span");
-  await expect(icons.nth(2)).toHaveAttribute("title", "Color scheme: no preference");
-  await expect(icons.nth(3)).toHaveAttribute("title", "Contrast: no preference");
-  await expect(icons.nth(4)).toHaveAttribute("title", "Forced colors: none");
-});
-
-test("variant keys do not claim an omitted display preference", async ({ page }) => {
-  await page.evaluate(() => {
-    const model = window.reviewFixture.model();
-    const variant = model.items[0]?.variants[0];
-    if (!variant) throw new Error("Missing variant fixture");
-    variant.key = "none";
-    variant.label = "React · Chromium · none";
-    variant.labelParts = [
-      { kind: "framework", value: "React" },
-      { kind: "browser", value: "Chromium" },
-      { kind: "key", value: "none" },
-    ];
-    window.reviewFixture.update(model);
-  });
-  const summary = page.getByRole("navigation", { name: "Variants" }).getByRole("link").first();
-  await expect(summary.locator(".review-variant-title")).toHaveText("none");
-  await expect(
-    summary.locator('.review-variant-icons > span[title="Forced colors: none"]'),
-  ).toHaveCount(0);
-});
-
-test("framework names do not display browser marks", async ({ page }) => {
-  await page.evaluate(() => {
-    const model = window.reviewFixture.model();
-    const variant = model.items[0]?.variants[0];
-    if (!variant) throw new Error("Missing variant fixture");
-    variant.key = "chrome-firefox";
-    variant.label = "chrome · firefox · chrome-firefox";
-    variant.labelParts = [
-      { kind: "framework", value: "chrome" },
-      { kind: "browser", value: "firefox" },
-      { kind: "key", value: "chrome-firefox" },
-    ];
-    window.reviewFixture.update(model);
-  });
-  const summary = page.getByRole("navigation", { name: "Variants" }).getByRole("link").first();
-  await expect(summary.locator(".review-variant-title")).toHaveText("chrome · chrome-firefox");
-  const icons = summary.locator(".review-variant-icons > span");
-  await expect(icons).toHaveCount(1);
-  await expect(icons.first()).toHaveAttribute("title", "firefox");
-  await expect(icons.first().locator("img")).toBeVisible();
-});
-
 for (const width of [1280, 390]) {
   test(`automatically accepted additions stay in the main list at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     if (width < 1024) {
-      await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+      await page.getByRole("button", { name: "Show list", exact: true }).click();
     }
     const accepted = page.getByRole("button", { name: "Accepted (1)" });
     const addition = page.locator('[id="review-item-new%2Fopen"]');
     await expect(addition).toBeVisible();
     await expect(accepted).toHaveAttribute("aria-expanded", "false");
     await expect(addition).toContainText("0 of 1 need review");
-    await expect(page.locator(".review-run-progress")).toContainText("9 of 11 need review");
+    await expect(page.locator(".review-run-progress")).toContainText("9 left");
     await page.locator('[id="review-item-menu%2Fopen"]').click();
     await page.keyboard.press("ArrowDown");
     await expect(addition).toBeFocused();
@@ -185,10 +93,12 @@ for (const width of [1280, 390]) {
     if (width < 1024) {
       await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
     }
-    await expect(page.locator(".review-result-heading")).toContainText("Accepted automatically");
+    await expect(
+      page.locator(".review-variant-row").getByRole("img", { name: "Added" }),
+    ).toBeVisible();
     await focusWorkspace(page);
     await page.keyboard.press("ArrowUp");
-    await expect(selected(page)).toContainText("Menu");
+    await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
     await callCount(page, 0);
     expect(
       await page.evaluate(() => window.reviewFixture.model().items[2]?.variants[0]),
@@ -198,7 +108,7 @@ for (const width of [1280, 390]) {
       source: "automatic",
     });
     if (width < 1024) {
-      await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+      await page.getByRole("button", { name: "Show list", exact: true }).click();
     }
     await addition.click();
     await page.keyboard.press("ArrowDown");
@@ -235,26 +145,26 @@ test("mixed items stay visible after their changed and added variants are approv
   const addition = page.locator('[id="review-item-new%2Fopen"]');
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
   await expect(addition).toContainText("1 of 3 need review");
-  await expect(page.locator(".review-run-progress")).toContainText("8 of 13 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("8 left");
   await addition.click();
-  await expect(selected(page)).toContainText("Existing");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Existing"));
   await ready(page);
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
   await expect(addition).toContainText("0 of 3 need review");
-  await expect(page.locator(".review-run-progress")).toContainText("7 of 13 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("7 left");
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
   await addition.click();
   await page
-    .getByRole("navigation", { name: "Variants" })
-    .getByRole("link", { name: /Addition/ })
+    .getByRole("group", { name: "Variants" })
+    .getByRole("link", { name: /^Addition\./ })
     .click();
   await ready(page);
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await callCount(page, 2);
   await expect(addition).toBeVisible();
   await expect(addition).toContainText("0 of 3 need review");
-  await expect(page.locator(".review-run-progress")).toContainText("7 of 13 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("7 left");
   await expect(accepted).toHaveAttribute("aria-expanded", "false");
   expect(
     await page.evaluate(() => window.reviewFixture.model().items[2]?.variants[0]),
@@ -373,44 +283,47 @@ test("keyboard item navigation follows attention items before accepted items", a
 
 test("item and variant navigation stops at ends and remembers each item", async ({ page }) => {
   await page.keyboard.press("ArrowUp");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await page.keyboard.press("6");
-  await expect(selected(page)).toContainText("WebKit");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("WebKit"));
   await page.keyboard.press("ArrowRight");
-  await expect(selected(page)).toContainText("Wide");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Wide"));
   await page.keyboard.press("ArrowRight");
-  await expect(selected(page)).toContainText("Wide");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Wide"));
   await page.keyboard.press("ArrowDown");
-  await expect(selected(page)).toContainText("Menu");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
   await page.keyboard.press("2");
-  await expect(selected(page)).toContainText("Menu-dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu-dark"));
   await page.keyboard.press("6");
-  await expect(selected(page)).toContainText("Menu-dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu-dark"));
   await page.keyboard.press("ArrowUp");
-  await expect(selected(page)).toContainText("Wide");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Wide"));
   await page.keyboard.press("ArrowDown");
-  await expect(selected(page)).toContainText("Menu-dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu-dark"));
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
-  await expect(selected(page)).toContainText("Removal");
+  // A screenshot with one variant names it as text, with no stepper.
+  await expect(page.getByRole("heading", { name: /Removed item/ })).toBeVisible();
+  await expect(selected(page)).toHaveCount(0);
 });
 
 test("shortcuts keep working after a click on a variant chip", async ({ page }) => {
   await page.getByRole("link", { name: /Solid/ }).click();
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.keyboard.press("ArrowRight");
-  await expect(selected(page)).toContainText("Dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Dark"));
   await page.keyboard.press("d");
   await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await expect(selected(page)).toBeFocused();
+  // The focus follows the selection to the mark of the new variant.
+  await expect(page.getByRole("link", { name: /^Dark\./ })).toBeFocused();
   await ready(page);
   await page.keyboard.press("a");
   await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
-  await expect(selected(page)).toContainText("Contrast");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Contrast"));
   await callCount(page, 1);
   const calls = await page.evaluate(() => window.reviewFixture.calls);
   expect(calls[0]).toMatchObject({
@@ -424,47 +337,42 @@ test("the next arrow key follows the selection after a shortcut on a variant chi
 }) => {
   await page.getByRole("link", { name: /Solid/ }).click();
   await page.keyboard.press("5");
-  await expect(selected(page)).toContainText("Firefox");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Firefox"));
   await page.keyboard.press("ArrowRight");
-  await expect(selected(page)).toContainText("WebKit");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("WebKit"));
 });
 
-test("the selected variant chip is inside the strip without moving the page", async ({ page }) => {
+test("the selected variant mark is visible with seven variants, and a key does not move the page", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 300 });
-  await page.goto("/src/review/__tests__/index.html?fifthVariantChanged");
-  await ready(page);
-  const strip = page.getByRole("navigation", { name: "Variants" });
-  const chipIsInside = () =>
-    strip.evaluate((element) => {
-      const chip = element.querySelector('a[aria-current="page"]');
-      if (!chip) return false;
-      const stripBox = element.getBoundingClientRect();
-      const chipBox = chip.getBoundingClientRect();
-      return chipBox.left >= stripBox.left && chipBox.right <= stripBox.right;
-    });
-  await expect(selected(page)).toContainText("Firefox");
-  expect(await strip.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
-  await expect.poll(chipIsInside).toBe(true);
-  expect(await page.evaluate(() => window.scrollY)).toBe(0);
-
-  // With the strip above the viewport, a scroll of the page would show.
-  await page.evaluate(() => window.scrollTo(0, 400));
-  expect(await page.evaluate(() => window.scrollY)).toBe(400);
-  expect(await strip.evaluate((element) => element.getBoundingClientRect().bottom)).toBeLessThan(0);
+  const marks = page.getByRole("group", { name: "Variants" });
+  const current = marks.locator('a[aria-current="true"]');
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
+  await expect(marks.getByRole("link")).toHaveCount(7);
+  await expect(current).toHaveAccessibleName(/^React\./);
+  await expect(current).toBeInViewport();
+  // After a click on a mark, the right arrow moves one variant.
+  await marks.getByRole("link", { name: /^WebKit\./ }).click();
   await page.keyboard.press("ArrowRight");
-  await expect(selected(page)).toContainText("WebKit");
-  await expect.poll(chipIsInside).toBe(true);
-  await page.keyboard.press("1");
-  await expect(selected(page)).toContainText("React");
-  await expect.poll(chipIsInside).toBe(true);
-  expect(await page.evaluate(() => window.scrollY)).toBe(400);
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Wide"));
+  await expect(current).toHaveAccessibleName(/^Wide\./);
+  await expect(current).toBeInViewport();
+
+  // With the variant row above the viewport, a scroll of the page would show.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const scrolled = await page.evaluate(() => window.scrollY);
+  expect(scrolled).toBeGreaterThan(0);
+  await page.keyboard.press("2");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
+  expect(await page.evaluate(() => window.scrollY)).toBe(scrolled);
 });
 
 test("item navigation picks the first variant needing review unless one was chosen", async ({
   page,
 }) => {
   await page.keyboard.press("ArrowDown");
-  await expect(selected(page)).toContainText("Menu");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
   await page.keyboard.press("ArrowUp");
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
@@ -476,7 +384,7 @@ test("item navigation picks the first variant needing review unless one was chos
   });
   await expect(page.locator('[id="review-item-menu%2Fopen"]')).toContainText("1 of 2 need review");
   await page.keyboard.press("ArrowDown");
-  await expect(selected(page)).toContainText("Menu-dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu-dark"));
 });
 
 test("a missing remembered key falls back and announces the first variant", async ({ page }) => {
@@ -489,7 +397,7 @@ test("a missing remembered key falls back and announces the first variant", asyn
     window.reviewFixture.update(model);
   });
   await page.keyboard.press("ArrowUp");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await expect(
     page.getByText("The remembered variant is unavailable. Selected React", { exact: false }),
   ).toBeVisible();
@@ -501,18 +409,18 @@ test("approve and reject queue while saving, and repeat keys do not submit twice
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
   await page.keyboard.press("a");
   await callCount(page, 1);
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
-  await expect(page.locator(".review-run-progress")).toContainText("8 of 11 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("8 left");
   await ready(page);
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
   await page
     .getByLabel("Review workspace", { exact: true })
     .dispatchEvent("keydown", { key: "a", repeat: true });
   await page.keyboard.press("x");
-  await expect(selected(page)).toContainText("Dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Dark"));
   await expect(page.getByRole("link", { name: /Solid.*Rejected/ })).toBeVisible();
-  await expect(page.locator(".review-run-progress")).toContainText("7 of 11 need review");
+  await expect(page.locator(".review-run-progress")).toContainText("7 left");
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   await callCount(page, 1);
   await page.evaluate(() => window.reviewFixture.resolve());
@@ -523,11 +431,11 @@ test("approve and reject queue while saving, and repeat keys do not submit twice
     window.reviewFixture.resolve();
   });
   await expect(page.getByText("1 variant rejected. Saved.")).toBeVisible();
-  await expect(selected(page)).toContainText("Dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Dark"));
   const calls = await page.evaluate(() => window.reviewFixture.calls);
   expect(calls[1]).toMatchObject({ verdict: "rejected" });
   await page.keyboard.press("Control+z");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
 });
@@ -537,11 +445,11 @@ test("queued whole-item decisions use revisions from earlier pending decisions",
 }) => {
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await ready(page);
   await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
   await page.getByRole("button", { name: /Reject whole item/ }).click();
-  await expect(selected(page)).toContainText("Menu");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
   await expect(page.locator(".review-save-state")).toHaveText("Saving…");
   // The service queued the two decisions, and no receipt is final. The
   // browser still asks before it leaves: the event is cancelled.
@@ -566,7 +474,7 @@ test("queued whole-item decisions use revisions from earlier pending decisions",
     })),
   });
   await page.keyboard.press("Control+z");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
 });
@@ -576,10 +484,10 @@ test("a later failed save preserves confirmed decisions and retries its exact co
 }) => {
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await ready(page);
   await page.keyboard.press("x");
-  await expect(selected(page)).toContainText("Dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Dark"));
   await page.evaluate(() => window.reviewFixture.resolve());
   await callCount(page, 2);
   await page.evaluate(() => {
@@ -587,7 +495,7 @@ test("a later failed save preserves confirmed decisions and retries its exact co
     window.reviewFixture.resolve();
   });
   await expect(page.getByRole("alert")).toContainText("Could not confirm the queued decisions");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
   await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
@@ -602,13 +510,13 @@ for (const behavior of ["offline", "conflict", "noop"]) {
     await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
     await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
     await expect(selected(page)).toHaveAccessibleName(/Solid/);
-    await expect(page.locator(".review-run-progress")).toContainText("8 of 11 need review");
+    await expect(page.locator(".review-run-progress")).toContainText("8 left");
     await page.evaluate((behavior) => {
       window.reviewFixture.setBehavior(behavior);
       window.reviewFixture.resolve();
     }, behavior);
     await expect(selected(page)).toHaveAccessibleName(/React.*Needs review/);
-    await expect(page.locator(".review-run-progress")).toContainText("9 of 11 need review");
+    await expect(page.locator(".review-run-progress")).toContainText("9 left");
     await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   });
 }
@@ -752,25 +660,23 @@ test("long item and variant names keep the navigation and main header compact", 
     }
     window.reviewFixture.update(model);
   });
-  const links = page.getByRole("navigation", { name: "Variants" }).getByRole("link");
-  for (const link of await links.all()) {
-    const bounds = await link.boundingBox();
-    expect(bounds?.height).toBeLessThanOrEqual(48);
-    expect((await link.locator(".review-variant-title").boundingBox())?.width).toBeLessThanOrEqual(
-      192,
-    );
+  const marks = page.getByRole("group", { name: "Variants" }).getByRole("link");
+  for (const mark of await marks.all()) {
+    expect((await mark.boundingBox())?.height).toBeLessThanOrEqual(48);
   }
-  expect((await page.locator(".shell-main-header").boundingBox())?.height).toBeLessThanOrEqual(48);
+  const header = page.getByRole("banner");
+  expect((await header.boundingBox())?.height).toBeLessThanOrEqual(49);
+  expect((await page.locator(".review-variant-row").boundingBox())?.height).toBeLessThanOrEqual(48);
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
-  expect((await page.locator(".shell-main-header").boundingBox())?.height).toBeLessThanOrEqual(48);
+  expect((await header.boundingBox())?.height).toBeLessThanOrEqual(49);
 });
 
 test("a saved review keeps its reviewer visible when revisited", async ({ page }) => {
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.keyboard.press("ArrowLeft");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await page.getByRole("button", { name: "Details", exact: true }).click();
   await expect(page.getByRole("complementary", { name: "Capture details" })).toContainText(
     "maintainer-1",
@@ -790,9 +696,9 @@ test("whole item freezes all changed IDs in one undoable command", async ({ page
       expectedRevision: 0,
     })),
   });
-  await expect(selected(page)).toContainText("Menu");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
   await page.keyboard.press("Control+z");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
@@ -811,13 +717,13 @@ test("next pending wraps, skips automatic verdicts and reviewed rejections", asy
   await page.keyboard.press("2");
   await ready(page);
   await page.keyboard.press("x");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await ready(page);
   await page.keyboard.press("a");
   await expect(
     page.getByText("Review complete. No variants need review.", { exact: true }),
   ).toBeVisible();
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
 });
 
 test("undo restores automatic acceptance and the original selection", async ({ page }) => {
@@ -825,10 +731,12 @@ test("undo restores automatic acceptance and the original selection", async ({ p
   await page.keyboard.press("ArrowDown");
   await ready(page);
   await page.keyboard.press("x");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await page.keyboard.press("Control+z");
-  await expect(selected(page)).toContainText("Addition");
-  await expect(selected(page)).toHaveAccessibleName(/Accepted automatically/);
+  await expect(page.getByRole("heading", { name: /New item/ })).toBeVisible();
+  await expect(
+    page.locator(".review-variant-row").getByRole("img", { name: "Added" }),
+  ).toBeVisible();
 });
 
 test("protected whole-item rejection refuses every target, while individual actions stay usable", async ({
@@ -844,7 +752,7 @@ test("protected whole-item rejection refuses every target, while individual acti
     }
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("link", { name: /Protected Solid/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Solid\./ })).toBeVisible();
   await page.keyboard.press("Shift+X");
   await callCount(page, 0);
   await expect(
@@ -921,7 +829,9 @@ test("a save from an old run revision makes the page read the model again", asyn
     status: 0,
     model: 1,
   });
-  // The next decision starts from the model of the read.
+  // The next decision starts from the model of the read. A key decides only
+  // what is on screen, so it waits for the images of the next variant.
+  await ready(page);
   await page.keyboard.press("a");
   await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
   await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
@@ -944,7 +854,7 @@ test("already accepted history creates no session undo command", async ({ page }
   await page.keyboard.press("a");
   await callCount(page, 1);
   await expect(page.getByText("This acceptance is already saved.")).toBeVisible();
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 
@@ -1382,7 +1292,7 @@ test("shortcut scope, native modifiers, editing exclusions, and toggle", async (
   await page.keyboard.press("a");
   await page.keyboard.press("ArrowRight");
   await callCount(page, 0);
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
   await callCount(page, 1);
 });
@@ -1395,7 +1305,7 @@ test("conflict identifies reviewer and does not advance or save a partial item",
   await expect(page.getByRole("alert")).toContainText(
     "Conflict. Kenji Mori rejected this variant. Your approval was not saved.",
   );
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await expect(page.getByRole("link", { name: /React.*Rejected/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
@@ -1412,7 +1322,7 @@ test("a conflict with a decision of the same person in another tab says so", asy
   await expect(page.getByRole("alert")).toContainText(
     "Conflict. You already approved this variant. Your rejection was not saved.",
   );
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
 });
 
@@ -1420,23 +1330,23 @@ test("disconnect shows unsaved state and retries the same frozen command", async
   await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
   await page.keyboard.press("a");
   await expect(page.getByRole("alert")).toContainText("Not saved");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await page.keyboard.press("x");
   await callCount(page, 1);
   await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
   await page.getByRole("button", { name: "Retry same command" }).click();
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   const calls = await page.evaluate(() => window.reviewFixture.calls);
   expect(calls[0]).toEqual(calls[1]);
 });
 
 test("Undo conflict preserves the selection and later reviewer state", async ({ page }) => {
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.evaluate(() => window.reviewFixture.setBehavior("conflict"));
   await page.keyboard.press("Control+z");
   await expect(page.getByRole("alert")).toContainText("A later promotion is current");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
 });
 
 test("help closes with Escape and keeps native focus without rejecting", async ({ page }) => {
@@ -1560,7 +1470,7 @@ test("keyboard pan preserves image position across modes and item thumbnails sta
 
 test("session Undo ends on reload", async ({ page }) => {
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await expect(page.getByRole("button", { name: /Undo/ })).toBeEnabled();
   await page.reload();
   await ready(page);
@@ -1571,16 +1481,16 @@ test("a stale latest Undo does not block an older independent session command", 
   page,
 }) => {
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await ready(page);
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Dark"));
   await page.evaluate(() => window.reviewFixture.setBehavior("conflict"));
   await page.keyboard.press("Control+z");
   await expect(page.getByRole("alert")).toContainText("A later promotion is current");
   await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
   await page.keyboard.press("Control+z");
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   const calls = await page.evaluate(() => window.reviewFixture.calls);
   expect(calls[3]?.commandId).toBe(calls[0]?.commandId);
   expect(calls[2]?.commandId).toBe(calls[1]?.commandId);
@@ -1588,13 +1498,13 @@ test("a stale latest Undo does not block an older independent session command", 
 
 test("failed Undo retries its original command identity", async ({ page }) => {
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
   await page.keyboard.press("Control+z");
   await expect(page.getByRole("alert")).toContainText("Not saved");
   await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
   await page.getByRole("button", { name: "Retry Undo", exact: true }).click();
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   const calls = await page.evaluate(() => window.reviewFixture.calls);
   expect(calls[1]).toEqual(calls[2]);
 });
@@ -1670,12 +1580,15 @@ test("a return to the tab after a newer run replaced the run says so with no sav
       "This run is archived. Decisions show the state at archive time and are read-only.";
     window.reviewFixture.replaceServerModel(model);
   });
-  await expect(page.getByText("Comparison superseded", { exact: true })).toHaveCount(0);
+  const evidence = page.locator(".review-evidence");
+  await expect(evidence.getByText("No longer active", { exact: true })).toHaveCount(0);
   await returnToTab(page);
-  await expect(page.getByText("Comparison superseded", { exact: true })).toBeVisible();
+  // The run has no stored reason, so the words name no cause.
+  await expect(evidence.getByText("No longer active", { exact: true })).toBeVisible();
   await expect(
-    page.getByText("A newer attempt replaced this comparison. Its evidence cannot be reviewed."),
+    page.getByText("This run is closed. Its evidence cannot be reviewed.", { exact: true }),
   ).toBeVisible();
+  await expect(page.getByText(/A newer attempt replaced this comparison/)).toHaveCount(0);
   await expect(page.locator(".review-save-state")).toContainText("A newer run replaced this run.");
   await expect(
     page.locator(".review-save-state").getByRole("link", { name: "Go to the Queue" }),
@@ -1807,7 +1720,7 @@ test("archived history keeps navigation while blocking review, Undo, recompare, 
   page,
 }) => {
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await callCount(page, 1);
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
@@ -1831,7 +1744,7 @@ test("archived history keeps navigation while blocking review, Undo, recompare, 
   await page.keyboard.press("Control+z");
   await callCount(page, 1);
   await page.keyboard.press("ArrowRight");
-  await expect(selected(page)).toContainText("Dark");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Dark"));
   await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
 });
 
@@ -1840,7 +1753,7 @@ test("active review has no export control and still saves decisions", async ({ p
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
   await page.keyboard.press("a");
   await callCount(page, 1);
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
 });
 
 test("existing historical work completes while closed history remains read-only", async ({
@@ -1953,7 +1866,7 @@ test("a run that closes before recompare also disables the previous Undo while c
 }) => {
   await page.getByRole("button", { name: "Details", exact: true }).click();
   await page.keyboard.press("a");
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await expect(page.getByRole("button", { name: /Undo/ })).toBeEnabled();
   const previousRevision = await page.evaluate(
     () => window.reviewFixture.model().comparisonRevision,
@@ -1979,16 +1892,16 @@ test("page-wide arrows work from body focus and the off switch preserves native 
     document.body.focus();
   });
   await page.keyboard.press("ArrowRight");
-  await expect(page.locator('.review-variant[aria-current="page"]')).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("heading", { name: "Open menu", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Open menu$/ })).toBeVisible();
   await page.getByRole("button", { name: "Shortcuts on" }).click();
   await page.evaluate(() => document.body.focus());
   await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("heading", { name: "Open menu", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Open menu$/ })).toBeVisible();
   await page.getByRole("textbox", { name: "Outside search" }).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(selected(page)).toContainText("Menu · Chromium");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
 });
 
 test("a diff loads on first use and keeps pan until the variant changes", async ({ page }) => {
@@ -2043,11 +1956,11 @@ test("a diff loads on first use and keeps pan until the variant changes", async 
   await focusWorkspace(page);
   await page.keyboard.press("ArrowRight");
   await ready(page);
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   expect(requests).toBe(1);
   await page.keyboard.press("ArrowLeft");
   await ready(page);
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   expect(requests).toBe(1);
   await page.getByRole("button", { name: "Difference D" }).click();
   await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
@@ -2089,7 +2002,7 @@ for (const imagesExpired of [false, true]) {
       page.getByRole("button", { name: "Approve & next A", exact: true }),
     ).toBeDisabled();
     await page.keyboard.press("ArrowRight");
-    await expect(selected(page)).toContainText("Solid");
+    await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   });
 }
 
@@ -2117,7 +2030,7 @@ for (const forcedColors of ["none", "active"] as const) {
     const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
     await expect(approve).toBeVisible();
     const geometry = await workspace.evaluate((element) => {
-      const context = element.querySelector(".review-result-heading")?.getBoundingClientRect();
+      const context = element.querySelector(".review-variant-row")?.getBoundingClientRect();
       const actions = element.querySelector(".review-actions")?.getBoundingClientRect();
       if (!context || !actions) throw new Error("Missing review header content.");
       return {
@@ -2150,7 +2063,7 @@ test("modal dialogs sit outside the shell and set the base text size themselves"
   expect(await fontSize(batch.getByRole("button").first())).toBe("14px");
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+  await page.getByRole("button", { name: "Show list", exact: true }).click();
   const screenshots = page.getByRole("dialog", { name: "Screenshots", exact: true });
   await expect(screenshots).toBeVisible();
   expect(await fontSize(screenshots.locator(".review-item").first())).toBe("14px");
@@ -2169,7 +2082,7 @@ test("bulk confirmation closes when a queued failure restores another selection"
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
   await page.keyboard.press("a");
   await callCount(page, 1);
-  await expect(selected(page)).toContainText("Solid");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await ready(page);
   await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
   const dialog = page.getByRole("dialog", { name: "Review all changed views" });
@@ -2181,7 +2094,7 @@ test("bulk confirmation closes when a queued failure restores another selection"
   });
   await expect(page.getByRole("alert")).toContainText("Could not confirm the queued decisions");
   await expect(dialog).toBeHidden();
-  await expect(selected(page)).toContainText("React");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await callCount(page, 1);
 });
 
@@ -2222,15 +2135,15 @@ test("workspace arrows and screenshot buttons follow the filtered item order", a
   await expect(page.locator(".review-item")).toHaveCount(2);
   await focusWorkspace(page);
   await page.keyboard.press("ArrowDown");
-  await expect(page.getByRole("heading", { name: "Focus addition", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Focus addition$/ })).toBeVisible();
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("button", { name: "Next screenshot", exact: true })).toBeDisabled();
   await page.keyboard.press("ArrowUp");
-  await expect(page.getByRole("heading", { name: "Focus dialog", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Focus dialog$/ })).toBeVisible();
   await page.getByRole("button", { name: "Next screenshot", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Focus addition", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Focus addition$/ })).toBeVisible();
   await page.getByRole("button", { name: "Previous screenshot", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Focus dialog", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Focus dialog$/ })).toBeVisible();
   await callCount(page, 0);
 });
 
@@ -2238,7 +2151,7 @@ test("mobile screenshot filters persist and update navigation while the dialog i
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+  await page.getByRole("button", { name: "Show list", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Screenshots", exact: true });
   const search = dialog.getByRole("combobox", { name: "Search screenshots" });
   await search.fill("Open menu");
@@ -2251,7 +2164,7 @@ test("mobile screenshot filters persist and update navigation while the dialog i
     page.getByRole("button", { name: "Previous screenshot", exact: true }),
   ).toBeDisabled();
   await next.click();
-  await expect(page.getByRole("heading", { name: "Open menu", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Open menu$/ })).toBeVisible();
   await expect(next).toBeDisabled();
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
@@ -2266,7 +2179,7 @@ test("mobile screenshot filters persist and update navigation while the dialog i
   await expect(
     page.getByRole("heading", { name: "Open menu additional", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+  await page.getByRole("button", { name: "Show list", exact: true }).click();
   await expect(search).toHaveValue("Open menu");
   await expect(dialog.locator(".review-item")).toHaveCount(2);
   await expect(dialog.locator('.review-item[aria-current="page"]')).toContainText(
@@ -2299,4 +2212,16 @@ test("the review shell sets one base text size and no visible text is under 12px
   expect(sizes.smallest).toBeGreaterThanOrEqual(12);
   // A list item is a control with no size of its own, so it takes the base size.
   expect(sizes.control).toBe("14px");
+});
+
+test("the list button opens the screenshots at a width between the two layouts", async ({
+  page,
+}) => {
+  // The header has the stepper from 48rem, and the sidebar shows from 64rem.
+  await page.setViewportSize({ width: 900, height: 800 });
+  const button = page.getByRole("button", { name: "Show list", exact: true });
+  await expect(button).toHaveCount(1);
+  await button.click();
+  const dialog = page.getByRole("dialog", { name: "Screenshots", exact: true });
+  await expect(dialog.getByText("Open menu", { exact: true })).toBeVisible();
 });

@@ -49,7 +49,7 @@ A run must have its complete capture and finished comparison before review actio
 
 ## Inspect an item
 
-The item list groups all variants for one item. Select an item, then select a variant. The full variant label and result appear above the image controls. Counts show how many variants still need review.
+The item list groups all variants for one item. Select an item, then select a variant in the variant row above the image. Its stepper shows the selected variant with its status mark and its position, for example `2 / 6`, and opens a list of all variants. Then the row has one status mark for each variant, and each mark is a link to its variant. A click on an item, or a link that names no variant, opens the first variant that needs review. Up, Down, and the two screenshot buttons of the header open the variant that you selected last in that item. The header shows how many changes still need review.
 
 Items with a new variant stay in the main list for inspection, including after approval. Automatically accepted new variants do not add to the pending review count. Ordinary accepted and unchanged items stay under **Accepted**.
 

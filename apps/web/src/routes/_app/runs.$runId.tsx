@@ -2,7 +2,7 @@ import { createFileRoute, useBlocker, useNavigate, useRouter } from "@tanstack/r
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { useAccessDenied, useSessionFacts } from "../../app-session.tsx";
 import { pageTitle } from "../../page-title.ts";
-import { AppHeader, AppShell } from "../../components/kit/shell.tsx";
+import { AppShell } from "../../components/kit/shell.tsx";
 import {
   ButtonLabel,
   ButtonSlot,
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_app/runs/$runId")({
   ssr: false,
   // The loading text shows at once after a click on a run.
   pendingMs: 0,
-  // The review workspace renders the shell root itself.
+  // The review workspace renders the shell root and its own header.
   staticData: { shell: "page" },
   // Do not hold the hydrated loading shell after the model is ready.
   pendingMinMs: 0,
@@ -151,7 +151,8 @@ function Run() {
   const route: ReviewRoute = {
     runId,
     comparisonId: comparison,
-    selection: item && variant ? { itemKey: item, variantKey: variant } : undefined,
+    // A link with a screenshot and no variant opens the variant of a row click.
+    selection: item ? { itemKey: item, variantKey: variant } : undefined,
     onSelect,
   };
   return (
@@ -211,7 +212,6 @@ function RunPage({
         model={state.model}
         commands={commands}
         route={route}
-        header={<AppHeader />}
         onUnsentDecisionsChange={setUnsentDecisions}
       />
     );

@@ -16,7 +16,7 @@ import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard, type RunsAnswer } from "./dashboard.js";
 import { pullAnswer } from "./pulls.js";
 import { SecurityError } from "@visonaut/security";
-import { CAPTURE_PAGE_ROWS, identityKey } from "@visonaut/protocol";
+import { CAPTURE_PAGE_ROWS, identityKey, runClosedReasons } from "@visonaut/protocol";
 import {
   readReviewCapturePage,
   readReviewInventory,
@@ -108,6 +108,12 @@ async function projectRun(context: PrivateContext, runId: string) {
     throw new SecurityError("not_found", 404, "The run was not found.");
   }
   return run;
+}
+
+function runClosedReason(value: string) {
+  const reason = runClosedReasons.find((candidate) => candidate === value);
+  if (!reason) throw new Error("The run has an invalid closed reason.");
+  return reason;
 }
 
 const archivedReadOnlyReason =
@@ -759,6 +765,8 @@ export async function reviewModel(
             },
           }
         : {}),
+      // `service.run` reads the whole row, so the reason needs no new read.
+      ...(run.closed_reason ? { closedReason: runClosedReason(run.closed_reason) } : {}),
     },
     ...(!run.active || run.state === "accepted" || historical || archive
       ? {

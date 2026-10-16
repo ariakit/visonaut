@@ -3284,3 +3284,36 @@ describe("credential checks before other work", () => {
     ).toBeNull();
   });
 });
+
+describe("the closed reason of a run", () => {
+  it("comes with the run model from the run row that the read already has", async () => {
+    const test = await fixture();
+    await test.complete();
+    const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
+    const read = async () => {
+      const costs = measureD1(database);
+      test.bindings.database = costs.database;
+      const response = await test.send(`/api/runs/${test.runId}`, { headers });
+      test.bindings.database = database;
+      const model = parseReviewModel(JSON.parse(await response.text()));
+      return { model, roundTrips: costs.roundTrips(), statements: costs.costs.length };
+    };
+    const close = (reason: string | null) =>
+      database
+        .prepare(
+          "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = 1, closed_reason = ? WHERE id = ?",
+        )
+        .bind(reason, test.runId)
+        .run();
+    // A run that closed before the stored reason has none.
+    await close(null);
+    const unknown = await read();
+    expect(unknown.model.run).not.toHaveProperty("closedReason");
+    await close("pull-request-closed");
+    const closed = await read();
+    expect(closed.model.run.closedReason).toBe("pull-request-closed");
+    // The reason adds no statement and no round trip to the read.
+    expect(closed.roundTrips).toBe(unknown.roundTrips);
+    expect(closed.statements).toBe(unknown.statements);
+  });
+});
