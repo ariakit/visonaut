@@ -5,13 +5,12 @@ import { join } from "node:path";
 import { expect, it } from "vitest";
 import { sanitizeRestoredDatabase, inspectRecoveryImages, readRestoreCutoff } from "./recovery.ts";
 import { TestDatabase, captured, context } from "./test-fixtures.ts";
-import { archiveClosedRuns, readRunHistory } from "./history.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import { expireRunImages } from "./retention.ts";
 import { expireSnapshotImages } from "./snapshot-retention.ts";
 import { dashboard } from "../api/dashboard.ts";
 
-it("retains the latest cutoff and permits a fresh capture with readable history and verified images", async () => {
+it("retains the latest cutoff and permits a fresh capture with verified images", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context, "old");
@@ -32,18 +31,6 @@ it("retains the latest cutoff and permits a fresh capture with readable history 
   fixture.state.time += 1;
   const fresh = await captured(fixture.context, "fresh");
   await fresh.retireRun({ runId: "fresh", now: fixture.state.time });
-  for (let step = 0; step < 50; step++) {
-    const report = await archiveClosedRuns(fixture.context);
-    expect(report.attention).toEqual([]);
-    if (report.completed.includes("fresh")) break;
-  }
-  expect(await readRunHistory(fixture.context, "fresh")).toMatchObject({
-    sections: {
-      run: [expect.objectContaining({ id: "fresh" })],
-      captures: [expect.objectContaining({ id: "capture-fresh" })],
-      comparisonRows: [expect.objectContaining({ comparison_id: "comparison-fresh" })],
-    },
-  });
   expect(await inspectRecoveryImages(fixture.context)).toMatchObject({
     checked: 2,
     missing: [],
@@ -60,8 +47,8 @@ it.each(["building", "ready", "failed", "expired"])(
     const fixture = context(database);
     await captured(fixture.context, "exported", "main");
     database.connection.exec(`
-      INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at)
-        VALUES('exported','project','exported','comparison-exported','sha','accepted',1,'baselines/exported',0);
+      INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at,inventory_key,inventory_digest,inventory_bytes,capture_count,inventory_verified)
+        VALUES('exported','project','exported','comparison-exported','sha','accepted',1,'baselines/exported',0,'baselines/exported/inventory/manifest.json','digest',1,1,1);
       INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES('exported','export','export:old');
       INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('exported','export:old','recovery');
     `);
@@ -70,7 +57,7 @@ it.each(["building", "ready", "failed", "expired"])(
         "INSERT INTO operations_exports(id,run_id,actor_id,state,expires_at,created_at) VALUES('old','exported','maintainer',?,1,0)",
       )
       .run(exportState);
-    await fixture.images.put("baselines/exported/original", "protected-image");
+    await fixture.images.put("baselines/exported/images/original", "protected-image");
     await sanitizeRestoredDatabase(database, fixture.state.time);
     await sanitizeRestoredDatabase(database, fixture.state.time);
     expect(database.connection.prepare("SELECT * FROM operations_exports").all()).toEqual([]);
@@ -84,13 +71,6 @@ it.each(["building", "ready", "failed", "expired"])(
         .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='exported'")
         .get(),
     ).toEqual({ byte_state: "retiring" });
-    let archived = false;
-    for (let step = 0; step < 50 && !archived; step++) {
-      const result = await archiveClosedRuns(fixture.context);
-      expect(result.attention).toEqual([]);
-      archived = result.completed.includes("exported");
-    }
-    expect(archived).toBe(true);
     for (let pass = 0; pass < 100; pass++) {
       const result = await summarizeClosedRuns(fixture.context);
       if (result.completed.includes("exported")) break;
@@ -99,14 +79,14 @@ it.each(["building", "ready", "failed", "expired"])(
     fixture.state.time += 86400001;
     for (
       let step = 0;
-      step < 5 && fixture.images.objects.has("baselines/exported/original");
+      step < 5 && fixture.images.objects.has("baselines/exported/images/original");
       step++
     ) {
       const result = await expireSnapshotImages(fixture.context);
       expect(result.attention).toEqual([]);
     }
     expect(fixture.images.objects.has("runs/exported/original")).toBe(false);
-    expect(fixture.images.objects.has("baselines/exported/original")).toBe(false);
+    expect(fixture.images.objects.has("baselines/exported/images/original")).toBe(false);
     expect(
       database.connection
         .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='exported'")
@@ -115,7 +95,7 @@ it.each(["building", "ready", "failed", "expired"])(
   },
 );
 
-it("archives and expires restored unfinished work without restarting existing retention clocks", async () => {
+it("expires restored unfinished work without restarting existing retention clocks", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   const service = await captured(fixture.context, "restored");
@@ -138,19 +118,9 @@ it("archives and expires restored unfinished work without restarting existing re
     { id: "restored", closed_at: restoredAt },
   ]);
   expect(database.connection.prepare("SELECT * FROM work_retention_pins").all()).toEqual([]);
-  const archived = new Set<string>();
-  for (let step = 0; step < 50 && archived.size < 2; step++) {
-    const result = await archiveClosedRuns(fixture.context);
-    expect(result.attention).toEqual([]);
-    for (const id of result.completed) {
-      archived.add(id);
-    }
-  }
-  expect([...archived].sort()).toEqual(["closed", "restored"]);
   expect((await expireRunImages(fixture.context)).completed).toEqual([]);
   fixture.state.time += 31 * 86400000;
   const expired = new Set<string>();
-  // The shared two-object budget verifies one root and one page per turn.
   for (let step = 0; step < 100 && expired.size < 2; step++) {
     const summary = await summarizeClosedRuns(fixture.context);
     expect(summary.attention).toEqual([]);
@@ -173,13 +143,19 @@ it("preserves current and explicit evidence roots while retiring the former roll
     database.connection.prepare("UPDATE visonaut_runs SET state='accepted' WHERE id=?").run(id);
     database.connection
       .prepare(
-        "INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES(?,'project',?,?,'sha','accepted',1,?,0)",
+        "INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at,inventory_key,inventory_digest,inventory_bytes,capture_count,inventory_verified) VALUES(?,'project',?,?,'sha','accepted',1,?,0,?,'digest',1,1,1)",
       )
-      .run(id, id, `comparison-${id}`, `baselines/${id}`);
+      .run(
+        id,
+        id,
+        `comparison-${id}`,
+        `baselines/${id}`,
+        `baselines/${id}/inventory/manifest.json`,
+      );
     database.connection
       .prepare("INSERT INTO work_retention_pins(run_id,owner,reason) VALUES(?,?,'baseline')")
       .run(id, `promotion:${id}`);
-    await fixture.images.put(`baselines/${id}/original`, "protected-image");
+    await fixture.images.put(`baselines/${id}/images/original`, "protected-image");
   }
   for (const reason of ["manual", "command", "comparison", "review", "rollback"]) {
     const id = `pinned-${reason}`;
@@ -232,7 +208,6 @@ it("preserves current and explicit evidence roots while retiring the former roll
   ).toEqual(roots);
   expect(database.connection.prepare("SELECT * FROM visonaut_commands").all()).toEqual(command);
   fixture.state.time += 31 * 86400000;
-  expect((await archiveClosedRuns(fixture.context)).completed).toEqual([]);
   expect((await expireRunImages(fixture.context)).completed).toEqual([]);
   await expireSnapshotImages(fixture.context);
   expect(
@@ -248,8 +223,8 @@ it("preserves current and explicit evidence roots while retiring the former roll
   expect([...fixture.images.objects.keys()].filter((key) => key.startsWith("runs/"))).toHaveLength(
     7,
   );
-  expect(fixture.images.objects.has("baselines/current/original")).toBe(true);
-  expect(fixture.images.objects.has("baselines/rollback/original")).toBe(true);
+  expect(fixture.images.objects.has("baselines/current/images/original")).toBe(true);
+  expect(fixture.images.objects.has("baselines/rollback/images/original")).toBe(true);
 
   // A later baseline transition leaves the restored snapshot outside both roots.
   database.connection.exec(
@@ -261,25 +236,22 @@ it("preserves current and explicit evidence roots while retiring the former roll
       .prepare("SELECT byte_state FROM visonaut_snapshot_retention WHERE snapshot_id='current'")
       .get(),
   ).toEqual({ byte_state: "retiring" });
-  let archived = false;
-  for (let step = 0; step < 50 && !archived; step++) {
-    const result = await archiveClosedRuns(fixture.context);
-    expect(result.attention).toEqual([]);
-    archived = result.completed.includes("current");
-  }
-  expect(archived).toBe(true);
   for (let pass = 0; pass < 100; pass++) {
     const result = await summarizeClosedRuns(fixture.context);
     if (result.completed.includes("current")) break;
   }
   expect((await expireRunImages(fixture.context)).completed).toEqual(["current"]);
   fixture.state.time += 86400001;
-  for (let step = 0; step < 5 && fixture.images.objects.has("baselines/current/original"); step++) {
+  for (
+    let step = 0;
+    step < 5 && fixture.images.objects.has("baselines/current/images/original");
+    step++
+  ) {
     await expireSnapshotImages(fixture.context);
   }
   expect(fixture.images.objects.has("runs/current/original")).toBe(false);
-  expect(fixture.images.objects.has("baselines/current/original")).toBe(false);
-  expect(fixture.images.objects.has("baselines/rollback/original")).toBe(true);
+  expect(fixture.images.objects.has("baselines/current/images/original")).toBe(false);
+  expect(fixture.images.objects.has("baselines/rollback/images/original")).toBe(true);
   expect(
     database.connection.prepare("SELECT closed_at FROM visonaut_runs WHERE id='current'").get(),
   ).toEqual({ closed_at: restoredAt });
@@ -320,29 +292,13 @@ it("rolls back run closure and pin removal together when restore cleanup fails",
   expect(await readRestoreCutoff(database)).toBe(0);
 });
 
-it("keeps verified history and drops unfinished run and comparison archives independently of auth tables", async () => {
+it("sanitizes a restored database that has no auth tables", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context, "ready");
   await captured(fixture.context, "building");
-  database.connection.exec(`
-    INSERT INTO operations_run_archives(run_id,generation,state,source_revision,project_revision,object_key,digest,bytes,page_count,progress_json,created_at,verified_at)
-      VALUES('ready','generation','ready',0,0,'history/ready/generation/manifest.json','digest',1,0,'{}',0,0),
-      ('building','generation','building',0,0,'history/building/generation/manifest.json',NULL,NULL,0,'{}',0,NULL);
-    INSERT INTO operations_comparison_archives(comparison_id,run_id,generation,state,object_key,digest,bytes,page_count,created_at,verified_at)
-      VALUES('comparison-ready','ready','supplement','ready','history/ready/supplement/manifest.json','digest',1,0,0,0),
-      ('comparison-building','building','supplement','building',NULL,NULL,NULL,0,0,NULL);
-    DROP TABLE account;
-  `);
+  database.connection.exec("DROP TABLE account");
   await sanitizeRestoredDatabase(database, fixture.state.time);
-  expect(
-    database.connection.prepare("SELECT run_id,state FROM operations_run_archives").all(),
-  ).toEqual([{ run_id: "ready", state: "ready" }]);
-  expect(
-    database.connection
-      .prepare("SELECT comparison_id,state FROM operations_comparison_archives")
-      .all(),
-  ).toEqual([{ comparison_id: "comparison-ready", state: "ready" }]);
   expect(
     database.connection.prepare("SELECT id,active,state FROM visonaut_runs ORDER BY id").all(),
   ).toEqual([

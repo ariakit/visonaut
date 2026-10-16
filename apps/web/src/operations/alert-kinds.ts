@@ -14,7 +14,6 @@ export type AlertKind =
   | "check-delivery"
   | "comparison-finalization"
   | "database-capacity"
-  | "historical-archive"
   | "history"
   | "promotion"
   | "reference-retention"

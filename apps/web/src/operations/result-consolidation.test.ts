@@ -8,13 +8,6 @@ import { reviewModel } from "../api/review.ts";
 import { parseReviewModel } from "../review/client.ts";
 import type { PrivateContext } from "../api/context.ts";
 import { readClosedSummary, summarizeClosedRuns } from "./closed-summary.ts";
-import {
-  archiveClosedRuns,
-  readRunHistory,
-  writeHistoryStep,
-  type HistoryProgress,
-} from "./history.ts";
-import { historySections } from "./history-format.ts";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
 import type { OperationsContext } from "./types.ts";
 
@@ -319,57 +312,35 @@ it.each(["changed", "unchanged"] as const)(
   },
 );
 
-it.each(["live", "archive"])(
-  "keeps resolved results in the closed summary of a %s run after capture cleanup",
-  async (source) => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    const test = await localFixture(fixture.context);
-    await test.compare();
-    await test.service.retireRun({ runId: "run", now: fixture.context.now() });
-    if (source === "archive") {
-      for (let step = 0; step < 60; step++) {
-        const report = await archiveClosedRuns(fixture.context);
-        expect(report.attention).toEqual([]);
-        if (report.completed.includes("run")) break;
-      }
-      const history = await readRunHistory(fixture.context, "run");
-      expect(JSON.parse(String(history?.sections.comparisonRows?.[0]?.result_json))).toEqual(
-        changedResult,
-      );
-    }
-    fixture.state.time += closedRunRetentionMs + 1;
-    for (let step = 0; step < 60; step++) {
-      const report = await summarizeClosedRuns(fixture.context);
-      expect(report.attention).toEqual([]);
-      if (report.completed.includes("run")) break;
-    }
-    const summary = await readClosedSummary(database, "run");
-    if (source === "archive") {
-      // The archive deleted the undecided row from D1, and the summary reads
-      // no copy of the archive pages since #276.
-      expect(summary?.sections.comparisonRows).toEqual([]);
-    } else {
-      expect(JSON.parse(String(summary?.sections.comparisonRows?.[0]?.result_json))).toEqual(
-        changedResult,
-      );
-      expect((await test.model()).items[0]?.variants[0]).toMatchObject({
-        changedPixels: 1,
-        ratio: 1,
-      });
-    }
-    expect(
-      database.connection.prepare("SELECT id FROM visonaut_captures WHERE id='capture-run'").get(),
-    ).toBeUndefined();
-    expect(
-      database.connection
-        .prepare(
-          "SELECT capture_id FROM visonaut_snapshot_images WHERE snapshot_id='snapshot-seed'",
-        )
-        .get(),
-    ).toEqual({ capture_id: "capture-seed" });
-  },
-);
+it("keeps resolved results in the closed summary of a run after capture cleanup", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const test = await localFixture(fixture.context);
+  await test.compare();
+  await test.service.retireRun({ runId: "run", now: fixture.context.now() });
+  fixture.state.time += closedRunRetentionMs + 1;
+  for (let step = 0; step < 60; step++) {
+    const report = await summarizeClosedRuns(fixture.context);
+    expect(report.attention).toEqual([]);
+    if (report.completed.includes("run")) break;
+  }
+  const summary = await readClosedSummary(database, "run");
+  expect(JSON.parse(String(summary?.sections.comparisonRows?.[0]?.result_json))).toEqual(
+    changedResult,
+  );
+  expect((await test.model()).items[0]?.variants[0]).toMatchObject({
+    changedPixels: 1,
+    ratio: 1,
+  });
+  expect(
+    database.connection.prepare("SELECT id FROM visonaut_captures WHERE id='capture-run'").get(),
+  ).toBeUndefined();
+  expect(
+    database.connection
+      .prepare("SELECT capture_id FROM visonaut_snapshot_images WHERE snapshot_id='snapshot-seed'")
+      .get(),
+  ).toEqual({ capture_id: "capture-seed" });
+});
 
 it("preserves inline legacy results and refuses malformed or broken local references", async () => {
   using database = new TestDatabase();
@@ -424,40 +395,6 @@ it("preserves inline legacy results and refuses malformed or broken local refere
   ).toEqual({ candidate_capture_id: "capture-run" });
 });
 
-it("bounds archive reads by resolved JSON bytes and resumes each row", async () => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  const original = { ...changedResult, detail: "é".repeat(200_000) };
-  const test = await localFixture(fixture.context, original);
-  await test.compare();
-  const insert = database.connection.prepare(
-    "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,candidate_capture_id,tuple_json,outcome,result_json) VALUES(?,'comparison-run',?,'light',?,'capture-run','{}','changed',?)",
-  );
-  for (let index = 0; index < 4; index++) {
-    insert.run(`row-${index}`, `item-${index}`, index + 1, marker);
-  }
-  fixture.context.budget.maximumObjectBytes = 2 * 1024 * 1024;
-  const progress: HistoryProgress = {
-    section: historySections.indexOf("comparisonRows"),
-    cursor: "",
-    pages: [],
-  };
-  const ids: string[] = [];
-  for (let step = 0; step < 5 && ids.length < 5; step++) {
-    await writeHistoryStep(fixture.context, {
-      runId: "run",
-      generation: "resolved",
-      progress,
-      limit: 1,
-      async onPage(section, rows) {
-        if (section === "comparisonRows") ids.push(...rows.map((row) => String(row.id)));
-      },
-    });
-  }
-  expect(ids).toEqual(["comparison-run:capture-run", "row-0", "row-1", "row-2", "row-3"]);
-  expect(progress.pages.map((page) => page.rows)).toEqual([2, 2, 1]);
-});
-
 it("uses the same native D1 insert writes for an inline result and its capture reference", async () => {
   const runtime = new Miniflare(
     convertV4MiniflareOptions({
@@ -477,26 +414,6 @@ it("uses the same native D1 insert writes for an inline result and its capture r
     expect(
       JSON.parse((await test.service.comparisonRows("comparison-run"))[0]?.result_json ?? "null"),
     ).toEqual(changedResult);
-    const progress: HistoryProgress = {
-      section: historySections.indexOf("images"),
-      cursor: "",
-      pages: [],
-    };
-    const imageIds: unknown[] = [];
-    await writeHistoryStep(
-      { ...fixture.context, database },
-      {
-        runId: "run",
-        comparisonId: "comparison-run",
-        generation: "native",
-        progress,
-        limit: 1,
-        async onPage(section, rows) {
-          if (section === "images") imageIds.push(...rows.map((row) => row.id));
-        },
-      },
-    );
-    expect(imageIds).toEqual(["image-run", "mask-run", "thumbnail-run"]);
     const sql =
       "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT ?,comparison_id,?,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,? FROM visonaut_comparison_rows WHERE id='comparison-run:capture-run'";
     const inline = await database

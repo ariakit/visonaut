@@ -2,7 +2,6 @@ import { expect, it } from "vitest";
 import { digestJson } from "@visonaut/protocol";
 import { captureProfileReference, storeCaptureProfiles } from "../profiles.ts";
 import { readClosedSummary, summarizeClosedRuns } from "./closed-summary.ts";
-import { archiveClosedRuns, readArchivedSection } from "./history.ts";
 import { inspectRecoveryImages, sanitizeRestoredDatabase } from "./recovery.ts";
 import { captured, context, profile, TestDatabase } from "./test-fixtures.ts";
 
@@ -58,47 +57,6 @@ it("copies no capture metadata into the closed summary", async () => {
   const summary = await readClosedSummary(database, "run");
   expect(summary?.sections.comparisonRows).toHaveLength(1);
   expect(summary?.sections.captures).toBeUndefined();
-  expect(
-    database.connection
-      .prepare(
-        "SELECT (SELECT COUNT(*) FROM visonaut_closed_summary_rows)+(SELECT COUNT(*) FROM visonaut_closed_summary_decisions) AS copies",
-      )
-      .get(),
-  ).toEqual({ copies: 0 });
-});
-
-it("keeps omission metadata in archived capture pages and refuses historical representative replay", async () => {
-  using database = new TestDatabase();
-  const fixture = await localFixture(database);
-  await fixture.service.retireRun({ runId: "run", now: fixture.context.now() });
-  for (let step = 0; step < 100; step++) {
-    const report = await archiveClosedRuns(fixture.context);
-    expect(report.attention).toEqual([]);
-    if (report.completed.includes("run")) break;
-  }
-  const captures: Record<string, unknown>[] = [];
-  for await (const rows of readArchivedSection(fixture.context, "run", "captures"))
-    captures.push(...rows);
-  expect(JSON.parse(String(captures[0]?.metadata_json))).toMatchObject({
-    localMode: "local-v1",
-    candidateStored: false,
-    observedImage: fixture.metadata.observedImage,
-    comparison: fixture.metadata.comparison,
-    comparisonDigest: fixture.metadata.comparisonDigest,
-  });
-  await expect(
-    fixture.service.createComparison({
-      id: "replay",
-      runId: "run",
-      referenceSnapshotId: null,
-      now: fixture.context.now(),
-      // @ts-expect-error Stored representatives cannot supply a verified receipt.
-      localComparison: undefined,
-    }),
-  ).rejects.toThrow("local Submit receipt");
-  expect(
-    database.connection.prepare("SELECT id FROM visonaut_captures WHERE run_id='run'").all(),
-  ).toEqual([]);
 });
 
 it("preserves omission metadata during a restored database activation and checks only stored bytes", async () => {

@@ -58,9 +58,6 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
     commands.push(
       "UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL",
     );
-  for (const table of ["operations_run_archives", "operations_comparison_archives"]) {
-    if (names.has(table)) commands.push(`DELETE FROM "${table}" WHERE state='building'`);
-  }
   commands.push(
     // Old external writes cannot be proven settled by reading a backup. Keep them fenced.
     "UPDATE work_checks SET ambiguous=1",
