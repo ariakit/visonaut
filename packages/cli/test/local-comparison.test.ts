@@ -662,6 +662,203 @@ it("fails clearly when the service says that the reference is stale", async () =
   expect(service.pageRequests()).toBe(0);
 });
 
+/** Record each backoff wait of one second or more, and end it at once. */
+function skipBackoffWaits() {
+  const delays: number[] = [];
+  const realSetTimeout = globalThis.setTimeout;
+  vi.stubGlobal("setTimeout", (handler: () => void, delay?: number) => {
+    if (delay === undefined || delay < 1000) return realSetTimeout(handler, delay);
+    delays.push(delay);
+    return realSetTimeout(handler, 0);
+  });
+  return delays;
+}
+
+function edgeError(status: number, retryAfter?: string) {
+  return new Response("<html>An error page of the edge.</html>", {
+    status,
+    headers: {
+      "Content-Type": "text/html",
+      ...(retryAfter === undefined ? {} : { "Retry-After": retryAfter }),
+    },
+  });
+}
+
+function networkError(): never {
+  throw new TypeError("fetch failed to https://visonaut.example with secret-detail");
+}
+
+const transientReadFailures = [
+  ["a 502", () => edgeError(502)],
+  ["a 504", () => edgeError(504)],
+  ["a 503 with no error code", () => edgeError(503)],
+  ["a network error", networkError],
+] as const;
+
+function referenceRetryWaitMs(output: string) {
+  const match = /^Reference reads: (\d+)ms retry wait\.$/m.exec(output);
+  return match ? Number(match[1]) : undefined;
+}
+
+it.each(transientReadFailures)(
+  "retries a reference image read after %s",
+  async (_name, failure) => {
+    const local = await localFixture();
+    await only(local, "changed");
+    const delays = skipBackoffWaits();
+    let reads = 0;
+    const service = mockService(local, {
+      respond: (url) => {
+        if (!url.pathname.includes("/reference/images/")) return;
+        return reads++ === 0 ? failure() : undefined;
+      },
+    });
+    const result = await execute(local);
+    expect(result.code).toBe(0);
+    expect(service.downloads()).toEqual([local.digests.white, local.digests.white]);
+    expect(delays).toHaveLength(1);
+    expect(delays[0]).toBeGreaterThanOrEqual(1000);
+    expect(delays[0]).toBeLessThan(1250);
+    expect(referenceRetryWaitMs(result.output)).toBeDefined();
+    expect(result.error).toBe("");
+    expect([...(await service.rows()).keys()]).toEqual(["changed"]);
+  },
+);
+
+it("retries a reference page read after a 504", async () => {
+  const local = await localFixture();
+  await only(local, "changed");
+  const delays = skipBackoffWaits();
+  let reads = 0;
+  const service = mockService(local, {
+    respond: (url) => {
+      if (!/\/reference\/\w{64}\/pages\//.test(url.pathname)) return;
+      return reads++ === 0 ? edgeError(504) : undefined;
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(0);
+  expect(service.paths().filter((path) => path.includes("/pages/"))).toHaveLength(2);
+  expect(delays).toHaveLength(1);
+});
+
+it("waits for the Retry-After time of a retried reference read and counts the wait", async () => {
+  const local = await localFixture();
+  await only(local, "changed");
+  let reads = 0;
+  const service = mockService(local, {
+    respond: (url) => {
+      if (!url.pathname.includes("/reference/images/")) return;
+      return reads++ === 0 ? edgeError(502, "0") : undefined;
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(0);
+  expect(service.downloads()).toHaveLength(2);
+  expect(referenceRetryWaitMs(result.output)).toBeGreaterThanOrEqual(100);
+});
+
+it.each([
+  ["a 502", () => edgeError(502), "The service refused the request (HTTP 502)."],
+  [
+    "a network error",
+    networkError,
+    "The request failed, timed out, or redirected. Check the service and retry.",
+  ],
+] as const)(
+  "stops a reference image read after five attempts with %s",
+  async (_name, failure, message) => {
+    const local = await localFixture();
+    await only(local, "changed");
+    const delays = skipBackoffWaits();
+    const service = mockService(local, {
+      respond: (url) => (url.pathname.includes("/reference/images/") ? failure() : undefined),
+    });
+    const result = await execute(local);
+    expect(result.code).toBe(1);
+    expect(result.error).toContain(message);
+    if (message.includes("HTTP 502")) {
+      expect(result.error).toContain("No visual approval was granted.");
+    }
+    expect(result.error).not.toContain("secret-detail");
+    expect(result.error).not.toContain("visonaut.example");
+    expect(service.downloads()).toHaveLength(5);
+    expect(delays.map((delay) => Math.floor(delay / 1000))).toEqual([1, 2, 4, 8]);
+    expect(service.index()).toBeUndefined();
+  },
+);
+
+it("completes a reference image read that succeeds on the fifth attempt", async () => {
+  const local = await localFixture();
+  await only(local, "changed");
+  const delays = skipBackoffWaits();
+  let reads = 0;
+  const service = mockService(local, {
+    respond: (url) => {
+      if (!url.pathname.includes("/reference/images/")) return;
+      return reads++ < 4 ? edgeError(502) : undefined;
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(0);
+  expect(service.downloads()).toHaveLength(5);
+  expect(delays).toHaveLength(4);
+});
+
+it("does not retry a reference image read when the next wait passes the deadline", async () => {
+  const local = await localFixture();
+  await only(local, "changed");
+  const delays = skipBackoffWaits();
+  const service = mockService(local, {
+    respond: (url) =>
+      url.pathname.includes("/reference/images/") ? edgeError(502, "120") : undefined,
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(1);
+  expect(result.error).toContain("HTTP 502");
+  expect(service.downloads()).toHaveLength(1);
+  expect(delays).toEqual([]);
+});
+
+it.each([
+  ["a 500", () => edgeError(500)],
+  [
+    "a 503 with the code service_unavailable and no Retry-After",
+    () => json({ error: { code: "service_unavailable" } }, 503),
+  ],
+  [
+    "a 503 with another error code",
+    () =>
+      json({ error: { code: "plan_too_large" } }, 503, {
+        "Retry-After": "0",
+      }),
+  ],
+  ["a 429", () => edgeError(429)],
+  [
+    "a timeout",
+    () => {
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    },
+  ],
+  [
+    "a redirect",
+    () => {
+      throw new TypeError("fetch failed", { cause: new Error("unexpected redirect") });
+    },
+  ],
+])("does not retry a reference image read after %s", async (_name, failure) => {
+  const local = await localFixture();
+  await only(local, "changed");
+  const delays = skipBackoffWaits();
+  const service = mockService(local, {
+    respond: (url) => (url.pathname.includes("/reference/images/") ? failure() : undefined),
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(1);
+  expect(service.downloads()).toHaveLength(1);
+  expect(delays).toEqual([]);
+});
+
 it.each(["png", "dimensions", "settings", "webp", "result"] as const)(
   "does not request credentials for invalid local %s",
   async (failure) => {
