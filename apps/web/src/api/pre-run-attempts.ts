@@ -227,8 +227,9 @@ async function retireSupersededMainAttempt({
 
 /**
  * A pull request with a moved head or target never makes this attempt current
- * again. Its progress has no work once the completed delivery failed its check
- * and no signed work owns the attempt.
+ * again. Its progress has no work once its check is complete (failed by the
+ * completed delivery, or passed by a Plan with no visual work) and no signed
+ * work owns the attempt.
  */
 async function settledPullRequestAttempt(
   context: ApiContext,
@@ -238,7 +239,7 @@ async function settledPullRequestAttempt(
   const settled = await context.database
     .prepare(`SELECT 1 AS found FROM pre_run_checks bound
       WHERE bound.external_id=? AND bound.workflow_run_id=? AND bound.workflow_attempt=?
-        AND bound.state='failed' AND bound.lease_until IS NULL
+        AND bound.lease_until IS NULL
         AND NOT EXISTS(SELECT 1 FROM ingest_staged_runs
           WHERE repository_id=? AND workflow_run_id=bound.workflow_run_id
             AND workflow_attempt=bound.workflow_attempt)
@@ -303,10 +304,11 @@ async function retireSupersededPullRequestAttempt({
       run.status === "completed" &&
       (base.ref !== "main" || head.ref !== run.head_branch || head.sha !== row.source_sha);
     if (!closed && !moved) return false;
-    await verifiedCheck(github, row, row.check_id);
+    const check = await verifiedCheck(github, row, row.check_id);
     // Only a completed delivery may close the check, even when the live run
     // has finished since this progress delivery was sent.
     if (closed) return true;
+    if (check.status !== "completed") return false;
     return settledPullRequestAttempt(context, github, row);
   }
   if (run.status !== "completed") return false;
@@ -600,17 +602,22 @@ async function uncreatedSupersededMainAttemptIsHistorical(
   if (!currentSha || currentSha === testedSha) return false;
   const runId = numericId(run.id);
   // A main candidate with a check, a lease, or a binding keeps its delivery,
-  // and so does any signed work of this attempt.
+  // and so does any signed work of this attempt. A candidate bound to another
+  // attempt of this run belongs to that attempt: a rerun that did not bind
+  // never settles it.
   const historical = await context.database
     .prepare(`SELECT 1 AS found WHERE
       NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND kind='main'
         AND (state!='pending' OR check_id IS NOT NULL OR request_started!=0
-          OR lease_until IS NOT NULL OR workflow_run_id IS NOT NULL))
+          OR lease_until IS NOT NULL OR workflow_run_id IS NOT NULL)
+        AND NOT (workflow_run_id IS ? AND workflow_attempt IS NOT ?))
       AND NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
       AND NOT EXISTS(SELECT 1 FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
       AND NOT EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)`)
     .bind(
       testedSha,
+      runId,
+      attempt,
       github.repositoryId,
       runId,
       attempt,
