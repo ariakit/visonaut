@@ -19,3 +19,6 @@ minimumReleaseAgeExclude:
   - "@tanstack/react-start@1.168.57"
   - "@tanstack/start-plugin-core@1.171.47"
   - "@cloudflare/workers-types@5.20260922.1"
+
+patchedDependencies:
+  "@changesets/apply-release-plan@8.1.1": patches/@changesets__apply-release-plan@8.1.1.patch
