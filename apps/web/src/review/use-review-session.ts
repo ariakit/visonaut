@@ -2,7 +2,7 @@ import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState }
 import type { RunClosedReason } from "@visonaut/protocol";
 import { useAppSession } from "../app-session.tsx";
 import { ReviewCommandError } from "./model.ts";
-import { getClosedWords } from "./run-words.ts";
+import { getRunStateWords } from "./run-words.ts";
 import type {
   ReviewCommand,
   ReviewCommands,
@@ -118,13 +118,13 @@ function runStatusLabel(status: string) {
 }
 
 /**
- * A text of the status line that is not a save state: a refusal, the
- * remembered variant that a screenshot no longer has, or the end of a review.
- * The next save state replaces it.
+ * A text of the status line that is not a save state: a refusal, or the
+ * remembered variant that a screenshot no longer has. The next save state
+ * replaces it.
  */
 export interface ReviewNotice {
   text: string;
-  tone: "neutral" | "success" | "warning";
+  tone: "neutral" | "warning";
   /** The notice is true only for this selection, and the bar hides it after. */
   selection?: ReviewSelection;
   /**
@@ -602,9 +602,6 @@ export function useReviewSession({
                   message: `Saved. ${count} variant${count === 1 ? "" : "s"} ${currentCommand.verdict}.`,
                 },
           );
-          if (!remaining.length && !nextPending(currentModel.items, currentCommand.selection)) {
-            announce("Review complete. No variants need review.", "success");
-          }
         } catch (error) {
           if (session.queue[0] !== entry) return;
           setPendingReviews([]);
@@ -840,8 +837,10 @@ export function useReviewSession({
     awaitingComparison,
     terminalComparison,
     unsentDecisions,
-    // A closed run has the words of the header: its stored cause, or no cause.
-    runStatus: getClosedWords(model.run) ?? runStatusLabel(model.run.status),
+    // The state of the run in the words of the pages. A closed run has the
+    // words of the header: its stored cause, or no cause. An earlier
+    // comparison has the words of its comparison.
+    runStatus: getRunStateWords(model.run) ?? runStatusLabel(model.run.status),
     notice,
     announce,
     clearNotice: () => setNotice(null),

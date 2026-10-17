@@ -8,9 +8,9 @@ import type {} from "./fixture-api.ts";
 
 const firstTargets = ["React", "Solid", "Dark", "Contrast", "Firefox", "WebKit", "Wide"];
 
-// A run approval decides each change, so it ends the review, and the notice
-// of the end takes the place of its saved text "Saved. 9 variants approved.".
-const endText = "Review complete. No variants need review.";
+// A run approval decides each change, so it ends the review: the result
+// takes the place of the stage and of the bar, and it names the counts.
+const endText = "Run state: Passed. 11 changes in 4 screenshots: 11 approved, 0 rejected.";
 
 async function open(page: Page) {
   await page.goto("/src/review/__tests__/index.html");
@@ -20,6 +20,11 @@ async function open(page: Page) {
 
 function statusLine(page: Page) {
   return page.locator(".review-save-state");
+}
+
+/** The result page of a run with nothing left to review. */
+function result(page: Page, title = "All approved") {
+  return page.getByRole("region", { name: title, exact: true });
 }
 
 function moreButton(page: Page) {
@@ -76,8 +81,15 @@ test("the confirmation names the changes and the ones not opened, and one Undo r
   expect(await page.evaluate(() => window.reviewFixture.calls)).toEqual([]);
 
   await confirmRunApproval(page, "Approve 8 changes?");
-  await expect(moreButton(page)).toBeFocused();
-  await expect(statusLine(page)).toHaveText(endText);
+  await expect(result(page, "1 rejected")).toContainText(
+    "Run state: Rejected. 11 changes in 4 screenshots: 10 approved, 1 rejected.",
+  );
+  // The bar leaves with the stage, and the main action of the result takes
+  // the focus.
+  await expect(moreButton(page)).toHaveCount(0);
+  await expect(
+    result(page, "1 rejected").getByRole("link", { name: "Queue", exact: true }),
+  ).toBeFocused();
   expect(await page.evaluate(() => window.reviewFixture.calls)).toMatchObject([
     {
       verdict: "approved",
@@ -87,12 +99,9 @@ test("the confirmation names the changes and the ones not opened, and one Undo r
     },
   ]);
   const approved = firstTargets.filter((key) => key !== "Wide");
-  for (const key of approved) {
-    await expect(page.getByRole("link", { name: new RegExp(`^${key}\\. Approved`) })).toBeVisible();
-  }
-  await expect(page.getByRole("link", { name: /^Wide\. Rejected/ })).toBeVisible();
 
-  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  // Undo brings the stage back with the selection of the approval.
+  await page.getByRole("button", { name: "Undo last decision", exact: true }).click();
   await expect(statusLine(page)).toHaveText(
     "Undo saved. The original selection and verdicts were restored.",
   );
@@ -123,7 +132,7 @@ test("a waiting run approval blocks the other decisions", async ({ page }) => {
   await expect(runItem(page)).toBeDisabled();
   await page.keyboard.press("Escape");
   await page.evaluate(() => window.reviewFixture.resolve());
-  await expect(line).toHaveText(endText);
+  await expect(result(page)).toContainText(endText);
   expect(await page.evaluate(() => window.reviewFixture.calls)).toHaveLength(1);
 });
 
@@ -184,9 +193,9 @@ test("a run approval that fails offline gives the focus to the page", async ({ p
 test("a failed Undo of a run approval says that nothing was undone", async ({ page }) => {
   await open(page);
   await confirmRunApproval(page);
-  await expect(statusLine(page)).toHaveText(endText);
+  await expect(result(page)).toContainText(endText);
   await page.evaluate(() => window.reviewFixture.setBehavior("undo-failed"));
-  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.getByRole("button", { name: "Undo last decision", exact: true }).click();
   await expect(statusLine(page)).toHaveText(
     "Not saved. The Undo of the run approval failed. Nothing was undone. Try again.",
   );

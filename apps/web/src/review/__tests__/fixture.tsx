@@ -49,6 +49,15 @@ if (new URLSearchParams(window.location.search).has("fifthVariantChanged")) {
     Object.assign(entry, { kind: "unchanged", verdict: null, source: null, diff: null });
   }
 }
+// A run with nothing to review: each screenshot matches the baseline.
+if (new URLSearchParams(window.location.search).has("noChanges")) {
+  model.run.status = "passed";
+  for (const item of model.items) {
+    for (const entry of item.variants) {
+      Object.assign(entry, { kind: "unchanged", verdict: null, source: null, diff: null });
+    }
+  }
+}
 const saved = new Map<string, { model: ReviewModel; result: ReviewSaveResult }>();
 const undone = new Map<string, ReviewCommandResult>();
 const calls: Array<ReviewCommand | UndoCommand> = [];
