@@ -195,6 +195,26 @@ test("a decision key on a variant with no change prints why nothing changed", as
   expect(await page.evaluate(() => window.reviewFixture.calls.length)).toBe(0);
 });
 
+test("a message with recovery buttons tints the status line and not the bar", async ({ page }) => {
+  await open(page);
+  const bar = page.getByRole("region", { name: "Review actions", exact: true });
+  const line = statusLine(page).locator("../..");
+  const barAtRest = await colorOf(bar, "backgroundColor");
+  const lineAtRest = await colorOf(line, "backgroundColor");
+  expect(lineAtRest[3]).toBe(0);
+  await page.evaluate(() => window.reviewFixture.setBehavior("other-conflict"));
+  await page.keyboard.press("a");
+  await expect(statusLine(page)).toContainText("Conflict.");
+  await expect(
+    page.getByRole("button", { name: "Refresh current state", exact: true }),
+  ).toBeVisible();
+  // The line takes the color of its state, and the row of the bar keeps the
+  // color of the sheet.
+  const tinted = await colorOf(line, "backgroundColor");
+  expect(tinted[3]).toBeGreaterThan(0);
+  expect(await colorOf(bar, "backgroundColor")).toEqual(barAtRest);
+});
+
 test("a disabled Approve has no brand fill", async ({ page }) => {
   await open(page);
   const approve = approveButton(page);
@@ -287,9 +307,11 @@ test("a failed save gives the focus to the page when the bar control that had it
 // view controls of the stage: 87 and 118 px at rest, and 27 and 38 px with
 // the session ended and a refusal. Since #519 the zoom has a row of its own
 // at these widths, so each control of the bar is on screen. Measured with the
-// zoom row: 49.5 and 80.5 px at rest. The floors at rest are about 8 px below
-// those values (41 and 72 px), so a small change of the fonts does not fail
-// the test. The floors with the tallest text are 15 and 20 px.
+// zoom row: 49.5 and 80.5 px at rest. Since the bar is the bottom row of the
+// sheet (no pill, no border, no gap below it), it leaves 56.5 and 87.5 px at
+// rest. The floors at rest are about 8 px below those values (48 and 79 px),
+// so a small change of the fonts does not fail the test. The floors with the
+// tallest text are 15 and 20 px.
 async function freeHeight(page: Page) {
   // The header sticks to the top and the bar to the bottom, so the free
   // height is the same at each scroll position.
@@ -305,8 +327,8 @@ async function freeHeight(page: Page) {
 // A failed save hides the view controls, so the row of the zoom does not
 // change the floors of the tallest bar.
 for (const [width, height, atRest, withFailure] of [
-  [360, 225, 41, 15],
-  [320, 256, 72, 20],
+  [360, 225, 48, 15],
+  [320, 256, 79, 20],
 ] as const) {
   test(`at ${width} by ${height} px, the bar leaves at least ${atRest} px for the image at rest, and ${withFailure} px with its longest text`, async ({
     page,

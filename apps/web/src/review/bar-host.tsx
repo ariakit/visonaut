@@ -268,7 +268,7 @@ export function BarHost({ bar }: BarHostProps) {
     <ReviewBar
       id={reviewActionsId}
       // The bar keeps the bottom of the window while the stage scrolls.
-      className="sticky bottom-2 z-20"
+      className="sticky bottom-0 z-20"
       message={getStatusMessage(bar)}
       view={bar.view}
       undo={{

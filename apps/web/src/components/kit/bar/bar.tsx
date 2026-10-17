@@ -1,13 +1,11 @@
-// The one bar of the review page, from the lab: a raised pill with Undo, the
-// view controls of the stage, the status line, Reject, Approve, and the `⋯`
-// menu.
+// The one bar of the review page: the bottom row of the panel sheet, with
+// Undo, the view controls of the stage, the status line, Reject, Approve, and
+// the `⋯` menu.
 
 import { cx } from "clava";
 import { useLayoutEffect, useRef } from "react";
-import type { ReactNode } from "react";
 import { ButtonSeparator } from "../../ariakit/components/button.ariakit.react.tsx";
 import { Frame } from "../../ariakit/components/frame.ariakit.react.tsx";
-import type { FrameProps } from "../../ariakit/components/frame.ariakit.react.tsx";
 import type { StageEngine } from "../stage/view.ts";
 import type { StoredView } from "../view-types.ts";
 import { DecisionButton, UndoButton } from "./decisions.tsx";
@@ -29,7 +27,7 @@ export interface BarView {
 }
 
 export interface ReviewBarProps {
-  /** The id of the pill, the target of the skip link of the page. */
+  /** The id of the row, the target of the skip link of the page. */
   id?: string;
   /** The one text of the status line, or null for none. */
   message: BarMessage | null;
@@ -57,74 +55,23 @@ function Divider({ className }: DividerProps) {
   return <ButtonSeparator $shy={false} className={cx("mx-0.5", className)} />;
 }
 
-type BarTint = "warning" | "danger";
-
-// The tint of a message with recovery buttons: the color of its state at 15%
-// with its edge.
-function getTint(message: BarMessage | null): BarTint | null {
-  if (!message?.actions.length) return null;
-  if (message.tone === "danger") return "danger";
-  if (message.tone === "warning") return "warning";
-  return null;
-}
-
-function getTintProps(tint: BarTint): FrameProps {
-  return { $layer: tint, $mix: 15, $border: true, $edge: tint };
-}
-
-interface BarFrameProps {
-  id?: string;
-  tint: BarTint | null;
-  children: ReactNode;
-}
-
-// The surface of the bar: a raised pill with an edge and a shadow. The skip
-// link of the page moves the focus to it. A tint is a mix with the surface
-// behind it. The stage is too dark for that, so the raised surface of the
-// pill stays under the tint. The tree is the same with and without a tint,
-// so the live region and the focus stay.
-function BarFrame({ id, tint, children }: BarFrameProps) {
-  return (
-    <Frame
-      $layer
-      $lighten={2}
-      $rounded="3xl"
-      $forceRounded
-      className="flex w-full max-w-[72rem] shadow-xl"
-    >
-      <Frame
-        id={id}
-        tabIndex={-1}
-        role="region"
-        aria-label="Review actions"
-        {...(tint ? getTintProps(tint) : { $border: true })}
-        $rounded="3xl"
-        $forceRounded
-        $p={1}
-        className="review-actions flex min-w-0 flex-1 flex-wrap items-end gap-1"
-      >
-        {children}
-      </Frame>
-    </Frame>
-  );
-}
-
 /**
  * The bar of the review page: Undo, the view controls of the stage, the status
  * line, Reject, Approve, and the `⋯` menu, in that order.
  *
+ * - The bar has no surface: its controls sit in the sheet, with the gutter of
+ *   the sheet, and the row has the width of the sheet.
  * - The status line has a reserved height, and the buttons are at the bottom
- *   of the pill. A longer text grows the pill upward, so Approve stays in
+ *   of the row. A longer text grows the row upward, so Approve stays in
  *   its place when a message shows.
  * - A failed save takes the bar over: the bar then has only its words and
  *   its recovery buttons.
  * - Below 57rem of its own width, the bar has rows: the view controls, the
  *   status line, then Undo and the decisions. An empty status line has no
  *   height there.
- * - A message with recovery buttons tints the pill.
+ * - A message with recovery buttons tints the status line.
  *
- * The bar is its own size container. Put it in a box with the width of the
- * stage.
+ * The bar is its own size container. Put it last in a sheet with no padding.
  * @example
  * <ReviewBar
  *   message={getBarMessage({ text: "Saving…", tone: "saving" })}
@@ -162,59 +109,68 @@ export function ReviewBar({
     onActionDone?.();
   }, [takeover, onActionDone]);
   return (
-    <div ref={rootRef} className={cx("@container flex justify-center", className)}>
-      <BarFrame id={id} tint={getTint(message)}>
-        {/* The siblings of the status line keep their places in the tree, so
+    // The row has the layer of the sheet, so the stage does not show through
+    // it where the row sticks to the bottom of a short window. The gutter of
+    // the sheet is its padding, and the stage above it has the gap.
+    <Frame
+      ref={rootRef}
+      id={id}
+      tabIndex={-1}
+      role="region"
+      aria-label="Review actions"
+      $layer
+      $p={2}
+      className={cx(
+        "review-actions @container flex min-w-0 flex-none flex-wrap items-end gap-1 pt-0",
+        className,
+      )}
+    >
+      {/* The siblings of the status line keep their places in the tree, so
             the live region stays mounted. */}
-        {!takeover && <UndoButton control={undo} />}
-        {!takeover && <Divider className="@max-[57rem]:hidden" />}
-        {!takeover && view && (
-          <div
-            className={cx(
-              "flex flex-none items-center justify-center gap-1",
-              // A narrow bar gives the view controls the first row. In a
-              // very narrow bar, the zoom takes a row of its own.
-              "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:flex-wrap",
-            )}
-          >
-            <ModeButtons
-              stored={view.stored}
-              subject={view.engine.subject}
-              mode={view.engine.mode}
-            />
-            <Divider />
-            <MaskToggle stored={view.stored} available={!!view.engine.subject.mask} />
-            {/* The divider goes where the row has no room for it, and the
-                zoom then takes a row of its own. */}
-            <Divider className="@max-[24.75rem]:hidden" />
-            <ZoomControl view={view.engine} className="flex-none" />
-          </div>
-        )}
-        {!takeover && view && <Divider className="@max-[57rem]:hidden" />}
-        <StatusLine
-          message={message}
-          onActionDone={onActionDone}
+      {!takeover && <UndoButton control={undo} />}
+      {!takeover && <Divider className="@max-[57rem]:hidden" />}
+      {!takeover && view && (
+        <div
           className={cx(
-            "flex-1 self-stretch",
-            takeover
-              ? "basis-full"
-              : // A narrow bar gives the line a row of its own above the
-                // buttons. An empty line has no height there, so the bar
-                // keeps two rows at 400% zoom (A11Y-14). The buttons are at
-                // the bottom of the pill, so a text that shows moves no
-                // button. The line stays in the tree: it is the live region.
-                "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:has-[.review-save-state:empty]:h-0 @max-[57rem]:has-[.review-save-state:empty]:overflow-hidden",
+            "flex flex-none items-center justify-center gap-1",
+            // A narrow bar gives the view controls the first row. In a
+            // very narrow bar, the zoom takes a row of its own.
+            "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:flex-wrap",
           )}
-        />
-        {!takeover && <Divider className="@max-[57rem]:hidden" />}
-        {!takeover && (
-          <div className="ms-auto flex flex-none items-center gap-1">
-            <DecisionButton action="reject" control={reject} />
-            <DecisionButton action="approve" control={approve} />
-            <MoreMenu wholeItem={wholeItem} runApproval={runApproval} />
-          </div>
+        >
+          <ModeButtons stored={view.stored} subject={view.engine.subject} mode={view.engine.mode} />
+          <Divider />
+          <MaskToggle stored={view.stored} available={!!view.engine.subject.mask} />
+          {/* The divider goes where the row has no room for it, and the
+                zoom then takes a row of its own. */}
+          <Divider className="@max-[24.75rem]:hidden" />
+          <ZoomControl view={view.engine} className="flex-none" />
+        </div>
+      )}
+      {!takeover && view && <Divider className="@max-[57rem]:hidden" />}
+      <StatusLine
+        message={message}
+        onActionDone={onActionDone}
+        className={cx(
+          "flex-1 self-stretch",
+          takeover
+            ? "basis-full"
+            : // A narrow bar gives the line a row of its own above the
+              // buttons. An empty line has no height there, so the bar
+              // keeps two rows at 400% zoom (A11Y-14). The buttons are at
+              // the bottom of the row, so a text that shows moves no
+              // button. The line stays in the tree: it is the live region.
+              "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:has-[.review-save-state:empty]:h-0 @max-[57rem]:has-[.review-save-state:empty]:overflow-hidden",
         )}
-      </BarFrame>
-    </div>
+      />
+      {!takeover && <Divider className="@max-[57rem]:hidden" />}
+      {!takeover && (
+        <div className="ms-auto flex flex-none items-center gap-1">
+          <DecisionButton action="reject" control={reject} />
+          <DecisionButton action="approve" control={approve} />
+          <MoreMenu wholeItem={wholeItem} runApproval={runApproval} />
+        </div>
+      )}
+    </Frame>
   );
 }

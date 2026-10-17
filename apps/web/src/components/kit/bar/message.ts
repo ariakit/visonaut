@@ -4,7 +4,7 @@
 
 /**
  * The tone of a message. `saving` shows a ring, and `danger` and `warning`
- * also tint the bar while the message has actions.
+ * also tint the status line while the message has actions.
  */
 export type BarTone = "neutral" | "saving" | "success" | "warning" | "danger";
 

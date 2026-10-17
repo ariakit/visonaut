@@ -634,8 +634,8 @@ function ReviewSession({
                         </Text>
                       </div>
                     )}
-                    <BarHost bar={bar} />
                   </Frame>
+                  <BarHost bar={bar} />
                 </PanelSheet>
               )}
             </HeadingLevel>

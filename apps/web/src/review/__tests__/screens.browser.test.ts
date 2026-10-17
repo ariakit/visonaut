@@ -274,6 +274,7 @@ test("after HTTP 429, the sign-in button is off for the time that the service na
 // the list open: the server renders it, and the saved state is on the client.
 const shapeSizes = [
   { name: "a wide window", width: 1280, height: 900 },
+  { name: "a middle window", width: 900, height: 900 },
   { name: "a narrow window", width: 390, height: 844 },
 ] as const;
 
@@ -295,17 +296,27 @@ for (const { name, width, height } of shapeSizes) {
     const loading = page.getByLabel("Loading run");
     await expect(loading).toHaveAttribute("aria-busy", "true");
     const loadingSheet = await loading.locator(":scope > :last-child").boundingBox();
+    // The last block of the sheet is the bottom row, the place of the bar.
+    const loadingRow = await loading.locator(":scope > :last-child > :last-child").boundingBox();
     release();
     await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
     const sheet = await page
       .getByRole("region", { name: "Selected variant", exact: true })
       .locator("../..")
       .boundingBox();
-    if (!loadingSheet || !sheet) throw new Error("Missing the panel sheet.");
+    const row = await page
+      .getByRole("region", { name: "Review actions", exact: true })
+      .boundingBox();
+    if (!loadingSheet || !loadingRow || !sheet || !row) throw new Error("Missing the panel sheet.");
     expect(loadingSheet.x).toBeCloseTo(sheet.x, 0);
     expect(loadingSheet.y).toBeCloseTo(sheet.y, 0);
     expect(loadingSheet.width).toBeCloseTo(sheet.width, 0);
     expect(loadingSheet.height).toBeCloseTo(sheet.height, 0);
+    // The bottom row has the place and the height of the bar, so the controls
+    // and the stage do not move when the run arrives.
+    expect(loadingRow.y).toBeCloseTo(row.y, 0);
+    expect(loadingRow.height).toBeCloseTo(row.height, 0);
+    expect(loadingRow.width).toBeCloseTo(row.width, 0);
   });
 }
 
