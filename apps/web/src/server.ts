@@ -53,6 +53,7 @@ interface DocumentContextParams {
   request: Request;
   respond: (request: Request) => Promise<Response | null> | Response | null;
   guest: boolean;
+  repository: string;
   failure: OperationFailureContext;
 }
 
@@ -67,10 +68,12 @@ function documentContext({
   request,
   respond,
   guest,
+  repository,
   failure,
 }: DocumentContextParams): DocumentContext {
   return {
     guest,
+    repository,
     readRunList: async () => {
       try {
         // The same headers as the document request: the cookie of the session.
@@ -166,6 +169,7 @@ export default {
             request,
             respond: previewFixtureResponse,
             guest: false,
+            repository: env.VISONAUT_REPOSITORY,
             failure: { correlationId, startedAt },
           }),
         });
@@ -223,6 +227,7 @@ export default {
               disableSessionRefresh: true,
             }),
           guest: hasNoSessionCredential(request),
+          repository: env.VISONAUT_REPOSITORY,
           failure: { correlationId, startedAt },
         }),
       });

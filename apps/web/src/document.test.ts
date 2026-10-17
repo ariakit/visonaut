@@ -212,6 +212,8 @@ it.each(["/", "/history?q=dialog", "/status", "/pulls/7", "/runs/unknown-run"])(
     // The sign-in page is in the markup of the document: it needs no script.
     expect(document.text).toContain(signInHeading);
     expect(document.text).toContain(signInButton);
+    // It names the repository of the configuration.
+    expect(document.text).toContain(`>${String(variables.VISONAUT_REPOSITORY)}</p>`);
     // The page has no header, no navigation, and no run.
     expect(document.text).not.toContain(nav);
     expect(document.text).not.toContain(runTitle);

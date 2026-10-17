@@ -77,7 +77,7 @@ export function getRunIdentity(run: ReviewModel["run"]): RunIdentity {
 }
 
 /** The way back to the Queue: the first control of the header. */
-function QueueButton() {
+export function QueueButton() {
   return (
     <Hint label="Queue">
       <Button aria-label="Queue" render={<Link to="/" />}>

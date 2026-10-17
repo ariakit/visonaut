@@ -417,11 +417,13 @@ it.each([
 });
 
 it.each([
-  { path: "/api/auth/callback/github", status: 403 },
-  { path: "/api/auth/unlisted", status: 404 },
-])("answers $status for $path at another origin", async ({ path, status }) => {
+  { method: "GET", path: "/api/auth/callback/github", status: 403 },
+  // The no access page then says that the sign-out failed (RESIL-09).
+  { method: "POST", path: "/api/auth/sign-out", status: 403 },
+  { method: "GET", path: "/api/auth/unlisted", status: 404 },
+])("answers $status for $method $path at another origin", async ({ method, path, status }) => {
   const response = await server.fetch(
-    appRequest("GET", path, { origin: "https://other.example" }),
+    appRequest(method, path, { origin: "https://other.example" }),
     withoutDatabase(),
     { waitUntil() {} },
   );
@@ -761,12 +763,16 @@ async function documentContextOf(
   expect(await response.text()).toBe("document");
   const options: unknown = render.mock.calls.at(-1)?.[1];
   const context = object(object(options).context);
-  const { readRunList, guest } = context;
-  if (typeof readRunList !== "function" || typeof guest !== "boolean") {
+  const { readRunList, guest, repository } = context;
+  if (
+    typeof readRunList !== "function" ||
+    typeof guest !== "boolean" ||
+    typeof repository !== "string"
+  ) {
     throw new Error("The document request has no document context.");
   }
   // The entry sets this function with the type of the document context.
-  return { readRunList: readRunList as DocumentContext["readRunList"], guest };
+  return { readRunList: readRunList as DocumentContext["readRunList"], guest, repository };
 }
 
 it("gives a document with no session cookie the sign-in state, with no D1 statement", async () => {
@@ -774,6 +780,8 @@ it("gives a document with no session cookie the sign-in state, with no D1 statem
   const context = await documentContextOf(undefined, { ...env, DB: measured.database });
   // The layout route renders the sign-in page with the document for this fact.
   expect(context.guest).toBe(true);
+  // The sign-in page names the repository of the configuration.
+  expect(context.repository).toBe(env.VISONAUT_REPOSITORY);
   expect(await context.readRunList()).toEqual({ status: "guest" });
   // The answer comes before the sign-in instance and before the first read.
   expect(security.createAuth).toHaveBeenCalledTimes(0);

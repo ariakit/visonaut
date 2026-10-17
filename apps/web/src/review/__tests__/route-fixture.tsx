@@ -31,11 +31,12 @@ export const router = createRouter({
 });
 // With `documentRead`, the first read of the run list comes as a promise in
 // the loader data, as in a document that the server rendered. The router of
-// the server gives that read to the loader in this option. Each later read is
-// a read of the browser.
+// the server gives that read and the repository to the loader in this option.
+// Each later read is a read of the browser.
 if (new URLSearchParams(window.location.search).has("documentRead")) {
   router.options.additionalContext = {
     serverContext: {
+      repository: "ariakit/ariakit",
       readRunList: () => {
         router.options.additionalContext = undefined;
         return fetchRunList();

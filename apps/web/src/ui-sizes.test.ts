@@ -19,9 +19,11 @@ test("no class sets a fixed text size", () => {
 });
 
 test("each page shell sets the one base text size", () => {
-  // The review workspace renders its own shell root.
-  const workspace = readFileSync(join(source, "review/review-workspace.tsx"), "utf8");
-  expect(workspace).toMatch(/<Shell\b[^>]*className="[^"]*\btext-sm\b/s);
+  // The review workspace and its loading shape render their own shell root.
+  for (const file of ["review/review-workspace.tsx", "review/run-loading.tsx"]) {
+    const workspace = readFileSync(join(source, file), "utf8");
+    expect(workspace).toMatch(/<Shell\b[^>]*className="[^"]*\btext-sm\b/s);
+  }
   // The shell of each other page takes the size from one token.
   const tokens = readFileSync(join(source, "components/kit/tokens.ts"), "utf8");
   expect(tokens).toMatch(/export const pageRoot = "text-sm";/);
@@ -31,6 +33,7 @@ test("each page shell sets the one base text size", () => {
   expect(find(/<Shell\b/).toSorted()).toEqual([
     "components/kit/shell.tsx",
     "review/review-workspace.tsx",
+    "review/run-loading.tsx",
   ]);
 });
 

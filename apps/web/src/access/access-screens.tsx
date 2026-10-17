@@ -78,13 +78,18 @@ function returnPath(href: string) {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+export interface SignInScreenProps {
+  /** The repository of the service as `owner/name`, when the document has it. */
+  repository?: string;
+}
+
 /**
- * The sign-in page: one heading, the one brand button of the page, and one
- * hint. The button has the focus, so Enter presses it. While GitHub opens,
- * the button keeps its size and its surface, shows a spinner in its first
- * slot, and takes no second click.
+ * The sign-in page: one heading, the repository, the one brand button of the
+ * page, and one hint. The button has the focus, so Enter presses it. While
+ * GitHub opens, the button keeps its size and its surface, shows a spinner in
+ * its first slot, and takes no second click.
  */
-export function SignInScreen() {
+export function SignInScreen({ repository }: SignInScreenProps) {
   const location = useLocation();
   const [signingIn, setSigningIn] = useState(false);
   const [problem, setProblem] = useState(
@@ -141,7 +146,14 @@ export function SignInScreen() {
   return (
     <AccessPage>
       <Sheet $p="1.5rem" render={<main />} className={cardClassName}>
-        <Heading className="mt-0 mb-0 text-xl font-semibold">Sign in to review</Heading>
+        <div className="grid gap-1">
+          <Heading className="mt-0 mb-0 text-xl font-semibold">Sign in to review</Heading>
+          {repository && (
+            <Text className={cx(secondary, "font-mono text-sm")} render={<p />}>
+              {repository}
+            </Text>
+          )}
+        </div>
         {problem && (
           <Text render={<p />} role="alert" $text="danger" className="text-sm">
             {problem}

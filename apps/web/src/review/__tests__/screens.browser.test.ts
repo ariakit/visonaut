@@ -139,6 +139,65 @@ test("the no access page names the account and signs it out", async ({ page }) =
   await expect(page.getByRole("heading", { name: "Sign in to review" })).toBeVisible();
 });
 
+// The service answers 403 to a sign-out on another origin than its own, as it
+// does for each request below /api/ there.
+test("a sign-out that the service refuses keeps the no access page with a way forward", async ({
+  page,
+}) => {
+  const signOuts: string[] = [];
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/auth/sign-out") {
+      signOuts.push(path);
+      return route.fulfill({ status: 403 });
+    }
+    return route.fulfill({ status: 403, json: { error: { code: "wrong_origin" } } });
+  });
+  await page.goto(entry("/"));
+  const useAnother = page.getByRole("button", { name: "Use another account" });
+  await expect(useAnother).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("alert")).toHaveText("Sign-out failed. Please try again.");
+  expect(signOuts).toEqual(["/api/auth/sign-out"]);
+  // The page stays, and both ways forward still work.
+  await expect(page.getByRole("heading", { name: "No write access", level: 1 })).toBeVisible();
+  await expect(useAnother).not.toHaveAttribute("aria-busy");
+  await expect(page.getByRole("link", { name: "Back to GitHub" })).toHaveAttribute(
+    "href",
+    "https://github.com",
+  );
+  await useAnother.click();
+  await expect.poll(() => signOuts.length).toBe(2);
+  await expect(page.getByRole("alert")).toHaveText("Sign-out failed. Please try again.");
+});
+
+test("the sign-in page names the repository of the document, also after a later read", async ({
+  page,
+}) => {
+  let signedIn = true;
+  await page.route("**/api/**", (route) =>
+    signedIn
+      ? route.fulfill({ json: runList })
+      : route.fulfill({ status: 401, json: { error: { code: "sign_in_required" } } }),
+  );
+  await page.goto(`${entry("/")}&documentRead`);
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
+  // The session ends. The read of the browser has no context of the server.
+  signedIn = false;
+  await readAgain(page);
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "Sign in to review", level: 1 })).toBeVisible();
+  await expect(main).toContainText("ariakit/ariakit");
+});
+
+test("the sign-in page names no repository when the document has none", async ({ page }) => {
+  await answerEach(page, 401);
+  await page.goto(entry("/"));
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "Sign in to review", level: 1 })).toBeVisible();
+  await expect(main.locator("p")).toHaveText(["Needs write access"]);
+});
+
 test("a sign-in returns to the page, and a failed sign-in returns to it with its reason", async ({
   page,
 }) => {
@@ -210,7 +269,7 @@ test("after HTTP 429, the sign-in button is off for the time that the service na
   await expect.poll(() => attempts).toBe(2);
 });
 
-test("a click on a run shows the loading text at once", async ({ page }) => {
+test("a click on a run shows the shape of the run page at once", async ({ page }) => {
   const run = {
     id: "run-42",
     kind: "pull_request",
@@ -243,10 +302,45 @@ test("a click on a run shows the loading text at once", async ({ page }) => {
   await page.clock.install();
   await page.goto(entry("/"));
   await page.getByRole("link", { name: "Review", exact: true }).click();
-  // No time passes on the clock of the page: the text is there with no wait.
-  await expect(page.getByText("Checking access and loading this run")).toBeVisible();
+  // No time passes on the clock of the page: the shape is there with no wait.
+  await expect(page.getByLabel("Loading run")).toHaveAttribute("aria-busy", "true");
   await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toHaveCount(0);
+  // The header of the run page, with the way back, and no sentence about the
+  // access check.
+  await expect(page.getByRole("link", { name: "Queue" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Pages" })).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText("Checking access");
   release();
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+});
+
+test("a run that does not load has Retry at the width of its label, and Retry reads again", async ({
+  page,
+}) => {
+  let fail = true;
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/review-sessions") {
+      return route.fulfill({ json: { reviewSessionId: "session-retry" } });
+    }
+    if (fail) {
+      return route.fulfill({
+        status: 503,
+        json: { error: { code: "service_unavailable" } },
+      });
+    }
+    return route.fulfill({ json: compactReviewModel(fixtureModel()) });
+  });
+  await page.goto(entry("/runs/run-42"));
+  const retry = page.getByRole("button", { name: "Retry" });
+  await expect(page.getByRole("alert")).toHaveText("The service is temporarily unavailable.");
+  const card = await page.getByRole("alert").locator("..").boundingBox();
+  const button = await retry.boundingBox();
+  if (!card || !button) throw new Error("Missing the error card or its button.");
+  // The button starts at the start of the card and does not fill its width.
+  expect(button.width).toBeLessThan(card.width / 4);
+  fail = false;
+  await retry.click();
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
 });
 
