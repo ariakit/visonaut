@@ -1,7 +1,17 @@
-// The controls of the stage: the view modes and the mask switch. Step 3 of
-// #274 adds the stepper of the changed regions.
+// The controls of the stage: the view modes, the mask switch, and the stepper
+// of the changed regions.
 
-import { Columns2, Diff, History, Image, Layers, SquareSplitHorizontal } from "lucide-react";
+import { cx } from "clava";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Columns2,
+  Diff,
+  History,
+  Image,
+  Layers,
+  SquareSplitHorizontal,
+} from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   Button,
@@ -9,11 +19,12 @@ import {
   ButtonGroup,
   ButtonSlot,
 } from "../../ariakit/components/button.ariakit.react.tsx";
-import { Hint } from "../controls.tsx";
-import { iconStroke } from "../tokens.ts";
+import { Text } from "../../ariakit/components/text.ariakit.react.tsx";
+import { Hint, IconButton } from "../controls.tsx";
+import { iconStroke, tertiary } from "../tokens.ts";
 import { modeNames } from "../stage/model.ts";
 import type { StageSubject } from "../stage/model.ts";
-import type { StoredView, ViewMode } from "../view-types.ts";
+import type { StageView, StoredView, ViewMode } from "../view-types.ts";
 
 interface ModeEntry {
   id: ViewMode;
@@ -119,6 +130,62 @@ export function MaskToggle({ stored, available }: MaskToggleProps) {
         </Button>
       </Hint>
       <ButtonGlider />
+    </ButtonGroup>
+  );
+}
+
+export interface RegionStepperProps {
+  view: StageView;
+  className?: string;
+}
+
+/**
+ * The steps through the changed regions, with their counter. A step zooms the
+ * stage to the region, and the box of that region is the current one. The
+ * stepper is always in the bar, so that Reject and Approve stay in one place
+ * from variant to variant. It is off for a variant with no region: a size
+ * change, an addition, a removal.
+ * @example
+ * <RegionStepper view={engine} />
+ */
+export function RegionStepper({ view, className }: RegionStepperProps) {
+  const { region, regionCount } = view;
+  const none = regionCount === 0;
+  const position = region == null ? "–" : `${region + 1}`;
+  const words =
+    region == null
+      ? `${regionCount} ${regionCount === 1 ? "region" : "regions"}`
+      : `Region ${region + 1} of ${regionCount}`;
+  return (
+    <ButtonGroup aria-label="Changed regions" $p="none" $gap="none" className={className}>
+      <IconButton
+        label="Previous region"
+        icon={<ChevronLeft strokeWidth={iconStroke} />}
+        disabled={none}
+        accessibleWhenDisabled
+        onClick={() => view.goToRegion(-1)}
+      />
+      {/* The width of `12/14`, so the bar does not move at each step or from
+          variant to variant. The text is a live region, so a step is
+          announced. */}
+      <Text
+        role="status"
+        className={cx(tertiary, "min-w-[4.5ch] self-center text-center tabular-nums")}
+      >
+        {!none && (
+          <>
+            <span aria-hidden>{`${position}/${regionCount}`}</span>
+            <span className="sr-only">{words}</span>
+          </>
+        )}
+      </Text>
+      <IconButton
+        label="Next region"
+        icon={<ChevronRight strokeWidth={iconStroke} />}
+        disabled={none}
+        accessibleWhenDisabled
+        onClick={() => view.goToRegion(1)}
+      />
     </ButtonGroup>
   );
 }

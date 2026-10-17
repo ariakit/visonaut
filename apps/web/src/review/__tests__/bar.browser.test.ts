@@ -299,6 +299,126 @@ test("a failed save gives the focus to the page when the bar control that had it
   await expect(page.getByLabel("Review workspace", { exact: true })).toBeFocused();
 });
 
+// The region stepper of the bar. The stage also has a group named `Changed
+// regions`, so the stepper is the one inside the bar.
+function stepper(page: Page) {
+  return page
+    .getByRole("region", { name: "Review actions", exact: true })
+    .getByRole("group", { name: "Changed regions", exact: true });
+}
+
+/** Two small changes far apart: the title and the button. */
+async function useTwoRegions(page: Page) {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const diff = model.items[0]?.variants[0]?.diff;
+    if (!diff) throw new Error("Expected a mask.");
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect x="150" y="120" width="40" height="24" fill="#f33"/><rect x="320" y="250" width="125" height="35" fill="#f33"/></svg>`;
+    diff.url = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    window.reviewFixture.update(model);
+  });
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+}
+
+test("Next region zooms the stage to the first region, and the counter and the box agree", async ({
+  page,
+}) => {
+  // The stepper is in a wide bar only.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  await useTwoRegions(page);
+  const marks = page.getByRole("button", { name: /^Changed region / });
+  await expect(marks).toHaveCount(2);
+  const counter = stepper(page).getByRole("status");
+  const digits = counter.locator("[aria-hidden]");
+  // Before the first step, the counter has a dash and the words.
+  await expect(digits).toHaveText("–/2");
+  await expect(counter).toContainText("2 regions");
+  await expect(marks.first()).not.toHaveAttribute("aria-current");
+  const image = page.getByRole("img", { name: /^Current: / });
+  const before = await image.boundingBox();
+  await stepper(page).getByRole("button", { name: "Next region", exact: true }).click();
+  await expect(digits).toHaveText("1/2");
+  await expect(counter).toContainText("Region 1 of 2");
+  await expect
+    .poll(async () => (await image.boundingBox())?.width)
+    .toBeGreaterThan(before?.width ?? 0);
+  // The box that is current is the box of the step.
+  await expect(marks.first()).toHaveAttribute("aria-current", "true");
+  // The step wraps around the end, and Previous region goes back.
+  await stepper(page).getByRole("button", { name: "Previous region", exact: true }).click();
+  await expect(digits).toHaveText("2/2");
+  await expect(counter).toContainText("Region 2 of 2");
+  await expect(page.getByRole("button", { name: "Changed region 2 of 2" })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  // A click on a box moves the counter to its region.
+  await page.getByRole("button", { name: "Changed region 2 of 2" }).click();
+  await stepper(page).getByRole("button", { name: "Next region", exact: true }).click();
+  await expect(digits).toHaveText("1/2");
+});
+
+test("the stepper is off for a variant with no region, and the decisions keep their place", async ({
+  page,
+}) => {
+  // The stepper is in a wide bar only.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  await useTwoRegions(page);
+  const next = stepper(page).getByRole("button", { name: "Next region", exact: true });
+  const previous = stepper(page).getByRole("button", { name: "Previous region", exact: true });
+  await expect(next).not.toHaveAttribute("aria-disabled", "true");
+  const before = await box(page);
+  // The third screenshot is an added variant: it has no mask, so no region.
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+  await expect(page.getByText("Added", { exact: true })).toBeVisible();
+  await expect(next).toHaveAttribute("aria-disabled", "true");
+  await expect(previous).toHaveAttribute("aria-disabled", "true");
+  await expect(stepper(page).getByRole("status")).toHaveText("");
+  expect(await box(page)).toEqual(before);
+});
+
+// A bar that is less than 65rem wide leaves the stepper out: it takes 119 px,
+// and a window of 1280 or 1366 px keeps its one row and the room of its status
+// line. In a wide bar the stepper is in the row of the view controls.
+for (const [width, shown] of [
+  [390, false],
+  [700, false],
+  [1280, false],
+  [1366, false],
+  [1400, true],
+  [1440, true],
+] as const) {
+  test(`at ${width} px, the stepper is ${shown ? "in the row of the view controls" : "out of the bar"}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await open(page);
+    const next = stepper(page).getByRole("button", { name: "Next region", exact: true });
+    // Every other view control stays on screen, with or without the stepper.
+    await expect(page.getByRole("button", { name: "Zoom in", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Zoom out", exact: true })).toBeVisible();
+    expect(await next.isVisible()).toBe(shown);
+    if (!shown) return;
+    const nextBox = await next.boundingBox();
+    const maskBox = await page.getByRole("switch", { name: "Mask" }).boundingBox();
+    expect(nextBox?.y).toBe(maskBox?.y);
+  });
+}
+
+test("a window of 1280 px keeps the bar in one row, as without the stepper", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  const maskBox = await page.getByRole("switch", { name: "Mask" }).boundingBox();
+  expect((await box(page)).y).toBe(maskBox?.y);
+  // The status line keeps its room: 215 px at this width.
+  const room = await statusLine(page).locator("..").boundingBox();
+  expect(room?.width).toBeGreaterThan(200);
+});
+
 // A11Y-14 at 400% zoom: the window of 1,440 by 900 px is 360 by 225 CSS px.
 // Measured on `main` with this test before the new bar: at rest, the sticky
 // header and the decision bar left 82.5 px for the image (113.5 px at 320 by

@@ -15,7 +15,7 @@ import type { BarMessage } from "./message.ts";
 import { MoreMenu } from "./more-menu.tsx";
 import type { WholeItemCommand } from "./more-menu.tsx";
 import type { RunApprovalCommand } from "./run-approval.tsx";
-import { MaskToggle, ModeButtons } from "./view-controls.tsx";
+import { MaskToggle, ModeButtons, RegionStepper } from "./view-controls.tsx";
 import { ZoomControl } from "./zoom.tsx";
 
 /** The view of the stage that the view controls change. */
@@ -56,8 +56,9 @@ function Divider({ className }: DividerProps) {
 }
 
 /**
- * The bar of the review page: Undo, the view controls of the stage, the status
- * line, Reject, Approve, and the `⋯` menu, in that order.
+ * The bar of the review page: Undo, the view controls of the stage (modes,
+ * mask, zoom, and the region stepper), the status line, Reject, Approve, and
+ * the `⋯` menu, in that order.
  *
  * - The bar has no surface: its controls sit in the sheet, with the gutter of
  *   the sheet, and the row has the width of the sheet.
@@ -145,6 +146,11 @@ export function ReviewBar({
                 zoom then takes a row of its own. */}
           <Divider className="@max-[24.75rem]:hidden" />
           <ZoomControl view={view.engine} className="flex-none" />
+          {/* Below 65rem the stepper and its divider leave the row: they take
+                119 px, which would leave the status line 96 px in a window of
+                1280 px. A box on the stage still zooms to its region. */}
+          <Divider className="@max-[65rem]:hidden" />
+          <RegionStepper view={view.engine} className="flex-none @max-[65rem]:hidden" />
         </div>
       )}
       {!takeover && view && <Divider className="@max-[57rem]:hidden" />}
