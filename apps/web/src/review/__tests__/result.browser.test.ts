@@ -234,7 +234,7 @@ test("the result marks no row and names no screenshot, and the run progress show
   await expect(list.locator('[aria-current="true"]')).toHaveCount(1);
   await expect(header.getByRole("heading", { name: /Success dialog$/ })).toBeVisible();
   // A run with a change to review has no result to show.
-  await expect(header.getByRole("button", { name: /left$/ })).toHaveCount(0);
+  await expect(header.getByRole("button", { name: /^Show result/ })).toHaveCount(0);
   await leaveOneChange(page);
   await expect(page.getByRole("link", { name: /^Solid\. Approved/ })).toBeVisible();
   await page.keyboard.press("a");
@@ -250,8 +250,12 @@ test("the result marks no row and names no screenshot, and the run progress show
   await expect(stage(page)).toBeVisible();
   await expect(resultPage).toHaveCount(0);
   await expect(list.locator('[aria-current="true"]')).toHaveCount(1);
-  // The name has the words of the review bar, then the count.
-  const progress = header.getByRole("button", { name: /All approved$/ });
+  // The tooltip is not a description, so the name has the action, the
+  // count, and the words of the review bar.
+  const progress = header.getByRole("button", {
+    name: "Show result: All approved (11 approved, 0 rejected, 0 open)",
+    exact: true,
+  });
   await progress.hover();
   await expect(page.getByRole("tooltip", { name: "Show result" })).toBeVisible();
   await progress.click();

@@ -318,10 +318,14 @@ function RunProgress({ model, onShowResult, className }: RunProgressProps) {
     </span>
   );
   if (onShowResult) {
+    // The tooltip shows on hover and focus, but it is not a description, so
+    // the name says what the button does.
+    const name = shares ? `Show result: ${label} (${shares.label})` : `Show result: ${label}`;
     return (
       <Hint label="Show result">
         <Button
           $gap="lg"
+          aria-label={name}
           onClick={onShowResult}
           className={cx("review-run-progress flex-none", className)}
         >

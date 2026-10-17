@@ -286,9 +286,10 @@ test("a failed save gives the focus to the page when the bar control that had it
 // ended, -27 px (4 px). Measured with the new bar of #554, which also has the
 // view controls of the stage: 87 and 118 px at rest, and 27 and 38 px with
 // the session ended and a refusal. Since #519 the zoom has a row of its own
-// at these widths, so each control of the bar is on screen: 49.5 and 80.5 px
-// at rest. The floors are 49 and 80 px at rest, and 15 and 20 px with the
-// tallest text.
+// at these widths, so each control of the bar is on screen. Measured with the
+// zoom row: 49.5 and 80.5 px at rest. The floors at rest are about 8 px below
+// those values (41 and 72 px), so a small change of the fonts does not fail
+// the test. The floors with the tallest text are 15 and 20 px.
 async function freeHeight(page: Page) {
   // The header sticks to the top and the bar to the bottom, so the free
   // height is the same at each scroll position.
@@ -304,8 +305,8 @@ async function freeHeight(page: Page) {
 // A failed save hides the view controls, so the row of the zoom does not
 // change the floors of the tallest bar.
 for (const [width, height, atRest, withFailure] of [
-  [360, 225, 49, 15],
-  [320, 256, 80, 20],
+  [360, 225, 41, 15],
+  [320, 256, 72, 20],
 ] as const) {
   test(`at ${width} by ${height} px, the bar leaves at least ${atRest} px for the image at rest, and ${withFailure} px with its longest text`, async ({
     page,
