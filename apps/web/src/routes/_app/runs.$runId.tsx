@@ -18,6 +18,7 @@ import {
 import { createReviewCommands, loadReviewModel } from "../../review/client.ts";
 import { ReviewCommandError } from "../../review/model.ts";
 import type { ReviewModel, ReviewSelection } from "../../review/model.ts";
+import { RunLoading } from "../../review/run-loading.tsx";
 import { ReviewWorkspace } from "../../review/review-workspace.tsx";
 import type { ReviewRoute } from "../../review/review-workspace.tsx";
 
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/_app/runs/$runId")({
     variant: typeof search.variant === "string" ? search.variant : undefined,
   }),
   ssr: false,
-  // The loading text shows at once after a click on a run.
+  // The loading shape shows at once after a click on a run.
   pendingMs: 0,
   // The review workspace renders the shell root and its own header.
   staticData: { shell: "page" },
@@ -76,16 +77,6 @@ function RunShell({ children }: { children: ReactNode }) {
   );
 }
 
-function RunLoading() {
-  return (
-    <RunShell>
-      <Text render={<p />} role="status" className="text-sm ak-ink-60">
-        Checking access and loading this run…
-      </Text>
-    </RunShell>
-  );
-}
-
 function RunError({ error, reset }: { error: unknown; reset(): void }) {
   const router = useRouter();
   const noAccess = error instanceof ReviewCommandError && error.status === 403;
@@ -113,7 +104,9 @@ function RunError({ error, reset }: { error: unknown; reset(): void }) {
           This run could not be opened
         </Text>
         <p role="alert">{message}</p>
+        {/* A grid stretches its children: the button keeps the width of its label. */}
         <Button
+          className="justify-self-start"
           onClick={() => {
             void router.invalidate().then(reset);
           }}

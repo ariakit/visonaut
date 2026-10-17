@@ -1,8 +1,9 @@
 import { createFileRoute, Outlet, useMatches } from "@tanstack/react-router";
+import { useState } from "react";
 import { NoAccessScreen, SignInScreen } from "../access/access-screens.tsx";
 import { AppSessionProvider, useAppSession } from "../app-session.tsx";
 import { AppShell } from "../components/kit/shell.tsx";
-import { isGuestDocument } from "../dashboard/run-list.ts";
+import { documentRepository, isGuestDocument } from "../dashboard/run-list.ts";
 
 declare module "@tanstack/react-router" {
   interface StaticDataRouteOption {
@@ -19,15 +20,21 @@ declare module "@tanstack/react-router" {
 export const Route = createFileRoute("/_app")({
   // The server says if the document request has a session credential. With
   // none, the document has the sign-in page and no page waits for a request.
-  loader: (options) => ({ guest: isGuestDocument(options) }),
+  loader: (options) => ({
+    guest: isGuestDocument(options),
+    repository: documentRepository(options),
+  }),
   component: AppLayout,
 });
 
 function AppLayout() {
-  const { guest } = Route.useLoaderData();
+  const loaderData = Route.useLoaderData();
+  // The browser runs the loader again with no server context, so the layout
+  // keeps the repository of the document.
+  const [repository] = useState(loaderData.repository);
   return (
     <AppSessionProvider>
-      <AppFrame guest={guest} />
+      <AppFrame guest={loaderData.guest} repository={repository} />
     </AppSessionProvider>
   );
 }
@@ -35,15 +42,17 @@ function AppLayout() {
 interface AppFrameProps {
   /** True when the document request had no session credential. */
   guest: boolean;
+  /** The repository of the service, from the document. */
+  repository?: string;
 }
 
-function AppFrame({ guest }: AppFrameProps) {
+function AppFrame({ guest, repository }: AppFrameProps) {
   const { denial } = useAppSession();
   const pageShell = useMatches({
     select: (matches) => matches.some((match) => match.staticData.shell === "page"),
   });
   // One sign-in page and one no access page for each page of the app.
-  if (guest || denial?.status === "guest") return <SignInScreen />;
+  if (guest || denial?.status === "guest") return <SignInScreen repository={repository} />;
   if (denial?.status === "forbidden") {
     return <NoAccessScreen login={denial.login} message={denial.message} />;
   }

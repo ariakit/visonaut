@@ -114,6 +114,11 @@ export interface DocumentContext {
    * It is a check of a name only, with no D1 read.
    */
   guest: boolean;
+  /**
+   * The repository of the service as `owner/name`, from the configuration.
+   * The sign-in page names it. It is public, and it needs no D1 read.
+   */
+  repository: string;
 }
 
 // The router gives the context of the server to a loader as `serverContext`.
@@ -136,6 +141,18 @@ export function isGuestDocument(loaderOptions: unknown) {
   if (!isRecord(loaderOptions)) return false;
   const { serverContext } = loaderOptions;
   return isRecord(serverContext) && serverContext.guest === true;
+}
+
+/**
+ * The repository that the server gives to the document request. It is
+ * absent in the browser.
+ */
+export function documentRepository(loaderOptions: unknown) {
+  if (!isRecord(loaderOptions)) return;
+  const { serverContext } = loaderOptions;
+  if (!isRecord(serverContext)) return;
+  const { repository } = serverContext;
+  return typeof repository === "string" && repository ? repository : undefined;
 }
 
 /**
