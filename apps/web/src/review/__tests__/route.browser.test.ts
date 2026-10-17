@@ -1523,8 +1523,9 @@ test("a run with no change loads the first page of its unchanged screenshots at 
 }) => {
   const requests = await unchangedRun(page, { changed: false });
   await page.goto(runUrl("/runs/run-42"));
-  await expect(page.getByRole("heading", { name: "Alpha" })).toBeVisible();
-  expect(requests).toEqual(["page=0"]);
+  // The result names no screenshot (#519), so the test waits for the request.
+  await expect(page.getByRole("region", { name: "Nothing to review" })).toBeVisible();
+  await expect.poll(() => requests).toEqual(["page=0"]);
 });
 
 test("a run with no change shows a failure of its first page, and loads it again", async ({
@@ -1540,8 +1541,10 @@ test("a run with no change shows a failure of its first page, and loads it again
   await expect(failure).toHaveText(unchangedFailure);
   expect(requests).toEqual(["page=0"]);
   await failure.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("heading", { name: "Alpha" })).toBeVisible();
-  expect(requests).toEqual(["page=0", "page=0", "page=1"]);
+  const items = page.getByRole("navigation", { name: "Screenshots" });
+  await expect(items.getByRole("button", { name: /^alpha/ })).toBeVisible();
+  await expect(failure).toHaveCount(0);
+  await expect.poll(() => requests).toEqual(["page=0", "page=0", "page=1"]);
 });
 
 test("a page of unchanged screenshots that fails to load shows the failure and loads again", async ({

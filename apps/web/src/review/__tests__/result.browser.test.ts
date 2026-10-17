@@ -221,3 +221,75 @@ test("the notice of a closed run above the result starts at the edge of the list
   if (!noticeBox || !listBox) throw new Error("Expected the notice and the list.");
   expect(Math.round(noticeBox.x)).toBe(Math.round(listBox.x + listBox.width));
 });
+
+// Points 4, 5, and 6 of #519: as in the lab, the result has no screenshot in
+// the list or in the header, and the run progress of the header shows it
+// again.
+test("the result marks no row and names no screenshot, and the run progress shows it again", async ({
+  page,
+}) => {
+  await open(page);
+  const list = page.getByRole("navigation", { name: "Screenshots" });
+  const header = page.locator(".shell-header");
+  await expect(list.locator('[aria-current="true"]')).toHaveCount(1);
+  await expect(header.getByRole("heading", { name: /Success dialog$/ })).toBeVisible();
+  // A run with a change to review has no result to show.
+  await expect(header.getByRole("button", { name: /left$/ })).toHaveCount(0);
+  await leaveOneChange(page);
+  await expect(page.getByRole("link", { name: /^Solid\. Approved/ })).toBeVisible();
+  await page.keyboard.press("a");
+  const resultPage = result(page, "All approved");
+  await expect(resultPage).toBeVisible();
+  await expect(list.locator('[aria-current="true"]')).toHaveCount(0);
+  await expect(header.getByRole("heading")).toHaveCount(0);
+  await expect(header.getByText(/ \/ 4$/)).toHaveCount(0);
+  // The list keeps a Tab stop.
+  await expect(list.locator('a[tabindex="0"]')).toHaveCount(1);
+
+  await page.keyboard.press("ArrowDown");
+  await expect(stage(page)).toBeVisible();
+  await expect(resultPage).toHaveCount(0);
+  await expect(list.locator('[aria-current="true"]')).toHaveCount(1);
+  // The name has the words of the review bar, then the count.
+  const progress = header.getByRole("button", { name: /All approved$/ });
+  await progress.hover();
+  await expect(page.getByRole("tooltip", { name: "Show result" })).toBeVisible();
+  await progress.click();
+  await expect(resultPage).toBeVisible();
+  await expect(stage(page)).toHaveCount(0);
+});
+
+// Point 7 of #519: the result has the two ways of the lab result that the
+// page has data for.
+test("the result shows the rejected change and links to the pull request", async ({ page }) => {
+  await open(page);
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.run.title = "#7751 · Dialog focus styles";
+    model.run.repository = "ariakit/ariakit";
+    for (const item of model.items) {
+      for (const variant of item.variants) {
+        if (variant.key !== "React") variant.verdict = "approved";
+      }
+    }
+    window.reviewFixture.update(model);
+  });
+  // The new model also renames the run, so the key waits for it.
+  await expect(page.getByRole("button", { name: "Run #7751 Dialog focus styles" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^Solid\. Approved/ })).toBeVisible();
+  await page.keyboard.press("x");
+  const resultPage = result(page, "1 rejected");
+  await expect(resultPage).toBeVisible();
+  await expect(resultPage.getByRole("link", { name: "Pull request" })).toHaveAttribute(
+    "href",
+    "https://github.com/ariakit/ariakit/pull/7751",
+  );
+  await resultPage.getByRole("button", { name: "Show rejected", exact: true }).click();
+  await expect(resultPage).toHaveCount(0);
+  await expect(page.getByRole("combobox", { name: /^Variant: React\. Rejected/ })).toBeVisible();
+  // The button went with the result, so the page has the focus and its keys.
+  await expect(page.getByLabel("Review workspace", { exact: true })).toBeFocused();
+  await expect(
+    page.getByRole("navigation", { name: "Screenshots" }).locator('[aria-current="true"]'),
+  ).toHaveAccessibleName(/^dialog\/open\. 1 rejected/);
+});

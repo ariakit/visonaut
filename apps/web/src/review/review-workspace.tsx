@@ -12,7 +12,6 @@ import {
   ShellFooter,
   ShellSidebar,
   ShellSidebarBody,
-  ShellSidebarHeader,
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
@@ -30,7 +29,7 @@ import { VariantNav } from "../components/kit/variants/variant-nav.tsx";
 import { BarHost, reviewActionsId, useBarHost } from "./bar-host.tsx";
 import { CaptureDetails } from "./capture-details.tsx";
 import type { ReviewCommands, ReviewModel, ReviewSelection } from "./model.ts";
-import { RunHeader, ScreenshotStepper, getRunIdentity } from "./run-header.tsx";
+import { RunHeader, ScreenshotStepper, getPullRequestUrl, getRunIdentity } from "./run-header.tsx";
 import { getRunResult } from "./run-words.ts";
 import { getFamilyLabels, getSessionItem, pickItem, pickVariant } from "./session-items.ts";
 import { ShortcutHelp } from "./shortcut-help.tsx";
@@ -97,6 +96,17 @@ function SkipLink() {
       </Button>
     </div>
   );
+}
+
+function findRejected(items: ReviewModel["items"]): ReviewSelection | null {
+  for (const item of items) {
+    for (const variant of item.variants) {
+      if (variant.kind === "unchanged") continue;
+      if (variant.verdict !== "rejected") continue;
+      return { itemKey: item.key, variantKey: variant.key };
+    }
+  }
+  return null;
 }
 
 function initialSelection(model: ReviewModel): ReviewSelection {
@@ -316,7 +326,8 @@ function ReviewSession({
   const sessionList = useScreenshotList({
     items: sessionItems,
     families,
-    selection,
+    // The result has no screenshot on the stage, so the list marks no row.
+    selection: showResult ? null : selection,
     selectItem: selectRow,
     unchangedReady: unchanged.complete || unchanged.failed,
   });
@@ -398,6 +409,17 @@ function ReviewSession({
   }, [showsUnchanged]);
   const itemPosition = sessionList.position;
   const stepVariant = (step: 1 | -1) => selectVariant(variantIndex + step);
+  // The first rejected change of the run, which the result can open.
+  const rejectedVariant = showResult ? findRejected(model.items) : null;
+  const showRejected = () => {
+    if (!rejectedVariant) return;
+    leaveResult();
+    remembered.current.set(rejectedVariant.itemKey, rejectedVariant.variantKey);
+    select(rejectedVariant);
+    // The button goes with the result, so the page takes the focus, as
+    // after Undo.
+    focusWorkspace();
+  };
   const onKeyDown = useEffectEvent((event: globalThis.KeyboardEvent) => {
     if (event.defaultPrevented || event.repeat || !shortcuts) return;
     if (excludesShortcuts(event)) return;
@@ -481,9 +503,11 @@ function ReviewSession({
     if (narrow) setItemsOpen(true);
     else setSidebarOpen(true);
   };
+  // The result names no screenshot in the header either.
+  const stepperItem = showResult ? null : sessionItem;
   const stepperProps = {
-    item: sessionItem,
-    family: sessionItem ? sessionList.labels.get(sessionItem.family) : null,
+    item: stepperItem,
+    family: stepperItem ? sessionList.labels.get(stepperItem.family) : null,
     position: itemPosition,
     count: sessionList.order.length,
     onStep: stepItem,
@@ -508,6 +532,7 @@ function ReviewSession({
         <span ref={narrowProbe} aria-hidden className={narrowProbeClass} />
         <RunHeader
           model={changedModel}
+          onShowResult={resultReady ? () => setResultLeft(false) : null}
           stepper={
             <HeadingLevel>
               <ScreenshotStepper
@@ -583,6 +608,8 @@ function ReviewSession({
                     next={nextRun}
                     screenshots={listCounts.changes + listCounts.unchanged}
                     onShowAll={showAllScreenshots}
+                    onShowRejected={rejectedVariant ? showRejected : null}
+                    pullRequestUrl={getPullRequestUrl(model.run)}
                     onUndo={session.canUndo ? bar.undo : null}
                   />
                 </PanelSheet>
@@ -667,24 +694,26 @@ function ReviewSession({
           render={<aside />}
           aria-label="Capture details"
         >
-          <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-            <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
-              Capture details
-            </Text>
-            <Button
-              $p={1}
-              aria-label="Close capture details"
-              onClick={() => {
-                setDetailsOpen(false);
-                detailsTrigger.current?.focus();
-              }}
-            >
-              <ButtonSlot>
-                <X />
-              </ButtonSlot>
-            </Button>
-          </ShellSidebarHeader>
+          {/* The panel starts at the header, beside the variant row of the
+              sheet, so it has no header with a line across the row. */}
           <ShellSidebarBody $p={5}>
+            <div className="mb-3 flex items-center justify-between">
+              <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
+                Capture details
+              </Text>
+              <Button
+                $p={1}
+                aria-label="Close capture details"
+                onClick={() => {
+                  setDetailsOpen(false);
+                  detailsTrigger.current?.focus();
+                }}
+              >
+                <ButtonSlot>
+                  <X />
+                </ButtonSlot>
+              </Button>
+            </div>
             {!narrow && variant && (
               <CaptureDetails model={model} variant={variant} runStatus={runStatus} />
             )}

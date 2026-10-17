@@ -172,8 +172,9 @@ export function ReviewBar({
           <div
             className={cx(
               "flex flex-none items-center justify-center gap-1",
-              // A narrow bar gives the view controls the first row.
-              "@max-[57rem]:order-first @max-[57rem]:basis-full",
+              // A narrow bar gives the view controls the first row. In a
+              // very narrow bar, the zoom takes a row of its own.
+              "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:flex-wrap",
             )}
           >
             <ModeButtons
@@ -183,7 +184,9 @@ export function ReviewBar({
             />
             <Divider />
             <MaskToggle stored={view.stored} available={!!view.engine.subject.mask} />
-            <Divider />
+            {/* The divider goes where the row has no room for it, and the
+                zoom then takes a row of its own. */}
+            <Divider className="@max-[24.75rem]:hidden" />
             <ZoomControl view={view.engine} className="flex-none" />
           </div>
         )}
