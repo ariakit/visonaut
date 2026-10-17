@@ -20,12 +20,11 @@ import { shellRadius } from "../components/kit/tokens.ts";
 import { QueueButton } from "./run-header.tsx";
 
 // The heights of the controls of the page: the variant control and the
-// stepper of a narrow window, `Details`, and the bar.
+// stepper of a narrow window, `Details`, and a row of the bar.
 const navHeight = "h-[calc(1lh+--spacing(5))]";
 // The stepper of a narrow window is lower than the variant control.
 const stepperHeight = "h-[calc(1lh+--spacing(4))]";
 const buttonHeight = "h-[calc(1lh+--spacing(4)+2px)]";
-const barHeight = "h-[calc(1lh+--spacing(5)+1px)]";
 
 // The row above the panel, with the stepper of a narrow window. The row stays
 // in the grid at each width, so the panel keeps its place in the second row.
@@ -57,18 +56,31 @@ function VariantRowShape() {
 }
 
 // The stage before its image is here: the well with the median image box,
-// 416 by 170, and the bar under it, in the room of the panel.
+// 416 by 170, in the room of the panel.
 function StageShape() {
   return (
     <Frame $p={2} className="flex min-h-0 flex-1 flex-col gap-2 pt-0">
       <Well className="grid min-h-80 min-w-0 flex-1 place-items-center">
         <Skeleton soft $rounded="none" className="aspect-[416/170] w-full max-w-[416px]" />
       </Well>
+    </Frame>
+  );
+}
+
+// The bar before its controls are here: the bottom row of the panel, with
+// the height of the bar in one, two, and three rows of buttons, with the gap
+// of a row between them. The rows change at the widths where the bar wraps.
+function BarShape() {
+  return (
+    <Frame $p={2} className="@container flex-none pt-0">
       <Skeleton
         soft
-        $rounded="3xl"
-        $forceRounded
-        className={cx(barHeight, "mx-auto w-full max-w-[72rem]")}
+        $rounded="xl"
+        className={cx(
+          "h-[calc(1lh+--spacing(4))]",
+          "@max-[57rem]:h-[calc(2lh+--spacing(10))]",
+          "@max-[24.75rem]:h-[calc(3lh+--spacing(15))]",
+        )}
       />
     </Frame>
   );
@@ -120,6 +132,7 @@ export function RunLoading() {
             <PanelSheet className={besideList}>
               <VariantRowShape />
               <StageShape />
+              <BarShape />
             </PanelSheet>
           </ShellMainBody>
         </ShellMain>

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
+import { colorOf } from "./colors.ts";
 import type {} from "./fixture-api.ts";
 
 // The panel sheet of the screenshot view (#275): the variant row, the stage,
@@ -44,6 +45,41 @@ test("the variant row, the stage, and the bar are in one sheet", async ({ page }
   expect(stageBox.x).toBeGreaterThan(panelBox.x);
   expect(stageBox.x + stageBox.width).toBeLessThan(panelBox.x + panelBox.width);
 });
+
+// The maintainer asked for one bar: the controls sit in the bottom row of the
+// sheet, and the bar has no pill, no shadow, and no max width of its own.
+for (const colorScheme of ["light", "dark"] as const) {
+  test(`the bar is the bottom row of the sheet and has no surface of its own (${colorScheme})`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme });
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await open(page);
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const panel = sheet(page);
+    const bar = panel.getByRole("region", { name: "Review actions", exact: true });
+    const panelBox = await box(panel);
+    const barBox = await box(bar);
+    // The row has the width of the sheet, inside its edge.
+    expect(Math.abs(barBox.x - panelBox.x)).toBeLessThanOrEqual(2);
+    expect(Math.abs(barBox.width - panelBox.width)).toBeLessThanOrEqual(2);
+    // The first control has the gutter of the sheet, as the stage has it.
+    const stageBox = await box(stage(page));
+    const undoBox = await box(bar.getByRole("button", { name: "Undo", exact: true }));
+    expect(Math.abs(undoBox.x - stageBox.x)).toBeLessThanOrEqual(1);
+    const style = await bar.evaluate((element) => {
+      const computed = getComputedStyle(element);
+      return {
+        shadow: computed.boxShadow,
+        maxWidth: computed.maxWidth,
+        border: computed.borderTopWidth,
+      };
+    });
+    expect(style).toEqual({ shadow: "none", maxWidth: "none", border: "0px" });
+    // The row has the color of the sheet, not a lighter surface on it.
+    expect(await colorOf(bar, "backgroundColor")).toEqual(await colorOf(panel, "backgroundColor"));
+  });
+}
 
 test("the sheet starts at the edge of the list, and the page does not scroll", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });

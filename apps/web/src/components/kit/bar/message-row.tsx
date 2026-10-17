@@ -2,6 +2,8 @@ import { cx } from "clava";
 import { CircleAlert, CircleCheck, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button, ButtonLabel } from "../../ariakit/components/button.ariakit.react.tsx";
+import { Frame } from "../../ariakit/components/frame.ariakit.react.tsx";
+import type { FrameProps } from "../../ariakit/components/frame.ariakit.react.tsx";
 import { ProgressCircular } from "../../ariakit/components/progress.ariakit.react.tsx";
 import { Text } from "../../ariakit/components/text.ariakit.react.tsx";
 import { secondary } from "../tokens.ts";
@@ -60,6 +62,14 @@ function ActionButton({ action, onDone }: ActionButtonProps) {
   );
 }
 
+// The tint of a message with recovery buttons: the color of its state at 15%,
+// as the notices above the panel have it.
+function getTintProps(message: BarMessage | null): FrameProps {
+  if (!message?.actions.length) return {};
+  if (message.tone !== "danger" && message.tone !== "warning") return {};
+  return { $layer: message.tone, $mix: 15, $p: 1, $rounded: "xl" };
+}
+
 export interface StatusLineProps {
   message: BarMessage | null;
   /** Runs after a recovery button. */
@@ -71,14 +81,18 @@ export interface StatusLineProps {
  * The one status line of the bar. It has a reserved height and it is always
  * in the page, so the live region exists before its first text. The mark and
  * the words give the tone, and the recovery buttons follow, outside the live
- * region.
+ * region. A message with recovery buttons tints the line. The tree is the same
+ * with and without a tint, so the live region and the focus stay.
  */
 export function StatusLine({ message, onActionDone, className }: StatusLineProps) {
   const tone = message?.tone ?? "neutral";
   const mark = getMark(tone);
   const textTone = tone === "danger" || tone === "warning" || tone === "success" ? tone : undefined;
   return (
-    <div className={cx("flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1", className)}>
+    <Frame
+      {...getTintProps(message)}
+      className={cx("flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1", className)}
+    >
       {/* The words keep a width to read. The buttons wrap below them. */}
       <div className="flex min-w-[min(100%,16em)] flex-1 items-start gap-2 px-2">
         {mark && (
@@ -111,6 +125,6 @@ export function StatusLine({ message, onActionDone, className }: StatusLineProps
           ))}
         </div>
       )}
-    </div>
+    </Frame>
   );
 }
