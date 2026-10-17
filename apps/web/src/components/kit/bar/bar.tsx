@@ -15,7 +15,7 @@ import type { BarMessage } from "./message.ts";
 import { MoreMenu } from "./more-menu.tsx";
 import type { WholeItemCommand } from "./more-menu.tsx";
 import type { RunApprovalCommand } from "./run-approval.tsx";
-import { MaskToggle, ModeButtons } from "./view-controls.tsx";
+import { MaskToggle, ModeButtons, RegionStepper } from "./view-controls.tsx";
 import { ZoomControl } from "./zoom.tsx";
 
 /** The view of the stage that the view controls change. */
@@ -56,8 +56,9 @@ function Divider({ className }: DividerProps) {
 }
 
 /**
- * The bar of the review page: Undo, the view controls of the stage, the status
- * line, Reject, Approve, and the `⋯` menu, in that order.
+ * The bar of the review page: Undo, the view controls of the stage (modes,
+ * mask, zoom, and the region stepper), the status line, Reject, Approve, and
+ * the `⋯` menu, in that order.
  *
  * - The bar has no surface: its controls sit in the sheet, with the gutter of
  *   the sheet, and the row has the width of the sheet.
@@ -66,7 +67,7 @@ function Divider({ className }: DividerProps) {
  *   its place when a message shows.
  * - A failed save takes the bar over: the bar then has only its words and
  *   its recovery buttons.
- * - Below 57rem of its own width, the bar has rows: the view controls, the
+ * - Below 65rem of its own width, the bar has rows: the view controls, the
  *   status line, then Undo and the decisions. An empty status line has no
  *   height there.
  * - A message with recovery buttons tints the status line.
@@ -128,14 +129,14 @@ export function ReviewBar({
       {/* The siblings of the status line keep their places in the tree, so
             the live region stays mounted. */}
       {!takeover && <UndoButton control={undo} />}
-      {!takeover && <Divider className="@max-[57rem]:hidden" />}
+      {!takeover && <Divider className="@max-[65rem]:hidden" />}
       {!takeover && view && (
         <div
           className={cx(
             "flex flex-none items-center justify-center gap-1",
             // A narrow bar gives the view controls the first row. In a
             // very narrow bar, the zoom takes a row of its own.
-            "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:flex-wrap",
+            "@max-[65rem]:order-first @max-[65rem]:basis-full @max-[65rem]:flex-wrap",
           )}
         >
           <ModeButtons stored={view.stored} subject={view.engine.subject} mode={view.engine.mode} />
@@ -145,9 +146,14 @@ export function ReviewBar({
                 zoom then takes a row of its own. */}
           <Divider className="@max-[24.75rem]:hidden" />
           <ZoomControl view={view.engine} className="flex-none" />
+          {/* Below 33rem the stepper and its divider leave the row, so the
+                other controls keep the width. A box on the stage still zooms
+                to its region. */}
+          <Divider className="@max-[33rem]:hidden" />
+          <RegionStepper view={view.engine} className="flex-none @max-[33rem]:hidden" />
         </div>
       )}
-      {!takeover && view && <Divider className="@max-[57rem]:hidden" />}
+      {!takeover && view && <Divider className="@max-[65rem]:hidden" />}
       <StatusLine
         message={message}
         onActionDone={onActionDone}
@@ -160,10 +166,10 @@ export function ReviewBar({
               // keeps two rows at 400% zoom (A11Y-14). The buttons are at
               // the bottom of the row, so a text that shows moves no
               // button. The line stays in the tree: it is the live region.
-              "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:has-[.review-save-state:empty]:h-0 @max-[57rem]:has-[.review-save-state:empty]:overflow-hidden",
+              "@max-[65rem]:order-first @max-[65rem]:basis-full @max-[65rem]:has-[.review-save-state:empty]:h-0 @max-[65rem]:has-[.review-save-state:empty]:overflow-hidden",
         )}
       />
-      {!takeover && <Divider className="@max-[57rem]:hidden" />}
+      {!takeover && <Divider className="@max-[65rem]:hidden" />}
       {!takeover && (
         <div className="ms-auto flex flex-none items-center gap-1">
           <DecisionButton action="reject" control={reject} />
