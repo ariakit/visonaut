@@ -8,6 +8,7 @@ import { createContext, useContext } from "react";
 import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import "../../styles.css";
+import { ClientError } from "../../client-error.ts";
 import { ReviewWorkspace } from "../review-workspace.tsx";
 import { ReviewCommandError } from "../model.ts";
 import type {
@@ -230,7 +231,12 @@ async function undo(command: UndoCommand): Promise<ReviewCommandResult> {
   calls.push(command);
   const existing = undone.get(command.undoCommandId);
   if (existing) return existing;
-  if (behavior === "offline") throw new Error("Connection lost.");
+  // The client throws this error when a request has no answer.
+  if (behavior === "offline") throw new ClientError("No connection.");
+  // The service answered, so the Undo can be saved, but the client cannot read the answer.
+  if (behavior === "undo-unreadable") {
+    throw new Error("The service returned an invalid response. Refresh before reviewing.");
+  }
   // D1 refused the transaction of the Undo: the service answers a 500.
   if (behavior === "undo-failed") {
     throw new ReviewCommandError("Server text.", { status: 500 });

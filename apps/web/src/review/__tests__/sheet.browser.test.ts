@@ -130,7 +130,7 @@ test("a run that is not ready puts its text and the bar in the sheet", async ({ 
     model.reviewReady = false;
     window.reviewFixture.update(model);
   });
-  const heading = page.getByRole("heading", { name: "No comparison items" });
+  const heading = page.getByRole("heading", { name: "No screenshots to compare" });
   await expect(heading).toBeVisible();
   // The text is in the room of the sheet, with the bar that the skip link
   // of the page goes to.
