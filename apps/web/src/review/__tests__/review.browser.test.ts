@@ -2901,6 +2901,31 @@ test("modal dialogs sit outside the shell and set the base text size themselves"
   expect(await fontSize(details.getByRole("button").first())).toBe("14px");
 });
 
+// The title of the header is a `Text` with a heading element (#519), and not
+// the prose `Heading` with its flow margins. It keeps the size and the place
+// that it had.
+test("the screenshot title of the header keeps its size and its place", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const title = page
+    .locator(".shell-header")
+    .getByRole("heading", { level: 2, name: /Success dialog$/ });
+  await expect(title).toBeVisible();
+  // The font shorthand has the size, the line height, and the weight.
+  const style = await title.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return { font: computed.font, margin: computed.margin };
+  });
+  expect(style.font).toMatch(/\b600 16px \/ 24px /);
+  expect(style.margin).toBe("0px");
+  // The title is in the middle of the header, as the other controls are.
+  const header = await page.locator(".shell-header").boundingBox();
+  const titleBox = await title.boundingBox();
+  if (!header || !titleBox) throw new Error("Expected the header and the title.");
+  expect(
+    Math.abs(titleBox.y + titleBox.height / 2 - (header.y + header.height / 2)),
+  ).toBeLessThanOrEqual(1);
+});
+
 test("workspace arrows and screenshot buttons follow the filtered item order", async ({ page }) => {
   await page.evaluate(() => {
     const model = window.reviewFixture.model();

@@ -151,3 +151,47 @@ test("the bar keeps the bottom of a window that is too short for the stage", asy
   const barBox = await box(bar);
   expect(barBox.y + barBox.height).toBeLessThanOrEqual(360);
 });
+
+// SHELL-20 item 1 (#519): the capture details panel starts at the header,
+// beside the sheet, so a line across the panel would cross the variant row.
+test("the capture details panel draws no line across the variant row", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  const details = page.getByRole("complementary", { name: "Capture details" });
+  await expect(details.getByRole("button", { name: "Close capture details" })).toBeVisible();
+  const row = await box(page.locator(".review-variant-row"));
+  const lines = await details.evaluate((panel) => {
+    const found: number[] = [];
+    for (const element of panel.querySelectorAll("*")) {
+      const style = getComputedStyle(element);
+      if (style.borderBottomStyle === "none") continue;
+      if (parseFloat(style.borderBottomWidth) === 0) continue;
+      found.push(element.getBoundingClientRect().bottom);
+    }
+    return found;
+  });
+  for (const line of lines) {
+    expect(line <= row.y || line >= row.y + row.height).toBe(true);
+  }
+});
+
+// The view controls of a narrow bar wrap, as in the lab, so each one is in
+// the bar and in the window.
+for (const colorScheme of ["light", "dark"] as const) {
+  test(`each control of the bar is inside the bar at 390 px (${colorScheme})`, async ({ page }) => {
+    await page.emulateMedia({ colorScheme });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(page);
+    const bar = page.getByRole("region", { name: "Review actions", exact: true });
+    const barBox = await box(bar);
+    const controls = await bar.getByRole("button").all();
+    expect(controls.length).toBeGreaterThan(0);
+    for (const control of controls) {
+      const controlBox = await box(control);
+      expect(controlBox.x).toBeGreaterThanOrEqual(barBox.x);
+      expect(controlBox.x + controlBox.width).toBeLessThanOrEqual(barBox.x + barBox.width);
+    }
+    await expect(bar.getByRole("button", { name: "Zoom in" })).toBeInViewport({ ratio: 1 });
+  });
+}

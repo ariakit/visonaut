@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { cx } from "clava";
-import { Check, Undo2, X } from "lucide-react";
+import { ArrowUpRight, Check, Undo2, X } from "lucide-react";
 import { useEffect, useId, useRef } from "react";
 import { Button, ButtonLabel, ButtonSlot } from "../../ariakit/components/button.ariakit.react.tsx";
 import { formatCount } from "../format.ts";
+import { getExternalLinkProps } from "../shell.tsx";
 import { EmptyState } from "../surfaces.tsx";
 import { iconStroke } from "../tokens.ts";
 
@@ -25,6 +26,10 @@ export interface ResultPageProps {
   /** The number of screenshots of the run, unchanged ones too. */
   screenshots: number;
   onShowAll(): void;
+  /** Opens a rejected change. Null when the run has none. */
+  onShowRejected: (() => void) | null;
+  /** The address of the pull request of the run. Null when it has none. */
+  pullRequestUrl: string | null;
   /** The Undo of the last decision. Null when the page has nothing to undo. */
   onUndo: (() => void) | null;
   className?: string;
@@ -42,6 +47,8 @@ export interface ResultPageProps {
  *   next={{ label: "#7754", runId: "run-2" }}
  *   screenshots={626}
  *   onShowAll={showUnchanged}
+ *   onShowRejected={null}
+ *   pullRequestUrl="https://github.com/ariakit/ariakit/pull/7751"
  *   onUndo={undo}
  * />
  */
@@ -52,6 +59,8 @@ export function ResultPage({
   next,
   screenshots,
   onShowAll,
+  onShowRejected,
+  pullRequestUrl,
   onUndo,
   className,
 }: ResultPageProps) {
@@ -95,7 +104,14 @@ export function ResultPage({
               >
                 <ButtonLabel>{next ? `Next run · ${next.label}` : "Queue"}</ButtonLabel>
               </Button>
-              {next && (
+              {onShowRejected && (
+                <Button $lightnessOffset onClick={onShowRejected}>
+                  <ButtonLabel>Show rejected</ButtonLabel>
+                </Button>
+              )}
+              {/* As in the lab, a rejected change takes the place of the
+                  second way to the Queue. */}
+              {!onShowRejected && next && (
                 <Button $lightnessOffset render={<Link to="/" />}>
                   <ButtonLabel>Queue</ButtonLabel>
                 </Button>
@@ -113,6 +129,14 @@ export function ResultPage({
               <Button $size="sm" onClick={onShowAll}>
                 <ButtonLabel>{`All ${formatCount(screenshots, "screenshot")}`}</ButtonLabel>
               </Button>
+              {pullRequestUrl && (
+                <Button $size="sm" render={<a {...getExternalLinkProps(pullRequestUrl)} />}>
+                  <ButtonLabel>Pull request</ButtonLabel>
+                  <ButtonSlot $size="sm" $ink={60}>
+                    <ArrowUpRight strokeWidth={iconStroke} />
+                  </ButtonSlot>
+                </Button>
+              )}
             </div>
           </div>
         }

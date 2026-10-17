@@ -2,6 +2,7 @@
 // run, the screenshot on the stage, and the progress of the review. The
 // facts of the run (commit, attempt, baseline) are in the popover of the run.
 
+import * as ak from "@ariakit/react";
 import { Link } from "@tanstack/react-router";
 import { cx } from "clava";
 import {
@@ -20,7 +21,6 @@ import {
   ButtonLabel,
   ButtonSlot,
 } from "../components/ariakit/components/button.ariakit.react.tsx";
-import { Heading } from "../components/ariakit/components/heading.ariakit.react.tsx";
 import {
   Popover,
   PopoverDisclosure,
@@ -76,6 +76,13 @@ export function getRunIdentity(run: ReviewModel["run"]): RunIdentity {
   return { number, title, short, full };
 }
 
+/** The address of the pull request of a run, or null for a run without one. */
+export function getPullRequestUrl(run: ReviewModel["run"]) {
+  const { number } = getRunIdentity(run);
+  if (!run.repository || number == null) return null;
+  return `https://github.com/${run.repository}/pull/${number}`;
+}
+
 /** The way back to the Queue: the first control of the header. */
 export function QueueButton() {
   return (
@@ -114,6 +121,7 @@ function RunCrumb({ model }: RunCrumbProps) {
   const { run } = model;
   const identity = getRunIdentity(run);
   const repository = run.repository ? `https://github.com/${run.repository}` : null;
+  const pullRequestUrl = getPullRequestUrl(run);
   const KindIcon = identity.number == null ? GitBranch : GitPullRequest;
   return (
     <PopoverProvider placement="bottom-start">
@@ -156,11 +164,8 @@ function RunCrumb({ model }: RunCrumbProps) {
           <>
             <Separator $gap={0} />
             <div className="grid justify-items-start">
-              {identity.number != null && (
-                <Button
-                  $size="sm"
-                  render={<a {...getExternalLinkProps(`${repository}/pull/${identity.number}`)} />}
-                >
+              {pullRequestUrl && (
+                <Button $size="sm" render={<a {...getExternalLinkProps(pullRequestUrl)} />}>
                   <ButtonSlot>
                     <ArrowUpRight strokeWidth={iconStroke} />
                   </ButtonSlot>
@@ -262,7 +267,12 @@ export function ScreenshotStepper({
         </span>
       )}
       {item && (
-        <Heading className="mt-0 mb-0 flex min-w-0 items-baseline gap-2 px-1 text-base font-semibold">
+        // The prose `Heading` has the margins of a text flow, so the title
+        // is a `Text` with the heading element of its level.
+        <Text
+          render={<ak.Heading />}
+          className="flex min-w-0 items-baseline gap-2 px-1 text-base font-semibold"
+        >
           {/* The name tells two screenshots apart, so the family gives way
               first when the two do not fit. */}
           <Text
@@ -274,7 +284,7 @@ export function ScreenshotStepper({
             {note ? `${familyLabel} · ${note}` : familyLabel}
           </Text>
           <span className="min-w-0 truncate">{item.label}</span>
-        </Heading>
+        </Text>
       )}
       {item && (
         <Text className={cx(tertiary, "flex-none px-1 tabular-nums")}>
@@ -290,16 +300,44 @@ const barBox = "block w-24 flex-none self-center";
 
 interface RunProgressProps {
   model: ReviewModel;
+  /** Shows the result again. With it, the progress is a button. */
+  onShowResult?: (() => void) | null;
   className?: string;
 }
 
 /**
  * The run progress of the header: the review bar of a run row and one count.
  * The bar has the approved share, the rejected share, and the open rest.
+ * When the run has a result, it is a button that shows the result.
  */
-function RunProgress({ model, className }: RunProgressProps) {
+function RunProgress({ model, onShowResult, className }: RunProgressProps) {
   const { label, shares } = getRunProgress(model);
+  const bar = shares && (
+    <span className={barBox}>
+      <ReviewBar shares={shares} render={<span />} />
+    </span>
+  );
+  if (onShowResult) {
+    // The tooltip shows on hover and focus, but it is not a description, so
+    // the name says what the button does.
+    const name = shares ? `Show result: ${label} (${shares.label})` : `Show result: ${label}`;
+    return (
+      <Hint label="Show result">
+        <Button
+          $gap="lg"
+          aria-label={name}
+          onClick={onShowResult}
+          className={cx("review-run-progress flex-none", className)}
+        >
+          {bar}
+          <ButtonLabel className="tabular-nums">{label}</ButtonLabel>
+        </Button>
+      </Hint>
+    );
+  }
   return (
+    // The text frame starts its text where the label of a button starts, so
+    // the count does not move when the progress becomes a button.
     <TextFrame
       $p={2}
       className={cx(
@@ -307,11 +345,7 @@ function RunProgress({ model, className }: RunProgressProps) {
         className,
       )}
     >
-      {shares && (
-        <span className={barBox}>
-          <ReviewBar shares={shares} render={<span />} />
-        </span>
-      )}
+      {bar}
       <span>{label}</span>
     </TextFrame>
   );
@@ -342,6 +376,8 @@ export interface RunHeaderProps {
   model: ReviewModel;
   /** The screenshot stepper of a wide window. A narrow window has it above the panel. */
   stepper: ReactNode;
+  /** Shows the result of the run. Null while the run has no result. */
+  onShowResult?: (() => void) | null;
 }
 
 /**
@@ -349,7 +385,7 @@ export interface RunHeaderProps {
  * stage, why the run closed, the count of loose comparison settings, the
  * progress of the review, the alerts, and the account.
  */
-export function RunHeader({ model, stepper }: RunHeaderProps) {
+export function RunHeader({ model, stepper, onShowResult }: RunHeaderProps) {
   const { facts, signingOut, signOutError, signOut } = useAppSession();
   const closed = getClosedWords(model.run);
   const loose = model.run.comparisonSettings?.loose ?? 0;
@@ -380,7 +416,7 @@ export function RunHeader({ model, stepper }: RunHeaderProps) {
           )}
           {/* The count stays on one line, also when the header measures how
               narrow it can be. */}
-          <RunProgress model={model} className="whitespace-nowrap" />
+          <RunProgress model={model} onShowResult={onShowResult} className="whitespace-nowrap" />
           {facts.alertCount != null && <StatusLink count={facts.alertCount} />}
           {facts.signedIn && (
             <UserMenu
