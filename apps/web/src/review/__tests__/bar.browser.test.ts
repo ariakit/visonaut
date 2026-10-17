@@ -323,6 +323,8 @@ async function useTwoRegions(page: Page) {
 test("Next region zooms the stage to the first region, and the counter and the box agree", async ({
   page,
 }) => {
+  // The stepper is in a wide bar only.
+  await page.setViewportSize({ width: 1440, height: 900 });
   await open(page);
   await useTwoRegions(page);
   const marks = page.getByRole("button", { name: /^Changed region / });
@@ -360,6 +362,8 @@ test("Next region zooms the stage to the first region, and the counter and the b
 test("the stepper is off for a variant with no region, and the decisions keep their place", async ({
   page,
 }) => {
+  // The stepper is in a wide bar only.
+  await page.setViewportSize({ width: 1440, height: 900 });
   await open(page);
   await useTwoRegions(page);
   const next = stepper(page).getByRole("button", { name: "Next region", exact: true });
@@ -377,28 +381,43 @@ test("the stepper is off for a variant with no region, and the decisions keep th
   expect(await box(page)).toEqual(before);
 });
 
-// A bar that is too narrow for the stepper leaves it out, and never gives
-// the view controls a third row for it.
-for (const width of [390, 500, 520, 540, 560, 700]) {
-  test(`at ${width} px, the stepper is in the row of the view controls or out of the bar`, async ({
+// A bar that is less than 65rem wide leaves the stepper out: it takes 119 px,
+// and a window of 1280 or 1366 px keeps its one row and the room of its status
+// line. In a wide bar the stepper is in the row of the view controls.
+for (const [width, shown] of [
+  [390, false],
+  [700, false],
+  [1280, false],
+  [1366, false],
+  [1400, true],
+  [1440, true],
+] as const) {
+  test(`at ${width} px, the stepper is ${shown ? "in the row of the view controls" : "out of the bar"}`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await open(page);
     const next = stepper(page).getByRole("button", { name: "Next region", exact: true });
-    const mask = page.getByRole("switch", { name: "Mask" });
     // Every other view control stays on screen, with or without the stepper.
     await expect(page.getByRole("button", { name: "Zoom in", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Zoom out", exact: true })).toBeVisible();
-    if (!(await next.isVisible())) {
-      expect(width).toBeLessThan(560);
-      return;
-    }
+    expect(await next.isVisible()).toBe(shown);
+    if (!shown) return;
     const nextBox = await next.boundingBox();
-    const maskBox = await mask.boundingBox();
+    const maskBox = await page.getByRole("switch", { name: "Mask" }).boundingBox();
     expect(nextBox?.y).toBe(maskBox?.y);
   });
 }
+
+test("a window of 1280 px keeps the bar in one row, as without the stepper", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await open(page);
+  const maskBox = await page.getByRole("switch", { name: "Mask" }).boundingBox();
+  expect((await box(page)).y).toBe(maskBox?.y);
+  // The status line keeps its room: 215 px at this width.
+  const room = await statusLine(page).locator("..").boundingBox();
+  expect(room?.width).toBeGreaterThan(200);
+});
 
 // A11Y-14 at 400% zoom: the window of 1,440 by 900 px is 360 by 225 CSS px.
 // Measured on `main` with this test before the new bar: at rest, the sticky

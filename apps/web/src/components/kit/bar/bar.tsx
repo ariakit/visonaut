@@ -67,7 +67,7 @@ function Divider({ className }: DividerProps) {
  *   its place when a message shows.
  * - A failed save takes the bar over: the bar then has only its words and
  *   its recovery buttons.
- * - Below 65rem of its own width, the bar has rows: the view controls, the
+ * - Below 57rem of its own width, the bar has rows: the view controls, the
  *   status line, then Undo and the decisions. An empty status line has no
  *   height there.
  * - A message with recovery buttons tints the status line.
@@ -129,14 +129,14 @@ export function ReviewBar({
       {/* The siblings of the status line keep their places in the tree, so
             the live region stays mounted. */}
       {!takeover && <UndoButton control={undo} />}
-      {!takeover && <Divider className="@max-[65rem]:hidden" />}
+      {!takeover && <Divider className="@max-[57rem]:hidden" />}
       {!takeover && view && (
         <div
           className={cx(
             "flex flex-none items-center justify-center gap-1",
             // A narrow bar gives the view controls the first row. In a
             // very narrow bar, the zoom takes a row of its own.
-            "@max-[65rem]:order-first @max-[65rem]:basis-full @max-[65rem]:flex-wrap",
+            "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:flex-wrap",
           )}
         >
           <ModeButtons stored={view.stored} subject={view.engine.subject} mode={view.engine.mode} />
@@ -146,14 +146,14 @@ export function ReviewBar({
                 zoom then takes a row of its own. */}
           <Divider className="@max-[24.75rem]:hidden" />
           <ZoomControl view={view.engine} className="flex-none" />
-          {/* Below 33rem the stepper and its divider leave the row, so the
-                other controls keep the width. A box on the stage still zooms
-                to its region. */}
-          <Divider className="@max-[33rem]:hidden" />
-          <RegionStepper view={view.engine} className="flex-none @max-[33rem]:hidden" />
+          {/* Below 65rem the stepper and its divider leave the row: they take
+                119 px, which would leave the status line 96 px in a window of
+                1280 px. A box on the stage still zooms to its region. */}
+          <Divider className="@max-[65rem]:hidden" />
+          <RegionStepper view={view.engine} className="flex-none @max-[65rem]:hidden" />
         </div>
       )}
-      {!takeover && view && <Divider className="@max-[65rem]:hidden" />}
+      {!takeover && view && <Divider className="@max-[57rem]:hidden" />}
       <StatusLine
         message={message}
         onActionDone={onActionDone}
@@ -166,10 +166,10 @@ export function ReviewBar({
               // keeps two rows at 400% zoom (A11Y-14). The buttons are at
               // the bottom of the row, so a text that shows moves no
               // button. The line stays in the tree: it is the live region.
-              "@max-[65rem]:order-first @max-[65rem]:basis-full @max-[65rem]:has-[.review-save-state:empty]:h-0 @max-[65rem]:has-[.review-save-state:empty]:overflow-hidden",
+              "@max-[57rem]:order-first @max-[57rem]:basis-full @max-[57rem]:has-[.review-save-state:empty]:h-0 @max-[57rem]:has-[.review-save-state:empty]:overflow-hidden",
         )}
       />
-      {!takeover && <Divider className="@max-[65rem]:hidden" />}
+      {!takeover && <Divider className="@max-[57rem]:hidden" />}
       {!takeover && (
         <div className="ms-auto flex flex-none items-center gap-1">
           <DecisionButton action="reject" control={reject} />

@@ -78,7 +78,7 @@ function BarShape() {
         $rounded="xl"
         className={cx(
           "h-[calc(1lh+--spacing(4))]",
-          "@max-[65rem]:h-[calc(2lh+--spacing(10))]",
+          "@max-[57rem]:h-[calc(2lh+--spacing(10))]",
           "@max-[24.75rem]:h-[calc(3lh+--spacing(15))]",
         )}
       />
