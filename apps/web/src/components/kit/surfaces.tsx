@@ -50,6 +50,14 @@ export function PanelSheet({ className, ...props }: FrameProps) {
 }
 
 /**
+ * Beside an open list, the column of the panel starts at the edge of the
+ * list, as the panel of the lab does. The gutter of the main area is a grid
+ * column, so a margin of one gutter takes it back. Give it to the panel and
+ * to the row above it, in the review workspace and in its loading shape.
+ */
+export const besideList = "@5xl/shell:-ms-(--shell-gutter)";
+
+/**
  * A recessed surface inside a sheet: the stage, a preview strip, a table
  * head. It has no border. Depth separates it.
  * @example

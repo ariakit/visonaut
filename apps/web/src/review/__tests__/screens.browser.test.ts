@@ -269,6 +269,46 @@ test("after HTTP 429, the sign-in button is off for the time that the service na
   await expect.poll(() => attempts).toBe(2);
 });
 
+// The shape has the panel of the page, so the page does not move when the run
+// arrives, with the list open, in a wide and in a narrow window. The shape has
+// the list open: the server renders it, and the saved state is on the client.
+const shapeSizes = [
+  { name: "a wide window", width: 1280, height: 900 },
+  { name: "a narrow window", width: 390, height: 844 },
+] as const;
+
+for (const { name, width, height } of shapeSizes) {
+  test(`the shape of the run page has the panel of the page in ${name}`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    let release = () => {};
+    await page.route("**/api/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/api/review-sessions") {
+        return route.fulfill({ json: { reviewSessionId: "session-loading" } });
+      }
+      await new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return route.fulfill({ json: compactReviewModel(fixtureModel()) });
+    });
+    await page.goto(entry("/runs/run-42"));
+    const loading = page.getByLabel("Loading run");
+    await expect(loading).toHaveAttribute("aria-busy", "true");
+    const loadingSheet = await loading.locator(":scope > :last-child").boundingBox();
+    release();
+    await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+    const sheet = await page
+      .getByRole("region", { name: "Selected variant", exact: true })
+      .locator("../..")
+      .boundingBox();
+    if (!loadingSheet || !sheet) throw new Error("Missing the panel sheet.");
+    expect(loadingSheet.x).toBeCloseTo(sheet.x, 0);
+    expect(loadingSheet.y).toBeCloseTo(sheet.y, 0);
+    expect(loadingSheet.width).toBeCloseTo(sheet.width, 0);
+    expect(loadingSheet.height).toBeCloseTo(sheet.height, 0);
+  });
+}
+
 test("a click on a run shows the shape of the run page at once", async ({ page }) => {
   const run = {
     id: "run-42",
