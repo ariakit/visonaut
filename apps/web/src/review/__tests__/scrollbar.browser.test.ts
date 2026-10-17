@@ -53,21 +53,21 @@ for (const width of widths) {
       )
       .toEqual({ window: width, page: width - 15 });
     await page.getByRole("button", { name: "Show list", exact: true }).first().click();
-    const dialog = page.getByRole("dialog", { name: "Screenshots" });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.locator("a[data-row]").first()).toBeVisible();
-    // The dialog locks the scroll of the page, and the scrollbar goes. The
-    // wider shell does not close the dialog.
+    // The narrow shell shows the list in the page, above the variant row.
+    const list = page.getByRole("navigation", { name: "Screenshots" });
+    await expect(list).toBeVisible();
+    await expect(list.locator("a[data-row]").first()).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await frames(page, 20);
-    await expect(dialog).toBeVisible();
+    await expect(list).toBeVisible();
     expect(await page.evaluate(() => window.layoutLoops)).toBe(0);
-    await dialog.getByRole("button", { name: "Close screenshots", exact: true }).click();
-    await expect(dialog).toBeHidden();
+    await page.getByRole("button", { name: "Hide list", exact: true }).first().click();
+    await expect(list).toBeHidden();
     await frames(page, 20);
     await expect(
       page.getByRole("button", { name: "Show list", exact: true }).first(),
     ).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "Screenshots" })).toBeHidden();
+    await expect(list).toBeHidden();
     expect(await page.evaluate(() => window.layoutLoops)).toBe(0);
   });
 }

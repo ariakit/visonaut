@@ -43,6 +43,7 @@ import type { SessionItem } from "../components/kit/session.ts";
 import { getExternalLinkProps } from "../components/kit/shell.tsx";
 import { iconStroke, mono, overlayRoot, secondary, tertiary } from "../components/kit/tokens.ts";
 import { UserMenu } from "../components/user-menu.tsx";
+import { ShortcutControls } from "./shortcut-help.tsx";
 import type { ReviewModel } from "./model.ts";
 import { getClosedWords, getRunProgress } from "./run-words.ts";
 
@@ -418,15 +419,17 @@ export function RunHeader({ model, stepper, onShowResult }: RunHeaderProps) {
               narrow it can be. */}
           <RunProgress model={model} onShowResult={onShowResult} className="whitespace-nowrap" />
           {facts.alertCount != null && <StatusLink count={facts.alertCount} />}
-          {facts.signedIn && (
-            <UserMenu
-              login={facts.login}
-              preview={facts.preview}
-              signingOut={signingOut}
-              error={signOutError}
-              onSignOut={() => void signOut()}
-            />
-          )}
+          {/* The page binds keys, so its account menu always shows, with the
+              keyboard switch and the list of the keys. */}
+          <UserMenu
+            login={facts.login}
+            preview={facts.preview}
+            signingOut={signingOut}
+            error={signOutError}
+            onSignOut={facts.signedIn ? () => void signOut() : undefined}
+          >
+            <ShortcutControls />
+          </UserMenu>
         </ShellHeaderEnd>
       }
     />

@@ -1,5 +1,6 @@
 import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { useState } from "react";
+import type { ReactNode } from "react";
 import { ButtonLabel, ButtonSlot } from "./ariakit/components/button.ariakit.react.tsx";
 import {
   Popover,
@@ -17,9 +18,18 @@ export interface UserMenuProps {
   signingOut?: boolean;
   error?: string;
   onSignOut?: () => void;
+  /** The controls of the page, for example the keyboard switch. */
+  children?: ReactNode;
 }
 
-export function UserMenu({ login, preview, signingOut, error, onSignOut }: UserMenuProps) {
+export function UserMenu({
+  login,
+  preview,
+  signingOut,
+  error,
+  onSignOut,
+  children,
+}: UserMenuProps) {
   // A menu that mounts with an old error starts closed. A new error opens it.
   const [menu, setMenu] = useState({ open: false, error });
   const accountLabel = preview ? "Preview account" : login ? `@${login}` : "Account";
@@ -68,6 +78,7 @@ export function UserMenu({ login, preview, signingOut, error, onSignOut }: UserM
             {error}
           </Text>
         )}
+        {children}
         {!preview && onSignOut && (
           <ControlButton disabled={signingOut} onClick={onSignOut} className="w-full justify-start">
             <ButtonSlot>

@@ -11,7 +11,8 @@ export const narrowProbeClass =
 
 /**
  * True while the shell is narrower than 64rem: the sidebars of the shell
- * hide, and the page shows the list and the details in dialogs. A media query
+ * hide, the page shows the list above the variant row, and the details in a
+ * dialog. A media query
  * of the window does not agree with the shell when the window has a classic
  * scrollbar, which takes its width from the shell and not from the window.
  *

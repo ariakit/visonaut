@@ -2,6 +2,7 @@
 // image checks, the mask, the boxes around the changed regions, the band of a
 // size change, the pixel grid, and the label of an image.
 
+import * as ak from "@ariakit/react";
 import { cx } from "clava";
 import { useMemo } from "react";
 import type { CSSProperties, SyntheticEvent } from "react";
@@ -282,7 +283,8 @@ export interface RegionBoxesProps {
  * One outline box around each changed region: at least 24 screen pixels, and
  * boxes that would cross give way. A region that covers most of the image
  * gets corner brackets, so no line runs along the changed pixels. A box is a
- * button that zooms to its region.
+ * button that zooms to its region. The boxes are one composite with one Tab
+ * stop, and the arrow keys move between them.
  */
 export function RegionBoxes({
   regions,
@@ -302,40 +304,54 @@ export function RegionBoxes({
   );
   const width = regions.length > manyBoxes ? 1 : 2;
   return (
-    <div className="pointer-events-none absolute top-0 left-0" style={getShare(image, bounds)}>
-      {regions.map((region, index) => {
-        const rect = rects[index];
-        if (!rect) return null;
-        if ((rect.x + rect.width) / bounds.width <= shown.left) return null;
-        if (rect.x / bounds.width >= shown.right) return null;
-        if ((rect.y + rect.height) / bounds.height <= shown.top) return null;
-        if (rect.y / bounds.height >= shown.bottom) return null;
-        const current = index === active;
-        const large = isLargeMark(region, image);
-        return (
-          <div key={index} className="absolute grid" style={toShare(rect, image)}>
-            <Button
-              aria-label={`Changed region ${index + 1} of ${regions.length}`}
-              aria-current={current ? "true" : undefined}
-              $border={large ? false : current ? 3 : width}
-              $borderType={large ? undefined : "border"}
-              $edge={diffColor}
-              $edgeRaw
-              $rounded="sm"
-              $forceRounded
-              $p="none"
-              $hoverOffset={false}
-              onClick={() => onSelect(index)}
-              // A drag inside a large region moves the image. Only its
-              // brackets take the pointer.
-              className={large ? "pointer-events-none" : "pointer-events-auto cursor-zoom-in"}
-            >
-              {large && <Brackets />}
-            </Button>
-          </div>
-        );
-      })}
-    </div>
+    <ak.CompositeProvider focusLoop>
+      <ak.Composite
+        role="group"
+        aria-label="Changed regions"
+        // The arrow keys stay in the boxes. With one box, the composite has no
+        // box to move to and does not take the key, so the page would.
+        onKeyDown={(event) => {
+          if (!event.key.startsWith("Arrow")) return;
+          event.preventDefault();
+        }}
+        className="pointer-events-none absolute top-0 left-0"
+        style={getShare(image, bounds)}
+      >
+        {regions.map((region, index) => {
+          const rect = rects[index];
+          if (!rect) return null;
+          if ((rect.x + rect.width) / bounds.width <= shown.left) return null;
+          if (rect.x / bounds.width >= shown.right) return null;
+          if ((rect.y + rect.height) / bounds.height <= shown.top) return null;
+          if (rect.y / bounds.height >= shown.bottom) return null;
+          const current = index === active;
+          const large = isLargeMark(region, image);
+          return (
+            <div key={index} className="absolute grid" style={toShare(rect, image)}>
+              <Button
+                render={<ak.CompositeItem />}
+                aria-label={`Changed region ${index + 1} of ${regions.length}`}
+                aria-current={current ? "true" : undefined}
+                $border={large ? false : current ? 3 : width}
+                $borderType={large ? undefined : "border"}
+                $edge={diffColor}
+                $edgeRaw
+                $rounded="sm"
+                $forceRounded
+                $p="none"
+                $hoverOffset={false}
+                onClick={() => onSelect(index)}
+                // A drag inside a large region moves the image. Only its
+                // brackets take the pointer.
+                className={large ? "pointer-events-none" : "pointer-events-auto cursor-zoom-in"}
+              >
+                {large && <Brackets />}
+              </Button>
+            </div>
+          );
+        })}
+      </ak.Composite>
+    </ak.CompositeProvider>
   );
 }
 

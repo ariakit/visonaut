@@ -165,7 +165,7 @@ test("an earlier comparison has no run state, so its result names the counts onl
   await expect(result(page, "All approved")).not.toContainText("Run state");
 });
 
-test("the result sheet takes the main area from the header to the footer, and grows with its content", async ({
+test("the result sheet takes the main area from the header to the bottom, and grows with its content", async ({
   page,
 }) => {
   await page.goto("/src/review/__tests__/index.html?noChanges");
@@ -175,21 +175,22 @@ test("the result sheet takes the main area from the header to the footer, and gr
   const sheet = resultPage.locator("..");
   const sheetBox = await sheet.boundingBox();
   const headerBox = await page.getByRole("banner").boundingBox();
-  const footerBox = await page.locator("footer").boundingBox();
+  const workspaceBox = await page.getByLabel("Review workspace", { exact: true }).boundingBox();
   const searchBox = await page.getByRole("textbox", { name: "Search screenshots" }).boundingBox();
   const listBox = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
-  if (!sheetBox || !headerBox || !footerBox || !searchBox || !listBox) {
-    throw new Error("Expected the sheet, the header, the footer, the search field, and the list.");
+  if (!sheetBox || !headerBox || !workspaceBox || !searchBox || !listBox) {
+    throw new Error("Expected the sheet, the header, the page, the search field, and the list.");
   }
   // The sheet starts at the edge of the open list.
   expect(Math.round(sheetBox.x)).toBe(Math.round(listBox.x + listBox.width));
   const sheetBottom = sheetBox.y + sheetBox.height;
   // The sheet starts right below the header, with the list, and it ends at
-  // the gutter above the footer.
+  // the gutter of the bottom of the page.
   expect(sheetBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height);
   expect(sheetBox.y).toBeLessThanOrEqual(searchBox.y);
-  expect(footerBox.y - sheetBottom).toBeGreaterThanOrEqual(0);
-  expect(footerBox.y - sheetBottom).toBeLessThanOrEqual(12);
+  const pageBottom = workspaceBox.y + workspaceBox.height;
+  expect(pageBottom - sheetBottom).toBeGreaterThanOrEqual(0);
+  expect(pageBottom - sheetBottom).toBeLessThanOrEqual(12);
 
   // In a short window, the sheet grows with its content and the page scrolls.
   await page.setViewportSize({ width: 1440, height: 300 });

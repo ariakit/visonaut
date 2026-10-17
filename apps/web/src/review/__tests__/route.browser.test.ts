@@ -671,7 +671,7 @@ test("item and variant links open a direct selection without reloading the run",
     return route.fulfill({ json: compactReviewModel(model) });
   });
   await page.goto(url);
-  const variants = page.getByRole("group", { name: "Variants" });
+  const variants = page.getByRole("toolbar", { name: "Variants" });
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/Menu-dark/);
   await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
   const items = page.getByRole("navigation", { name: "Screenshots" });
@@ -708,7 +708,7 @@ test("item links return to the first variant needing review after selecting an u
   await page.goto(
     `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(selectedEntry)}`,
   );
-  const variants = page.getByRole("group", { name: "Variants" });
+  const variants = page.getByRole("toolbar", { name: "Variants" });
   await variants.getByRole("link", { name: /^Menu\./ }).click();
   await expect(variants.locator('a[aria-current="true"]')).toHaveAccessibleName(/^Menu\./);
   const items = page.getByRole("navigation", { name: "Screenshots" });
@@ -752,7 +752,7 @@ test("a stale variant link keeps its valid item selected", async ({ page }) => {
   );
   await expect(page.getByRole("heading", { name: "Open menu" })).toBeVisible();
   await expect(
-    page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]'),
+    page.getByRole("toolbar", { name: "Variants" }).locator('a[aria-current="true"]'),
   ).toHaveAccessibleName(/^Menu\./);
   await expect
     .poll(() =>
@@ -848,7 +848,7 @@ test("variant links preserve native new-tab activation and keyboard routes", asy
     route.fulfill({ json: compactReviewModel(fixtureModel()) }),
   );
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2Fruns%2Frun-42");
-  const variants = page.getByRole("group", { name: "Variants" });
+  const variants = page.getByRole("toolbar", { name: "Variants" });
   const solid = variants.getByRole("link", { name: /Solid/ });
   await expect(solid).toHaveAttribute("href", /item=dialog%2Fopen.*variant=Solid/);
   const popup = page.context().waitForEvent("page");
@@ -1014,10 +1014,10 @@ test("a preview review has image fixtures and no live actions or login", async (
   }
   await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Sign (in|out)/ })).toHaveCount(0);
-  await page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]').focus();
+  await page.getByRole("toolbar", { name: "Variants" }).locator('a[aria-current="true"]').focus();
   await page.keyboard.press("ArrowRight");
   await expect(
-    page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]'),
+    page.getByRole("toolbar", { name: "Variants" }).locator('a[aria-current="true"]'),
   ).toHaveAccessibleName(/Dark/);
   expect(requests).toEqual([`/api/runs/${previewRunId}`]);
 });
@@ -1349,7 +1349,7 @@ test("the changed screenshots show first, and the status Unchanged loads each pa
   // The unchanged variant of an item of the first response is in its variants.
   await chooseStatus(page, "Changes");
   await row(items, "menu/open").click();
-  const variants = page.getByRole("group", { name: "Variants" });
+  const variants = page.getByRole("toolbar", { name: "Variants" });
   await expect(variants.getByRole("link", { name: /Menu-wide/ })).toBeVisible();
   await expect(
     page.locator(".review-run-progress").getByText("2 left", { exact: true }),
@@ -1627,7 +1627,7 @@ test("a decision for the whole item saves when the selected variant is an unchan
   );
   await page.goto(runUrl("/runs/run-42?item=menu%2Fopen&variant=Menu-wide"));
   await expect(
-    page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]'),
+    page.getByRole("toolbar", { name: "Variants" }).locator('a[aria-current="true"]'),
   ).toHaveAccessibleName(/Menu-wide/);
   await decideWholeItem(page, "Approve all 2");
   await expect.poll(() => posted).toHaveLength(1);

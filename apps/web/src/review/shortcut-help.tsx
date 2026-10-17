@@ -1,18 +1,44 @@
 import * as ak from "@ariakit/react";
 import { Keyboard } from "lucide-react";
 import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
+import {
+  CheckboxField,
+  CheckboxLabel,
+} from "../components/ariakit/components/checkbox.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
+import { useShortcuts } from "../components/kit/keys.tsx";
 import { ControlButton as Button } from "../components/control-button.tsx";
 
-/** The button and the dialog of the keys of the review page. */
-export function ShortcutHelp() {
+/**
+ * The keyboard rows of the account menu of the review page: the checkbox
+ * `Shortcuts`, which turns the keys of the page off and on, and the button
+ * `Keys`, which opens the list of the keys.
+ */
+export function ShortcutControls() {
+  const { enabled, setEnabled } = useShortcuts();
+  return (
+    <div className="grid gap-2">
+      <CheckboxField checked={enabled} onChange={(event) => setEnabled(event.target.checked)}>
+        <CheckboxLabel>Shortcuts</CheckboxLabel>
+      </CheckboxField>
+      <ShortcutHelp />
+    </div>
+  );
+}
+
+/**
+ * The button and the dialog of the keys of the review page. The dialog is
+ * nested in the account menu, so the focus goes back to the button.
+ */
+function ShortcutHelp() {
   return (
     <ak.DialogProvider>
-      <ak.DialogDisclosure render={<Button $p={1.5} aria-label="Keyboard help" />}>
+      <ak.DialogDisclosure render={<Button className="w-full justify-start" />}>
         <ButtonSlot>
           <Keyboard />
         </ButtonSlot>
+        <ButtonLabel>Keys</ButtonLabel>
       </ak.DialogDisclosure>
       <ak.Dialog
         render={<Frame $layer="canvas" $border $rounded="lg" $p={5} />}

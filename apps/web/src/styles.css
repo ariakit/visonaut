@@ -1,3 +1,4 @@
 @import "@fontsource-variable/inter";
 @import "@fontsource-variable/jetbrains-mono";
-@import "./review.css";
+@import "tailwindcss";
+@import "./components/ariakit/styles/ui.css";

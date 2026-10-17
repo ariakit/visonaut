@@ -13,7 +13,7 @@ test("a screenshot with other variant keys adds no tooltip portal to the page", 
   page,
 }) => {
   await page.goto(fixture);
-  const marks = page.getByRole("group", { name: "Variants" }).getByRole("link");
+  const marks = page.getByRole("toolbar", { name: "Variants" }).getByRole("link");
   await expect(marks).toHaveCount(3);
   // Each tooltip has a portal of its own, a direct child of the body.
   const tooltips = page.locator("body > [id^='portal/']");
