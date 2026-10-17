@@ -1,5 +1,9 @@
 # @visonaut/web
 
+## 0.3.10
+
+- Added the region stepper to the decision bar of the review page: **Previous region**, a counter such as `1/3`, and **Next region**. A step zooms the stage to that changed region. The stepper is off for a variant with no region, and a bar that is less than 65rem wide leaves it out.
+
 ## 0.3.9
 
 ### The review page shows the result of a run
