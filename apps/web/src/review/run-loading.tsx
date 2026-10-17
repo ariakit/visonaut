@@ -9,7 +9,6 @@ import {
   Shell,
   ShellHeader,
   ShellHeaderCenter,
-  ShellFooter,
   ShellHeaderStart,
   ShellMain,
   ShellMainBody,
@@ -110,7 +109,7 @@ export function RunLoading() {
         >
           <ScreenshotListSkeleton />
         </ShellSidebar>
-        <ShellMain $maxWidth="100%" $p={2} className="review-main">
+        <ShellMain $maxWidth="100%" $p={2}>
           <ShellMainBody
             aria-busy="true"
             aria-label="Loading run"
@@ -124,9 +123,6 @@ export function RunLoading() {
             </PanelSheet>
           </ShellMainBody>
         </ShellMain>
-        {/* The footer of the page, with its height, so the panel ends where it
-            ends on the page. */}
-        <ShellFooter $height="sm" $p={3} aria-hidden className="min-h-10!" />
       </Shell>
     </HeadingLevel>
   );

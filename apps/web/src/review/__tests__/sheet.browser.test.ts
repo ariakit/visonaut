@@ -27,6 +27,9 @@ async function box(locator: Locator) {
 
 test("the variant row, the stage, and the bar are in one sheet", async ({ page }) => {
   await open(page);
+  // The fixture has a label above the page, so the document scrolls by its
+  // height. At the end of that scroll, the bar is where the page has it.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
   const panel = sheet(page);
   await expect(panel.locator(".review-variant-row")).toHaveCount(1);
   await expect(panel.getByRole("region", { name: "Review actions", exact: true })).toBeVisible();
@@ -47,19 +50,18 @@ test("the sheet starts at the edge of the list, and the page does not scroll", a
   await open(page);
   const panelBox = await box(sheet(page));
   const headerBox = await box(page.getByRole("banner"));
-  const footerBox = await box(page.locator("footer"));
+  const workspace = await box(page.getByLabel("Review workspace", { exact: true }));
   const listBox = await box(page.getByRole("navigation", { name: "Screenshots" }));
   const searchBox = await box(page.getByRole("textbox", { name: "Search screenshots" }));
   expect(Math.round(panelBox.x)).toBe(Math.round(listBox.x + listBox.width));
   expect(panelBox.y).toBeGreaterThanOrEqual(headerBox.y + headerBox.height);
   expect(panelBox.y).toBeLessThanOrEqual(searchBox.y);
-  // The sheet ends at the gutter above the footer.
-  const gutter = footerBox.y - (panelBox.y + panelBox.height);
+  // The sheet ends at the gutter of the bottom of the page.
+  const gutter = workspace.y + workspace.height - (panelBox.y + panelBox.height);
   expect(gutter).toBeGreaterThanOrEqual(0);
   expect(gutter).toBeLessThanOrEqual(12);
   // The workspace has the height of the window. The fixture has a label
   // above it, so the document is that label taller.
-  const workspace = await box(page.getByLabel("Review workspace", { exact: true }));
   expect(Math.round(workspace.height)).toBe(900);
 });
 
@@ -98,9 +100,8 @@ test("a narrow window has the same sheet, and the page does not scroll", async (
   await expect(panel.getByRole("region", { name: "Review actions", exact: true })).toBeVisible();
   const workspace = await box(page.getByLabel("Review workspace", { exact: true }));
   expect(Math.round(workspace.height)).toBe(844);
-  const footerBox = await box(page.locator("footer"));
   const panelBox = await box(panel);
-  expect(footerBox.y - (panelBox.y + panelBox.height)).toBeLessThanOrEqual(12);
+  expect(workspace.y + workspace.height - (panelBox.y + panelBox.height)).toBeLessThanOrEqual(12);
 });
 
 test("the notice of a closed run stays above the sheet", async ({ page }) => {
@@ -138,8 +139,8 @@ test("a run that is not ready puts its text and the bar in the sheet", async ({ 
   const bar = panel.getByRole("region", { name: "Review actions", exact: true });
   await expect(bar).toBeVisible();
   const panelBox = await box(panel);
-  const footerBox = await box(page.locator("footer"));
-  expect(footerBox.y - (panelBox.y + panelBox.height)).toBeLessThanOrEqual(12);
+  const workspace = await box(page.getByLabel("Review workspace", { exact: true }));
+  expect(workspace.y + workspace.height - (panelBox.y + panelBox.height)).toBeLessThanOrEqual(12);
 });
 
 test("the bar keeps the bottom of a window that is too short for the stage", async ({ page }) => {

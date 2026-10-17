@@ -35,6 +35,7 @@ const removedTargets = [
   "docs/history/simplification-implementation.md -> apps/web/src/operations/history.test.ts",
   "docs/history/simplification-implementation.md -> apps/web/src/operations/history.ts",
   "docs/history/simplification-implementation.md -> apps/web/src/operations/review-links.test.ts",
+  "docs/history/simplification-implementation.md -> apps/web/src/review.css",
   "docs/history/simplification-implementation.md -> apps/web/src/review/item-list.tsx",
   "docs/history/simplification-implementation.md -> apps/web/src/review/item-list.tsx",
   "docs/history/simplification-implementation.md -> apps/web/src/review/item-list.tsx",

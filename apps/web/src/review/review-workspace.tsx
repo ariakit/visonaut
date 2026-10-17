@@ -1,7 +1,6 @@
-import * as ak from "@ariakit/react";
 import { useEvent } from "@ariakit/react-utils";
 import { cx } from "clava";
-import { Settings2, X } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
@@ -9,12 +8,9 @@ import {
   Shell,
   ShellMain,
   ShellMainBody,
-  ShellFooter,
   ShellSidebar,
-  ShellSidebarBody,
 } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
-import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
 import { Heading, HeadingLevel } from "../components/ariakit/components/heading.ariakit.react.tsx";
 import { Link } from "../components/ariakit/components/link.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
@@ -23,16 +19,15 @@ import { useScreenshotList } from "../components/kit/list/use-screenshot-list.ts
 import type { ScreenshotListState } from "../components/kit/list/use-screenshot-list.ts";
 import { ShortcutsProvider, useShortcuts } from "../components/kit/keys.tsx";
 import { ResultPage } from "../components/kit/result/result-page.tsx";
-import { besideList, PanelSheet } from "../components/kit/surfaces.tsx";
+import { besideList, PanelSheet, Sheet } from "../components/kit/surfaces.tsx";
 import { shellRadius } from "../components/kit/tokens.ts";
 import { VariantNav } from "../components/kit/variants/variant-nav.tsx";
 import { BarHost, reviewActionsId, useBarHost } from "./bar-host.tsx";
-import { CaptureDetails } from "./capture-details.tsx";
+import { CaptureDetailsPanel } from "./capture-details.tsx";
 import type { ReviewCommands, ReviewModel, ReviewSelection, ReviewVariant } from "./model.ts";
 import { RunHeader, ScreenshotStepper, getPullRequestUrl, getRunIdentity } from "./run-header.tsx";
 import { getRunResult } from "./run-words.ts";
 import { getFamilyLabels, getSessionItem, pickItem, pickVariant } from "./session-items.ts";
-import { ShortcutHelp } from "./shortcut-help.tsx";
 import {
   readSidebarPreference,
   sidebarStorageKey,
@@ -42,9 +37,11 @@ import { getPixelLine, StageHost, useStageHost } from "./stage-host.tsx";
 import { nextPending } from "./navigation.ts";
 import { usePreload } from "./use-evidence.ts";
 import { useNextRun } from "./use-next-run.ts";
+import { useReviewKeys } from "./use-review-keys.ts";
 import { useReviewSession } from "./use-review-session.ts";
 import { narrowProbeClass, useNarrowShell } from "./use-narrow-shell.ts";
 import { useUnchangedScreenshots } from "./use-unchanged-screenshots.ts";
+import { useVariantMemory } from "./use-variant-memory.ts";
 
 export interface ReviewWorkspaceProps {
   model: ReviewModel;
@@ -63,17 +60,6 @@ export interface ReviewRoute {
    */
   selection?: { itemKey: string; variantKey?: string };
   onSelect(selection: ReviewSelection): void;
-}
-
-function excludesShortcuts(event: globalThis.KeyboardEvent) {
-  const target = event.target;
-  if (!target) return true;
-  if (!("nodeType" in target)) return true;
-  if (target.nodeType !== 1) return true;
-  const element = target as HTMLElement;
-  return !!element.closest(
-    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"], [role="tablist"]',
-  );
 }
 
 /**
@@ -139,13 +125,14 @@ function ReviewSession({
   onUnsentDecisionsChange,
 }: ReviewWorkspaceProps) {
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
-  const { enabled: shortcuts, setEnabled: setShortcuts } = useShortcuts();
+  const { enabled: shortcuts } = useShortcuts();
   const [retry, setRetry] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarPreference);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  // The list of a narrow shell, in the page above the variant row.
   const [itemsOpen, setItemsOpen] = useState(false);
-  // A dialog of the narrow layout holds it (see useNarrowShell).
-  const [narrowProbe, narrow] = useNarrowShell(itemsOpen || detailsOpen);
+  // The dialog of the details holds the narrow layout (see useNarrowShell).
+  const [narrowProbe, narrow] = useNarrowShell(detailsOpen);
   const detailsTrigger = useRef<HTMLButtonElement>(null);
   const toggleSidebar = () => setSidebarOpen((open) => !open);
   useEffect(() => {
@@ -159,19 +146,11 @@ function ReviewSession({
     window.addEventListener("storage", sync);
     return () => window.removeEventListener("storage", sync);
   }, []);
-  // The variant that the reviewer selected last in each screenshot. Up, Down,
-  // and the two screenshot buttons open it. A row click and a decision do not
-  // change it. It is state of the page: a reload forgets it.
-  const remembered = useRef(
-    new Map<string, string>(
-      route?.selection?.variantKey ? [[route.selection.itemKey, route.selection.variantKey]] : [],
-    ),
-  );
+  const memory = useVariantMemory(route?.selection);
   // The keys of the screenshots that the list shows, for the advance after a
   // decision. The list comes after the session, so a ref gives it the order.
   const visibleOrder = useRef<readonly string[]>([]);
   const workspace = useRef<HTMLDivElement>(null);
-  const variantRow = useRef<HTMLDivElement>(null);
   const focusWorkspace = () => workspace.current?.focus({ preventScroll: true });
   const select = (next: ReviewSelection) => {
     if (route) route.onSelect(next);
@@ -292,12 +271,11 @@ function ReviewSession({
   // the variant of a row click.
   const selectItem = (itemKey: string) => {
     const next = model.items.find((entry) => entry.key === itemKey);
-    if (!next) return;
-    const previous = remembered.current.get(next.key);
-    const selected = next.variants.find((entry) => entry.key === previous) ?? pickVariant(next);
-    if (!selected) return;
+    const recalled = next && memory.recall(next);
+    if (!next || !recalled) return;
+    const selected = recalled.variant;
     select({ itemKey: next.key, variantKey: selected.key });
-    if (previous && previous !== selected.key) {
+    if (recalled.lost) {
       session.announce(
         `The remembered variant is unavailable. Selected ${selected.label}.`,
         "neutral",
@@ -323,8 +301,9 @@ function ReviewSession({
     const next = item.variants[index];
     if (!next) return;
     leaveResult();
-    remembered.current.set(item.key, next.key);
-    select({ itemKey: item.key, variantKey: next.key });
+    const selected = { itemKey: item.key, variantKey: next.key };
+    memory.remember(selected);
+    select(selected);
   };
   const variantIndex = item && variant ? item.variants.indexOf(variant) : -1;
   const sessionItems = useMemo(() => model.items.map(getSessionItem), [model.items]);
@@ -423,76 +402,38 @@ function ReviewSession({
   const showRejected = () => {
     if (!rejectedVariant) return;
     leaveResult();
-    remembered.current.set(rejectedVariant.itemKey, rejectedVariant.variantKey);
+    memory.remember(rejectedVariant);
     select(rejectedVariant);
     // The button goes with the result, so the page takes the focus, as
     // after Undo.
     focusWorkspace();
   };
-  const onKeyDown = useEffectEvent((event: globalThis.KeyboardEvent) => {
-    if (event.defaultPrevented || event.repeat || !shortcuts) return;
-    if (excludesShortcuts(event)) return;
-    if (event.altKey) return;
-    const key = event.key.toLowerCase();
-    if (event.metaKey || event.ctrlKey) {
-      if (key === "z" && !event.shiftKey) {
-        event.preventDefault();
-        bar.undo();
-      }
-      return;
-    }
-    if (key === "[" && !narrow) {
-      event.preventDefault();
-      toggleSidebar();
-      return;
-    }
-    if (!item || !variant) return;
+  useReviewKeys({
+    root: workspace,
+    enabled: shortcuts,
+    hasVariant: !!item && !!variant,
+    undo: bar.undo,
+    toggleList: narrow ? undefined : toggleSidebar,
+    stepItem,
+    stepVariant,
+    selectVariant,
     // The result has no stage and no bar, so their keys do nothing there.
-    const action = showResult ? undefined : (bar.keys[key] ?? stage.keys[key]);
-    if (key === "arrowup") {
-      stepItem(-1);
-    } else if (key === "arrowdown") {
-      stepItem(1);
-    } else if (key === "arrowleft") {
-      stepVariant(-1);
-    } else if (key === "arrowright") {
-      stepVariant(1);
-    } else if (/^[1-6]$/.test(key)) {
-      selectVariant(Number(key) - 1);
-    } else if (action) {
-      action(event);
-    } else {
-      return;
-    }
-    event.preventDefault();
+    getAction: (key) => (showResult ? undefined : (bar.keys[key] ?? stage.keys[key])),
   });
-  useEffect(() => {
-    const document = workspace.current?.ownerDocument;
-    if (!document) return;
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, []);
-
-  // An arrow key or a number key on a focused mark moves the focus to the
-  // mark of the new variant, so Enter does not select the old one again.
-  const selectedVariantKey = variant?.key;
-  useLayoutEffect(() => {
-    const row = variantRow.current;
-    if (!row) return;
-    const active = row.ownerDocument.activeElement;
-    if (!active || !row.contains(active)) return;
-    const marks = active.closest('[aria-label="Variants"]');
-    if (!marks) return;
-    const current = marks.querySelector<HTMLElement>('a[aria-current="true"]');
-    if (!current || current === active) return;
-    current.focus({ preventScroll: true });
-  }, [selectedVariantKey]);
 
   const sessionItem = item ? getSessionItem(item) : null;
   const sessionVariant =
     sessionItem && variantIndex >= 0 ? sessionItem.variants[variantIndex] : null;
   const identity = getRunIdentity(model.run);
-  const itemNavigation = (
+  // The list of a narrow shell is over the stage, so a choice closes it, and
+  // the page takes the focus of the row. The rows are memoized, so the
+  // function keeps its identity.
+  const selectInline = useEvent((itemKey: string) => {
+    selectRow(itemKey);
+    setItemsOpen(false);
+    focusWorkspace();
+  });
+  const renderNavigation = (state: ScreenshotListState) => (
     <>
       {unchanged.failed && (
         <Text render={<p />} role="alert" className="mx-2 text-xs">
@@ -502,7 +443,7 @@ function ReviewSession({
           </Link>
         </Text>
       )}
-      <ScreenshotList list={list} />
+      <ScreenshotList list={state} />
     </>
   );
   // The list of the unchanged screenshots: with the changes, each screenshot
@@ -564,12 +505,12 @@ function ReviewSession({
           render={<nav />}
           aria-label="Screenshots"
         >
-          {!narrow && itemNavigation}
+          {!narrow && renderNavigation(list)}
         </ShellSidebar>
         {/* The panel has the gutter of the lab panel. The result takes the
             height that the page has left, or more with its content, and the
             stage takes the height that the page has left. */}
-        <ShellMain $maxWidth="100%" $p={2} className="review-main">
+        <ShellMain $maxWidth="100%" $p={2}>
           <ShellMainBody
             className={
               showResult
@@ -580,10 +521,10 @@ function ReviewSession({
             <Heading className="sr-only">{`Review of ${identity.full}`}</Heading>
             <HeadingLevel>
               {/* Above the panel, the row keeps its margin only while it shows
-                  the stepper of a narrow window or a notice. */}
+                  the stepper of a narrow window, the list, or a notice. */}
               <div
                 className={cx(
-                  "mb-2 grid min-w-0 gap-3 @3xl/shell:mb-0 @3xl/shell:has-[>p]:mb-2",
+                  "mb-2 grid min-w-0 gap-3 @3xl/shell:mb-0 @3xl/shell:has-[>p,>nav]:mb-2",
                   besideListClass,
                 )}
               >
@@ -593,6 +534,15 @@ function ReviewSession({
                   onListOpenChange={narrow ? setItemsOpen : setSidebarOpen}
                   className="@3xl/shell:hidden"
                 />
+                {narrow && itemsOpen && (
+                  <Sheet
+                    $p="none"
+                    render={<nav aria-label="Screenshots" />}
+                    className="flex max-h-72 min-h-0 flex-col"
+                  >
+                    {renderNavigation({ ...list, select: selectInline })}
+                  </Sheet>
+                )}
                 {model.run.error && (
                   <Frame $layer="warning" $mix={15} $p={3} role="alert" render={<p />}>
                     {model.run.error}
@@ -629,7 +579,6 @@ function ReviewSession({
                   {item && variant && sessionItem && sessionVariant && (
                     <Frame
                       $p={2}
-                      ref={variantRow}
                       className="review-variant-row @container flex flex-none flex-wrap items-center gap-x-3 gap-y-2"
                     >
                       <div className="flex min-w-[min(100%,27.5em)] flex-1">
@@ -692,92 +641,15 @@ function ReviewSession({
             </HeadingLevel>
           </ShellMainBody>
         </ShellMain>
-        <ShellSidebar
-          id="capture-details"
-          $side="end"
-          $from="intro"
-          $width="md"
-          $show="5xl"
-          $border
-          open={detailsOpen && !narrow}
-          render={<aside />}
-          aria-label="Capture details"
-        >
-          {/* The panel starts at the header, beside the variant row of the
-              sheet, so it has no header with a line across the row. */}
-          <ShellSidebarBody $p={5}>
-            <div className="mb-3 flex items-center justify-between">
-              <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
-                Capture details
-              </Text>
-              <Button
-                $p={1}
-                aria-label="Close capture details"
-                onClick={() => {
-                  setDetailsOpen(false);
-                  detailsTrigger.current?.focus();
-                }}
-              >
-                <ButtonSlot>
-                  <X />
-                </ButtonSlot>
-              </Button>
-            </div>
-            {!narrow && variant && (
-              <CaptureDetails model={model} variant={variant} runStatus={runStatus} />
-            )}
-          </ShellSidebarBody>
-        </ShellSidebar>
-        <ShellFooter
-          $height="sm"
-          $p={3}
-          className="flex! flex-wrap items-center gap-x-3 gap-y-0 min-h-10!"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <ShortcutHelp />
-            <Button $size="xs" aria-pressed={shortcuts} onClick={() => setShortcuts(!shortcuts)}>
-              <ButtonLabel>Shortcuts {shortcuts ? "on" : "off"}</ButtonLabel>
-            </Button>
-          </div>
-        </ShellFooter>
-        <ak.Dialog
-          open={itemsOpen && narrow}
-          onClose={() => setItemsOpen(false)}
-          render={<Frame $layer="canvas" $border $p={5} $rounded="2xl" />}
-          className="fixed inset-4 z-50 flex flex-col gap-4 text-sm"
-          backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
-        >
-          <div className="flex items-center justify-between">
-            <ak.DialogHeading className="text-base">Screenshots</ak.DialogHeading>
-            <ak.DialogDismiss render={<Button aria-label="Close screenshots" />}>
-              <ButtonSlot>
-                <X />
-              </ButtonSlot>
-            </ak.DialogDismiss>
-          </div>
-          {narrow && itemNavigation}
-        </ak.Dialog>
-        <ak.Dialog
-          open={detailsOpen && narrow}
+        <CaptureDetailsPanel
+          model={model}
+          variant={variant}
+          runStatus={runStatus}
+          open={detailsOpen}
+          narrow={narrow}
           onClose={() => setDetailsOpen(false)}
-          unmountOnHide
-          finalFocus={detailsTrigger}
-          render={<Frame $layer="canvas" $border $p={5} $rounded="2xl" />}
-          className="fixed inset-4 z-50 overflow-auto text-sm"
-          backdrop={<Layer $layer="canvas" className="fixed inset-0 z-40 bg-black/50!" />}
-        >
-          <div className="flex items-center justify-between mb-5">
-            <ak.DialogHeading className="text-base">Capture details</ak.DialogHeading>
-            <ak.DialogDismiss render={<Button aria-label="Close capture details" />}>
-              <ButtonSlot>
-                <X />
-              </ButtonSlot>
-            </ak.DialogDismiss>
-          </div>
-          {narrow && variant && (
-            <CaptureDetails model={model} variant={variant} runStatus={runStatus} />
-          )}
-        </ak.Dialog>
+          trigger={detailsTrigger}
+        />
       </Shell>
     </HeadingLevel>
   );

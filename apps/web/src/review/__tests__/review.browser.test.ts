@@ -30,6 +30,14 @@ async function ready(page: Page) {
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
 }
 
+// The keyboard switch is a checkbox of the account menu. The menu closes
+// after the change.
+async function switchShortcuts(page: Page) {
+  await page.getByRole("button", { name: "Account menu", exact: true }).click();
+  await page.getByRole("checkbox", { name: "Shortcuts", exact: true }).click();
+  await page.keyboard.press("Escape");
+}
+
 /** The image of one side on the stage, for example `Current: React`. */
 function stageImage(page: Page, side: "Current" | "Baseline") {
   return page.getByRole("img", { name: new RegExp(`^${side}: `) });
@@ -116,7 +124,8 @@ test("a locally matched capture does not show the reference as a new image", asy
 
 test("review surfaces remain dark when the system uses dark mode", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.getByRole("button", { name: "Keyboard help" }).click();
+  await page.getByRole("button", { name: "Account menu", exact: true }).click();
+  await page.getByRole("button", { name: "Keys", exact: true }).click();
   const surfaces = await page.evaluate(() => {
     const sample = (selector: string) => {
       const element = document.querySelector(selector);
@@ -149,12 +158,21 @@ for (const width of [1280, 390]) {
     await expect(addition).toHaveAccessibleName(/^new\/open\. 1 added$/);
     await expect(page.locator(".review-run-progress")).toContainText("9 left");
     await row(page, "menu/open").click();
-    await page.keyboard.press("ArrowDown");
-    await expect(addition).toBeFocused();
+    if (width < 1024) {
+      // A choice closes the list of a narrow window, and the page takes the
+      // focus, so its keys work at once.
+      await expect(addition).toBeHidden();
+      await expect(page.getByLabel("Review workspace", { exact: true })).toBeFocused();
+      await page.keyboard.press("ArrowDown");
+      await page.getByRole("button", { name: "Show list", exact: true }).click();
+    } else {
+      await page.keyboard.press("ArrowDown");
+      await expect(addition).toBeFocused();
+    }
     await ready(page);
     await expect(addition).toHaveAttribute("aria-current", "true");
     if (width < 1024) {
-      await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
+      await page.getByRole("button", { name: "Hide list", exact: true }).click();
     }
     await expect(
       page.locator(".review-variant-row").getByRole("img", { name: "Added" }),
@@ -175,7 +193,12 @@ for (const width of [1280, 390]) {
     }
     await addition.click();
     await page.keyboard.press("ArrowDown");
-    await expect(row(page, "removed/open")).toBeFocused();
+    if (width < 1024) {
+      await page.getByRole("button", { name: "Show list", exact: true }).click();
+      await expect(row(page, "removed/open")).toHaveAttribute("aria-current", "true");
+    } else {
+      await expect(row(page, "removed/open")).toBeFocused();
+    }
   });
 }
 
@@ -215,7 +238,7 @@ test("mixed items stay visible after their changed and added variants are approv
   await expect(page.locator(".review-run-progress")).toContainText("7 left");
   await addition.click();
   await page
-    .getByRole("group", { name: "Variants" })
+    .getByRole("toolbar", { name: "Variants" })
     .getByRole("link", { name: /^Addition\./ })
     .click();
   await ready(page);
@@ -380,7 +403,7 @@ test("the selected variant mark is visible with seven variants, and a key does n
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 300 });
-  const marks = page.getByRole("group", { name: "Variants" });
+  const marks = page.getByRole("toolbar", { name: "Variants" });
   const current = marks.locator('a[aria-current="true"]');
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await expect(marks.getByRole("link")).toHaveCount(7);
@@ -699,7 +722,7 @@ test("long item and variant names keep the navigation and main header compact", 
     }
     window.reviewFixture.update(model);
   });
-  const marks = page.getByRole("group", { name: "Variants" }).getByRole("link");
+  const marks = page.getByRole("toolbar", { name: "Variants" }).getByRole("link");
   for (const mark of await marks.all()) {
     expect((await mark.boundingBox())?.height).toBeLessThanOrEqual(48);
   }
@@ -1797,7 +1820,7 @@ test("shortcut scope, native modifiers, editing exclusions, and toggle", async (
     await callCount(page, 0);
     await page.locator("#exclusion-fixture").evaluate((node) => node.remove());
   }
-  await page.getByRole("button", { name: "Shortcuts on" }).click();
+  await switchShortcuts(page);
   await focusWorkspace(page);
   await page.keyboard.press("a");
   await page.keyboard.press("ArrowRight");
@@ -1861,17 +1884,25 @@ test("Undo conflict preserves the selection and later reviewer state", async ({ 
 });
 
 test("help closes with Escape and keeps native focus without rejecting", async ({ page }) => {
-  await page.getByRole("button", { name: "Keyboard help" }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Account menu", exact: true }).click();
+  await page.getByRole("button", { name: "Keys", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Review with the keyboard" })).toBeVisible();
   // The help names the keys and the gestures of the stage.
-  await expect(page.getByRole("dialog")).toContainText("Drag or use the wheel");
-  await expect(page.getByRole("dialog")).toContainText("F / G / D");
-  await expect(page.getByRole("dialog")).toContainText("S / W / O");
+  await expect(page.getByRole("dialog", { name: "Review with the keyboard" })).toContainText(
+    "Drag or use the wheel",
+  );
+  await expect(page.getByRole("dialog", { name: "Review with the keyboard" })).toContainText(
+    "F / G / D",
+  );
+  await expect(page.getByRole("dialog", { name: "Review with the keyboard" })).toContainText(
+    "S / W / O",
+  );
   await page.keyboard.press("x");
   await callCount(page, 0);
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(page.getByRole("button", { name: "Keyboard help" })).toBeFocused();
+  await expect(page.getByRole("dialog", { name: "Review with the keyboard" })).toBeHidden();
+  // The help is nested in the account menu, so the focus goes back to Keys.
+  await expect(page.getByRole("button", { name: "Keys", exact: true })).toBeFocused();
 });
 
 test("the zoom control sets each level, and a narrow window keeps the page width", async ({
@@ -2573,7 +2604,7 @@ test("an arrow key to a screenshot with other variant keys adds no tooltip porta
     window.reviewFixture.update(model);
   });
   await page.keyboard.press("ArrowDown");
-  const marks = page.getByRole("group", { name: "Variants" }).getByRole("link");
+  const marks = page.getByRole("toolbar", { name: "Variants" }).getByRole("link");
   await expect(marks.first()).toHaveAccessibleName(/^Menu\./);
   await page.evaluate(() => {
     window.addedTooltips = 0;
@@ -2675,7 +2706,7 @@ test("page-wide arrows work from body focus and the off switch preserves native 
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.keyboard.press("ArrowDown");
   await expect(page.getByRole("heading", { name: /Open menu$/ })).toBeVisible();
-  await page.getByRole("button", { name: "Shortcuts on" }).click();
+  await switchShortcuts(page);
   await page.evaluate(() => document.body.focus());
   await page.keyboard.press("ArrowUp");
   await expect(page.getByRole("heading", { name: /Open menu$/ })).toBeVisible();
@@ -2882,19 +2913,34 @@ for (const forcedColors of ["none", "active"] as const) {
   });
 }
 
-test("modal dialogs sit outside the shell and set the base text size themselves", async ({
+// #519: a narrow window shows the list in the page, above the variant row, as
+// the lab does, and not in a dialog.
+test("a narrow window shows the list in the page above the variant row", async ({ page }) => {
+  const fontSize = (locator: Locator) =>
+    locator.evaluate((element) => getComputedStyle(element).fontSize);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const screenshots = page.getByRole("navigation", { name: "Screenshots", exact: true });
+  await expect(screenshots).toBeHidden();
+  await page.getByRole("button", { name: "Show list", exact: true }).click();
+  await expect(screenshots).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(await fontSize(screenshots.locator("a[data-row]").first())).toBe("14px");
+  const list = await screenshots.boundingBox();
+  const variants = await page.locator(".review-variant-row").boundingBox();
+  if (!list || !variants) throw new Error("Expected the list and the variant row.");
+  expect(list.y + list.height).toBeLessThanOrEqual(variants.y);
+  // A choice of a row closes the list, so the stage is in view again.
+  await screenshots.locator("a[data-row]").nth(1).click();
+  await expect(screenshots).toBeHidden();
+  await expect(page.getByRole("button", { name: "Show list", exact: true })).toBeVisible();
+});
+
+test("the details dialog sits outside the shell and sets the base text size itself", async ({
   page,
 }) => {
   const fontSize = (locator: Locator) =>
     locator.evaluate((element) => getComputedStyle(element).fontSize);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole("button", { name: "Show list", exact: true }).click();
-  const screenshots = page.getByRole("dialog", { name: "Screenshots", exact: true });
-  await expect(screenshots).toBeVisible();
-  expect(await fontSize(screenshots.locator("a[data-row]").first())).toBe("14px");
-  // The headings keep the 16px that they had before the shell set its base size.
-  expect(await fontSize(screenshots.getByRole("heading", { name: "Screenshots" }))).toBe("16px");
-  await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
   await page.getByRole("button", { name: "Details", exact: true }).click();
   const details = page.getByRole("dialog", { name: "Capture details", exact: true });
   await expect(details).toBeVisible();
@@ -2983,17 +3029,17 @@ test("the advance after a decision selects a screenshot that the filtered list s
   await expect(page.getByRole("heading", { name: /Removed dialog$/ })).toBeVisible();
 });
 
-test("mobile screenshot filters persist and update navigation while the dialog is closed", async ({
+test("mobile screenshot filters persist and update navigation while the list is closed", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Show list", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Screenshots", exact: true });
-  const search = dialog.getByRole("textbox", { name: "Search screenshots" });
+  const list = page.getByRole("navigation", { name: "Screenshots", exact: true });
+  const search = list.getByRole("textbox", { name: "Search screenshots" });
   await search.fill("Open menu");
-  await expect(dialog.locator("a[data-row]")).toHaveCount(1);
-  await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
-  await expect(dialog).toBeHidden();
+  await expect(list.locator("a[data-row]")).toHaveCount(1);
+  await page.getByRole("button", { name: "Hide list", exact: true }).click();
+  await expect(list).toBeHidden();
   const next = page.getByRole("button", { name: "Next screenshot", exact: true });
   // The page shows the first screenshot, which the search hides: Next goes
   // to the first screenshot of the list.
@@ -3018,8 +3064,8 @@ test("mobile screenshot filters persist and update navigation while the dialog i
   ).toBeVisible();
   await page.getByRole("button", { name: "Show list", exact: true }).click();
   await expect(search).toHaveValue("Open menu");
-  await expect(dialog.locator("a[data-row]")).toHaveCount(2);
-  await expect(dialog.locator('a[data-row][aria-current="true"]')).toContainText(
+  await expect(list.locator("a[data-row]")).toHaveCount(2);
+  await expect(list.locator('a[data-row][aria-current="true"]')).toContainText(
     "Open menu additional",
   );
   await callCount(page, 0);
@@ -3059,6 +3105,6 @@ test("the list button opens the screenshots at a width between the two layouts",
   const button = page.getByRole("button", { name: "Show list", exact: true });
   await expect(button).toHaveCount(1);
   await button.click();
-  const dialog = page.getByRole("dialog", { name: "Screenshots", exact: true });
-  await expect(dialog.getByText("Open menu", { exact: true })).toBeVisible();
+  const list = page.getByRole("navigation", { name: "Screenshots", exact: true });
+  await expect(list.getByText("Open menu", { exact: true })).toBeVisible();
 });

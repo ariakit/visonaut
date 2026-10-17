@@ -118,7 +118,7 @@ for (const scheme of ["light", "dark"] as const) {
 test("the variant marks show the selected one with a glider, not a pill", async ({ page }) => {
   await page.goto("/src/review/__tests__/index.html");
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-  const marks = page.getByRole("group", { name: "Variants" });
+  const marks = page.getByRole("toolbar", { name: "Variants" });
   // The selected glider is the only glider of the marks.
   const glider = marks.locator(":scope > .glider");
   const covers = async (name: RegExp) => {

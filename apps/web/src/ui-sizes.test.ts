@@ -38,8 +38,7 @@ test("each page shell sets the one base text size", () => {
 });
 
 test("the style sheet that has the theme is imported once", () => {
-  expect(find(/(?<!@)\bimport\s+["'][./]*\/?review\.css["']/)).toEqual([]);
-  expect(find(/@import\s+["']\.\/review\.css["']/)).toEqual(["styles.css"]);
+  expect(find(/["']tailwindcss["']|\/ui\.css["']/)).toEqual(["styles.css"]);
 });
 
 test("text and icons take their color from the text system", () => {

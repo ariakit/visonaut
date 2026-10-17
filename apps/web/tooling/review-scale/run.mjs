@@ -60,7 +60,6 @@ export async function run(chromium) {
     "components/kit/list/screenshot-list.tsx",
     "review/use-evidence.ts",
     "components/kit/stage/stage.tsx",
-    "review.css",
     "styles.css",
     "components/ariakit/components/shell.ariakit.react.tsx",
   ];

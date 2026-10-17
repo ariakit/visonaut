@@ -136,13 +136,14 @@ Promoted history is read-only, including human and automatic approvals. A correc
 
 ## Keyboard controls
 
-Review shortcuts work across the page while enabled, subject to the native input, menu, and dialog rules below. **Keyboard help** (the keyboard button in the footer) lists them in the app. The button **Shortcuts on** (or **Shortcuts off**) next to it shows the state and switches it. The browser keeps that choice, and the key hints hide while the shortcuts are off.
+Review shortcuts work across the page while enabled, subject to the native input, menu, and dialog rules below. The account menu at the end of the header has the checkbox **Shortcuts**, which switches them off and on, and the button **Keys**, which lists them in the app. The browser keeps that choice, and the key hints hide while the shortcuts are off.
 
 | Key                   | Action                                                 |
 | --------------------- | ------------------------------------------------------ |
 | Up / Down             | Previous or next screenshot; stop at each end          |
 | Left / Right          | Previous or next variant in declared order             |
 | Home / End            | On a variant mark: first or last variant               |
+| Arrow keys            | On a region box: the previous or next box              |
 | `1` through `6`       | Select that variant position, if it exists             |
 | `A` / `X`             | Approve or reject the current variant                  |
 | `Shift+A` / `Shift+X` | Approve or reject the whole screenshot                 |
@@ -156,7 +157,7 @@ Review shortcuts work across the page while enabled, subject to the native input
 
 Each screenshot remembers its last selected variant. A first visit opens the first variant that needs review. If no variant needs review, it opens the first change, else the first variant. If a remembered variant is no longer available, the page selects the variant that a first visit would open and announces the change in the status line. If the address names a variant that the run does not have, for example after a newer state of the run, the page also selects the variant that a first visit would open, and the status line says **The selected variant is unavailable.** with the name of the variant that it shows. Arrow keys and visible controls reach variants beyond the first six.
 
-Held keys do not repeat review commands. Text fields, editable content, menus, and dialogs keep their own keys. Native Select All, Cut, and text-field Undo remain available. Escape never rejects an image.
+Held keys do not repeat review commands. Text fields, editable content, menus, and dialogs keep their own keys. The variant marks are one Tab stop, the selected mark, and Left, Right, Home, and End on a mark select a variant also while the shortcuts are off. On the counted marks of a screenshot with many variants, Left and Right move between the marks. With one counted mark, they are the keys of the page, and they select the previous or the next variant while the shortcuts are on. The boxes of the changed regions are one Tab stop too, and the arrow keys move between them. Native Select All, Cut, and text-field Undo remain available. Escape never rejects an image.
 
 ## Closed runs and export
 
@@ -166,4 +167,4 @@ New product exports are retired, and the **Export run** control is removed. The 
 
 Use **Queue** to return to the Queue and **Sign out** to end your session. If repository access cannot be checked, retry after the service recovers. A confirmed access denial requires an account with write permission.
 
-On a narrow screen, the screenshot list opens in a dialog from the button **Show list**. Launch review validation targets Chrome Desktop and keyboard operation. Mobile workflows, other review browsers, and screen-reader certification have separate validation scope.
+On a narrow screen, the button **Show list** opens the screenshot list in the page, above the variant control. A choice in the list closes it. Launch review validation targets Chrome Desktop and keyboard operation. Mobile workflows, other review browsers, and screen-reader certification have separate validation scope.
