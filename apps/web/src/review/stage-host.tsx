@@ -6,6 +6,7 @@
 import { useEffect, useEffectEvent } from "react";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Hourglass, TriangleAlert } from "lucide-react";
+import { canShowMode } from "../components/kit/bar/view-controls.tsx";
 import { ErrorBand, ErrorBandButton } from "../components/kit/error-band.tsx";
 import { formatCount, formatRatio } from "../components/kit/format.ts";
 import { getChipState, StateChip, useLateLoad } from "../components/kit/stage/chip.tsx";
@@ -15,7 +16,7 @@ import { getStageSubject } from "../components/kit/stage/model.ts";
 import { useStageView } from "../components/kit/stage/view.ts";
 import type { StageEngine } from "../components/kit/stage/view.ts";
 import { useStoredView } from "../components/kit/view-store.ts";
-import type { StoredView } from "../components/kit/view-types.ts";
+import type { StoredView, ViewMode } from "../components/kit/view-types.ts";
 import type { ReviewModel, ReviewVariant } from "./model.ts";
 import { getClosedWords } from "./run-words.ts";
 import { noImageBytes, useEvidence } from "./use-evidence.ts";
@@ -76,17 +77,23 @@ export function useStageHost({
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
   }, [failedLoad]);
+  // A key for a mode that the images cannot show does nothing, as its
+  // disabled button does, so the stored mode stays for the next variant.
+  const setMode = (mode: ViewMode) => {
+    if (!canShowMode(mode, view.subject)) return;
+    stored.setMode(mode);
+  };
   return {
     stored,
     view,
     evidence,
     ready: evidence.status === "ready",
     keys: {
-      f: () => stored.setMode("new"),
-      g: () => stored.setMode("original"),
-      s: () => stored.setMode("side"),
-      w: () => stored.setMode("swipe"),
-      o: () => stored.setMode("overlay"),
+      f: () => setMode("new"),
+      g: () => setMode("original"),
+      s: () => setMode("side"),
+      w: () => setMode("swipe"),
+      o: () => setMode("overlay"),
       // A variant with no mask keeps the switch, as its disabled button does.
       d: () => {
         if (!view.subject.mask) return;

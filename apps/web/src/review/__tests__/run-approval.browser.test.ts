@@ -178,6 +178,10 @@ test("a refused run approval says that nothing was saved and names the next step
     ).toBeVisible();
   }
   await expect(moreButton(page)).toBeFocused();
+  // The reviewer can try again at once: the menu item opens the confirmation.
+  await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
+  await confirmRunApproval(page);
+  await expect(result(page)).toContainText(endText);
 });
 
 test("a run approval that fails offline gives the focus to the page", async ({ page }) => {
@@ -200,4 +204,31 @@ test("a failed Undo of a run approval says that nothing was undone", async ({ pa
     "Not saved. The Undo of the run approval failed. Nothing was undone. Try again.",
   );
   await expect(page.getByRole("button", { name: "Retry Undo", exact: true })).toBeVisible();
+});
+
+test("an Undo of a run approval that fails offline names the cause and says that nothing was undone", async ({
+  page,
+}) => {
+  await open(page);
+  await confirmRunApproval(page);
+  await expect(result(page)).toContainText(endText);
+  await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
+  await page.getByRole("button", { name: "Undo last decision", exact: true }).click();
+  await expect(statusLine(page)).toHaveText(
+    "Not saved. No connection. Nothing was undone. Try again.",
+  );
+  await expect(page.getByRole("button", { name: "Retry Undo", exact: true })).toBeVisible();
+});
+
+test("an Undo of a run approval with an answer that the page cannot read does not say that nothing was undone", async ({
+  page,
+}) => {
+  await open(page);
+  await confirmRunApproval(page);
+  await expect(result(page)).toContainText(endText);
+  await page.evaluate(() => window.reviewFixture.setBehavior("undo-unreadable"));
+  await page.getByRole("button", { name: "Undo last decision", exact: true }).click();
+  await expect(statusLine(page)).toHaveText(
+    "Not saved. The service returned an invalid response. Refresh before reviewing.",
+  );
 });

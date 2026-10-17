@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RunClosedReason } from "@visonaut/protocol";
 import { useAppSession } from "../app-session.tsx";
+import { ClientError } from "../client-error.ts";
 import { ReviewCommandError } from "./model.ts";
 import { getRunStateWords } from "./run-words.ts";
 import type {
@@ -155,17 +156,23 @@ const signedOutMessage = "Your session ended. Sign in again, and then retry.";
 
 /**
  * The sentence of a run approval, or of its Undo, that D1 did not save. The
- * service knows only that the transaction failed, so it names no cause.
+ * service knows only that the transaction failed, so it names no cause. An
+ * Undo with no answer, for example with no connection, keeps its cause.
  */
 function runApprovalFailure(
-  failure: ReviewCommandError | undefined,
+  error: unknown,
   failed: ReviewCommand | undefined,
   failedUndo: UndoCommand | undefined,
 ) {
+  const failure = error instanceof ReviewCommandError ? error : undefined;
   if (failed?.run && failure?.code === "decision_failed") {
     return "The approval of the run failed. Approve one screenshot at a time, or try again.";
   }
-  if (failedUndo?.runApproval && failure && !failure.conflict) {
+  if (!failedUndo?.runApproval) return;
+  if (error instanceof ClientError && error.status == null) {
+    return `${error.message} Nothing was undone. Try again.`;
+  }
+  if (failure && !failure.conflict) {
     return "The Undo of the run approval failed. Nothing was undone. Try again.";
   }
 }
@@ -462,7 +469,7 @@ export function useReviewSession({
     const message =
       namedConflict ??
       sessionFailure(error) ??
-      runApprovalFailure(failure, failed, failedUndo) ??
+      runApprovalFailure(error, failed, failedUndo) ??
       (error instanceof Error
         ? error.message
         : "The command could not be saved. Check your connection.");

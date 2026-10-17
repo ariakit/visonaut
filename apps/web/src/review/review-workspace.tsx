@@ -29,7 +29,7 @@ import { shellRadius } from "../components/kit/tokens.ts";
 import { VariantNav } from "../components/kit/variants/variant-nav.tsx";
 import { BarHost, reviewActionsId, useBarHost } from "./bar-host.tsx";
 import { CaptureDetails } from "./capture-details.tsx";
-import type { ReviewCommands, ReviewModel, ReviewSelection } from "./model.ts";
+import type { ReviewCommands, ReviewModel, ReviewSelection, ReviewVariant } from "./model.ts";
 import { RunHeader, ScreenshotStepper, getRunIdentity } from "./run-header.tsx";
 import { getRunResult } from "./run-words.ts";
 import { getFamilyLabels, getSessionItem, pickItem, pickVariant } from "./session-items.ts";
@@ -261,12 +261,21 @@ function ReviewSession({
       },
     );
   }
+  const announceFallback = useEffectEvent((itemKey: string, shown: ReviewVariant) => {
+    session.announce(`The selected variant is unavailable. Selected ${shown.label}.`, "neutral", {
+      selection: { itemKey, variantKey: shown.key },
+    });
+  });
   useEffect(() => {
     if (!routedSelection || !onRouteSelect || !item || !variant) return;
     if (item.key === routedSelection.itemKey && variant.key === routedSelection.variantKey) return;
     // The address can name an unchanged screenshot of a page that is not loaded yet.
     if (unchanged.locating) return;
     onRouteSelect({ itemKey: item.key, variantKey: variant.key });
+    // The address named a variant that the run does not have, for example
+    // after a newer model of the run. An address with no variant names none.
+    if (!routedSelection.variantKey) return;
+    announceFallback(item.key, variant);
   }, [item, variant, routedSelection, onRouteSelect, unchanged.locating]);
 
   // Up, Down, and the two screenshot buttons: the remembered variant, else
@@ -641,10 +650,10 @@ function ReviewSession({
                       />
                     ) : (
                       <div className="grid min-h-0 flex-1 content-start gap-1 p-4">
-                        <Text render={<h2 />}>No comparison items</Text>
+                        <Text render={<h2 />}>No screenshots to compare</Text>
                         <Text render={<p />}>
                           {model.reviewReady
-                            ? "This run contains no review items."
+                            ? "This run contains no screenshots to review."
                             : "Images will appear after the complete run is processed."}
                         </Text>
                       </div>
