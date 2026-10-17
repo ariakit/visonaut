@@ -17,7 +17,7 @@
     "jose": "6.2.12"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "5.20261013.1",
+    "@cloudflare/workers-types": "5.20261014.1",
     "@types/node": "24.19.2",
     "miniflare": "5.20261006.2-beta",
     "rolldown": "1.2.14",
