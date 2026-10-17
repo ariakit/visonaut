@@ -1,5 +1,42 @@
 # @visonaut/web
 
+## 0.3.9
+
+### The review page shows the result of a run
+
+- **Nothing to review.** A run with no change to review opens on a short result in the place of the stage and the decision bar. It names the state of the run and the counts, for example "Run state: Rejected. 9 changes in 3 screenshots: 7 approved, 2 rejected." It links the next run of the Queue that waits for a decision, the Queue, and all screenshots of the run.
+- **The end of a review.** After the last decision is saved, the same result shows, with "Undo last decision". Undo brings the stage back with the selection of the undone decision. A row click or an arrow key also goes back to a screenshot.
+- **The way back.** While the result shows, the list marks no screenshot and the header names none. The run progress in the header is then a button that shows the result again. A result with a rejected change has "Show rejected", and the result of a pull request run links the pull request.
+- **One vocabulary.** The capture details name the state of the run with the words of the pages, such as "Passed" and "Needs review", in place of "Check passed" and "Changes need review". The status line no longer says "Review complete. No variants need review.".
+
+### Fixed the keyboard stops and the narrow list of the review page
+
+- **One Tab stop for the variant marks.** The marks of the variant control are one toolbar. Tab stops on the selected mark only, and Left, Right, Home, and End on a mark select a variant, also while the shortcuts are off. On the counted marks of a screenshot with more than 8 variants, Left and Right move between the marks, and with one counted mark they select the previous or the next variant while the shortcuts are on.
+- **One Tab stop for the region boxes.** The boxes of the changed regions on the stage are one Tab stop, and the arrow keys move between them.
+- **The list of a narrow window is in the page.** Below 64rem, **Show list** opens the screenshot list above the variant row, and not in a dialog. A choice in the list closes it.
+- **The keyboard switch is in the account menu.** The account menu has the checkbox **Shortcuts** and the button **Keys**, which lists the keys. The page has no footer.
+
+### Fixed texts and keys of the review page
+
+- **A selected variant that is gone.** When the address names a variant that the run does not have, for example after a newer state of the run, the status line now says "The selected variant is unavailable." and names the variant that the page shows.
+- **A mode key that is off.** A mode key does nothing when its mode button is off. Before, `S` on an added variant stored the mode "Two panes", and the next changed variant opened in two panes.
+- **The Undo of a run approval with no connection.** The status line now says "Not saved. No connection. Nothing was undone. Try again." Before, it said only "Not saved. No connection."
+- **Screenshot in place of item.** The keyboard help, the conflict text of a decision for a whole screenshot, and the empty review page now say "screenshot" and not "item".
+
+### Other updates
+
+- Moved the variant row, the stage, and the decision bar of the screenshot view of the review page into the same panel as the result page, so the stage takes the height that is left and the page does not scroll when the content fits.
+- Replaced the loading text "Checking access and loading this run…" of the review page with the shape of the page: the header with the way back to the Queue, the screenshot list, and the panel with the variant row, the stage, and the decision bar.
+- Added the repository of the service to the sign-in page, for example `ariakit/ariakit`. The page gets it from the configuration, with no database read.
+- Moved the controls of the decision bar of the review page into the bottom row of the panel sheet, with no raised pill. A message with recovery buttons now tints only the status line.
+- Fixed the capture details panel of the review page, which drew a line across the variant row beside it.
+- Made the conversion of a Submit into a run about one third faster. The one pass over the staged pages now also makes the comparison of the run, so the conversion no longer reads the stored pages of the run and the reference pages again after the seal. In local workerd, with one profile for each capture and measured again on the commit before this change, the conversion of a run of 2 pages (4,000 captures) took about 434 ms and now takes about 300 ms, and a run of 10 pages (20,000 captures) took about 2,139 ms and now takes about 1,403 ms.
+- Made the conversion of a Submit into a run about two times faster when each capture has its own clip rectangle. The check of each written and read page no longer computes the profile digests that the page build derived from the same rows. In local workerd, the conversion of a run of 2 pages (4,000 captures, one profile for each capture) took about 892 ms and now takes about 484 ms, and a run of 10 pages (20,000 captures) took about 4,897 ms and now takes about 2,311 ms. A run where all captures share one profile takes about 7% to 11% less time.
+- Fixed approvals of earlier runs of a merged pull request that were reused by later runs of `main` and of other pull requests. Only the newest run of a merged pull request is now a lineage source of these runs, with the approvals that it holds, also the approvals that it copied from its earlier runs. While a pull request is open, its earlier approvals still apply to its own newer runs, and a merge group still uses each run of its queued pull requests.
+- Fixed the decision bar of the review page at a width of 390 px, which cut off the zoom. The zoom now has a row of its own, so each control of the bar is on screen.
+- Fixed the Retry button of a review page that could not load its run. It filled the width of its card, and now it has the width of its label.
+- Updated dependencies: `@visonaut/service@0.0.8`
+
 ## 0.3.8
 
 ### One review command approves the changes of a run
