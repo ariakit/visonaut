@@ -10,7 +10,7 @@ Use the [release and deployment guide](.github/workflows/README.md) for executio
 
 ## Review a run
 
-Open the review link from the GitHub check and sign in with GitHub. Access requires current write permission to the configured repository. Check the commit and attempt, select an item and variant, then inspect its images before you approve or reject it.
+Open the review link from the GitHub check and sign in with GitHub. Access requires current write permission to the configured repository. Check the commit and attempt, select a screenshot and a variant, then inspect its images before you approve or reject it.
 
 A pull request author with no write permission cannot open the review link, and does not need it. The title of the Visonaut check names the state of the run, and its summary says who acts next. For example, `79 changes need review` waits for a maintainer, and `3 changes rejected` waits for a commit of the author that corrects the rejected changes. The [review guide](docs/review-guide.md#read-the-github-check) lists the title of each run state.
 
@@ -20,7 +20,7 @@ Validated image URLs need no session. Anyone with a URL can view and copy those 
 
 The Status page shows unresolved service alerts. It refreshes them while it is open and its tab is visible. No external notifications are sent.
 
-Use the [review guide](docs/review-guide.md) for image modes, keyboard controls, whole-item commands, Undo, and recovery from a failed save.
+Use the [review guide](docs/review-guide.md) for image modes, keyboard controls, commands for a whole screenshot, Undo, and recovery from a failed save.
 
 ## Capture and submit
 

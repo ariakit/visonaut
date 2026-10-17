@@ -182,6 +182,49 @@ test("on a routed page, the bar prints that the remembered variant is unavailabl
   );
 });
 
+test("on a routed page, the bar prints that the selected variant is unavailable", async ({
+  page,
+}) => {
+  const initial = fixtureModel();
+  let current = initial;
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/state")) {
+      return route.fulfill({
+        json: {
+          run: current.run,
+          comparisonState: "ready",
+          comparisonRevision: current.comparisonRevision,
+          reviewReady: true,
+          archived: false,
+        },
+      });
+    }
+    return route.fulfill({ json: compactReviewModel(current) });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+  await page.getByLabel("Review workspace", { exact: true }).focus();
+  await page.keyboard.press("2");
+  await expect(page.getByRole("combobox", { name: /^Variant: Solid\./ })).toBeVisible();
+  // A newer state of the run no longer has Solid, the selected variant.
+  const next = structuredClone(initial);
+  next.comparisonRevision += 1;
+  const first = next.items[0];
+  if (!first) throw new Error("Missing the first screenshot.");
+  first.variants = first.variants.filter((variant) => variant.key !== "Solid");
+  current = next;
+  const modelRead = page.waitForResponse((response) =>
+    new URL(response.url()).pathname.endsWith("/api/runs/run-42"),
+  );
+  await readAgain(page);
+  await modelRead;
+  await expect(page.getByRole("combobox", { name: /^Variant: React\./ })).toBeVisible();
+  await expect(page.locator(".review-save-state")).toHaveText(
+    /^The selected variant is unavailable\. Selected React /,
+  );
+});
+
 for (const [status, screen] of [
   [401, "the sign-in page"],
   [403, "the no access page"],
@@ -320,7 +363,7 @@ for (const conflict of [
     variant: 1,
     decision: { verdict: "rejected", reviewer: "Kenji Mori" },
     key: "Shift+A",
-    text: "Conflict. Kenji Mori rejected another variant of this item. Your approval was not saved.",
+    text: "Conflict. Kenji Mori rejected another variant of this screenshot. Your approval was not saved.",
     state: /Solid.*Rejected/,
     // The selection stays on the first variant, which has no decision.
     details: /React.*· Needs review/,
@@ -719,6 +762,9 @@ test("a stale variant link keeps its valid item selected", async ({ page }) => {
       }),
     )
     .toMatchObject({ item: "menu/open", variant: "Menu" });
+  await expect(page.locator(".review-save-state")).toHaveText(
+    /^The selected variant is unavailable\. Selected Menu /,
+  );
 });
 
 test("sign-in keeps a direct item and variant link", async ({ page }) => {

@@ -26,13 +26,13 @@ export function ShortcutHelp() {
         </ak.DialogDescription>
         <dl className="grid grid-cols-[auto_1fr] gap-3 my-5">
           <dt>↑ / ↓</dt>
-          <dd>Previous or next item. Stop at either end.</dd>
+          <dd>Previous or next screenshot. Stop at either end.</dd>
           <dt>← / → · 1–6</dt>
           <dd>Select a variant.</dd>
           <dt>A / X</dt>
           <dd>Approve or reject, then move to the next pending variant.</dd>
           <dt>Shift+A / Shift+X</dt>
-          <dd>Review all changed variants in this item as one command.</dd>
+          <dd>Review all changed variants in this screenshot as one command.</dd>
           <dt>F / G / D</dt>
           <dd>The current image, the baseline in the same place, or the red mask off and on.</dd>
           <dt>S / W / O</dt>

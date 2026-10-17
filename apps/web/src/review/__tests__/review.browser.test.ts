@@ -1464,6 +1464,22 @@ test("an added or a removed variant shows its one image, with no empty pane and 
   await expect(modeButton(page, "Current")).toHaveAttribute("aria-disabled", "true");
 });
 
+test("a mode key that the variant cannot show keeps the stored mode", async ({ page }) => {
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await ready(page);
+  await expect(stage(page).getByText("Added", { exact: true })).toBeVisible();
+  // The added variant has no baseline, so its Two panes button is off, and
+  // S does nothing.
+  await page.keyboard.press("s");
+  expect(await page.evaluate(() => window.localStorage.getItem("visonaut.review.view"))).toBeNull();
+  // The next changed variant opens in the mode of before.
+  await page.keyboard.press("ArrowUp");
+  await ready(page);
+  await expect(modeButton(page, "Current")).toHaveAttribute("aria-current", "true");
+  await expect(page.locator("[data-stage-pane]")).toHaveCount(1);
+});
+
 test("a mark shows each changed region, and the hidden pane of two panes has none", async ({
   page,
 }) => {

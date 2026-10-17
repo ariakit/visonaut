@@ -107,7 +107,7 @@ export function decisionConflict(model: ReviewModel, command: ReviewCommand): st
   if (!variant) return null;
   // The other decision is one of the same person, for example in another tab.
   const reviewer = variant.ownDecision ? "You already" : (variant.reviewer ?? "Another reviewer");
-  const place = variant === selected ? "this variant" : "another variant of this item";
+  const place = variant === selected ? "this variant" : "another variant of this screenshot";
   const refused = command.verdict === "approved" ? "approval" : "rejection";
   return `${reviewer} ${variant.verdict} ${place}. Your ${refused} was not saved.`;
 }

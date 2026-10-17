@@ -55,7 +55,7 @@ Screenshots with a new variant stay in the main list for inspection, including a
 
 The picture of a row shows the first variant that needs review, else the first change, else the first variant: the current image with the mask on top, cropped around the largest changed region. A removed variant shows its baseline. Selecting another variant changes the viewer, not the picture.
 
-The viewer is one stage. It opens on the current image, with the red mask on top for a changed variant. The bar has the buttons of the modes, the mask, and the zoom, and most of them have a key. The tooltip of a button shows its name and its key. A mode button is off when the stage cannot show that mode for the selected variant, for example **Baseline** for an added variant.
+The viewer is one stage. It opens on the current image, with the red mask on top for a changed variant. The bar has the buttons of the modes, the mask, and the zoom, and most of them have a key. The tooltip of a button shows its name and its key. A mode button is off when the stage cannot show that mode for the selected variant, for example **Baseline** for an added variant. The key of a mode button that is off does nothing, so the next variant opens in the mode of before.
 
 | Control            | What the stage shows                                                                                                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -110,13 +110,13 @@ If a save fails because a newer run replaced the run, the status line says **Not
 
 ## Approve the run
 
-Use **Approve the run…** in the **More** menu (**⋯**) of the bar to approve each change of the run that has no decision. The menu item has no key. The item is off while a save runs, after a failed save, while the run is not ready for review, after a failed comparison, and when no change is left. A closed run is read-only and has no such item.
+Use **Approve the run…** in the **More** menu (**⋯**) of the bar to approve each change of the run that has no decision. The menu item has no key. The item is off while a save runs, after a failed save that waits for a retry, while the run is not ready for review, after a failed comparison, and when no change is left. A closed run is read-only and has no such item.
 
 The item opens a confirmation with the title **Approve N changes?** and a note such as **12 were not opened. 3 rejected variants stay rejected.** A change is not opened when you never had its images on screen as the selected variant on this page. A reload clears that count: the number informs you, and it does not block the approval. **Cancel** has the focus, so `Enter` approves nothing. Select **Approve** to save.
 
 The command covers each added, changed, and removed variant with no decision. It leaves a rejected variant as it is, and it skips a variant whose comparison failed. It saves at once, and the status line says what was saved, for example **Saved. 246 variants approved.** One **Undo** reverses the whole command. No other decision starts while the approval waits.
 
-The service saves nothing when the run changed after the page read it, or when the count of the page differs from its own. The status line then says **Conflict.** and the page loads the current state. If the service cannot complete the approval, the status line says **Not saved. The approval of the run failed. Approve one screenshot at a time, or try again.** A failed Undo of the approval says **Not saved. The Undo of the run approval failed. Nothing was undone. Try again.** and offers **Retry Undo**.
+The service saves nothing when the run changed after the page read it, or when the count of the page differs from its own. The status line then says **Conflict.** and the page loads the current state. If the service cannot complete the approval, the status line says **Not saved. The approval of the run failed. Approve one screenshot at a time, or try again.** The item stays on, so you can open **Approve the run…** again at once. A failed Undo of the approval says **Not saved. The Undo of the run approval failed. Nothing was undone. Try again.** With no connection, it says **Not saved. No connection. Nothing was undone. Try again.** Both offer **Retry Undo**.
 
 ## Finish a review
 
@@ -154,7 +154,7 @@ Review shortcuts work across the page while enabled, subject to the native input
 | Tab                   | Move through controls, from **Skip to review actions** |
 | Escape                | Close help or a menu                                   |
 
-Each screenshot remembers its last selected variant. A first visit opens the first variant that needs review. If no variant needs review, it opens the first change, else the first variant. If a remembered variant is no longer available, the page selects the variant that a first visit would open and announces the change in the status line. Arrow keys and visible controls reach variants beyond the first six.
+Each screenshot remembers its last selected variant. A first visit opens the first variant that needs review. If no variant needs review, it opens the first change, else the first variant. If a remembered variant is no longer available, the page selects the variant that a first visit would open and announces the change in the status line. If the address names a variant that the run does not have, for example after a newer state of the run, the page also selects the variant that a first visit would open, and the status line says **The selected variant is unavailable.** with the name of the variant that it shows. Arrow keys and visible controls reach variants beyond the first six.
 
 Held keys do not repeat review commands. Text fields, editable content, menus, and dialogs keep their own keys. Native Select All, Cut, and text-field Undo remain available. Escape never rejects an image.
 

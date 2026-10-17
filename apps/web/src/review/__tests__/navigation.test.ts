@@ -117,7 +117,7 @@ test("the sentence of a conflict names the person of the newer decision", () => 
     reviewer: "Kenji Mori",
   });
   expect(decisionConflict(model, command)).toBe(
-    "Kenji Mori rejected another variant of this item. Your approval was not saved.",
+    "Kenji Mori rejected another variant of this screenshot. Your approval was not saved.",
   );
   const selected = { ...command, selection: { itemKey: "dialog/open", variantKey: third.key } };
   expect(decisionConflict(model, selected)).toBe(
