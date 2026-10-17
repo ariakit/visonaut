@@ -705,7 +705,8 @@ test("long item and variant names keep the navigation and main header compact", 
   }
   const header = page.getByRole("banner");
   expect((await header.boundingBox())?.height).toBeLessThanOrEqual(49);
-  expect((await page.locator(".review-variant-row").boundingBox())?.height).toBeLessThanOrEqual(48);
+  // The row is a frame with the gutter of the panel (8 px) on each side.
+  expect((await page.locator(".review-variant-row").boundingBox())?.height).toBeLessThanOrEqual(64);
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   expect((await header.boundingBox())?.height).toBeLessThanOrEqual(49);

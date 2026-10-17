@@ -5,7 +5,6 @@
 // `useBarHost`.
 
 import { useEffect, useRef, useState } from "react";
-import { ShellMainFull } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { ReviewBar } from "../components/kit/bar/bar.tsx";
 import type { BarView } from "../components/kit/bar/bar.tsx";
 import { getBarMessage } from "../components/kit/bar/message.ts";
@@ -266,29 +265,29 @@ export function BarHost({ bar }: BarHostProps) {
         onApprove: () => session.approveRun(bar.selection),
       };
   return (
-    <ShellMainFull className="sticky bottom-0 z-20 pointer-events-none">
-      <ReviewBar
-        id={reviewActionsId}
-        message={getStatusMessage(bar)}
-        view={bar.view}
-        undo={{
-          disabled: model.archived || !canUndo || busy || saveState.status === "error",
-          onClick: () => void session.undo(),
-        }}
-        reject={{
-          disabled: blocked || !selectedTarget || !!variant?.rejectDisabledReason,
-          reason: variant?.rejectDisabledReason,
-          onClick: () => bar.review("rejected"),
-        }}
-        approve={{
-          disabled: blocked || !selectedTarget || !!variant?.approveDisabledReason,
-          reason: variant?.approveDisabledReason,
-          onClick: () => bar.review("approved"),
-        }}
-        wholeItem={wholeItem}
-        runApproval={runApproval}
-        onActionDone={bar.onFocusPage}
-      />
-    </ShellMainFull>
+    <ReviewBar
+      id={reviewActionsId}
+      // The bar keeps the bottom of the window while the stage scrolls.
+      className="sticky bottom-2 z-20"
+      message={getStatusMessage(bar)}
+      view={bar.view}
+      undo={{
+        disabled: model.archived || !canUndo || busy || saveState.status === "error",
+        onClick: () => void session.undo(),
+      }}
+      reject={{
+        disabled: blocked || !selectedTarget || !!variant?.rejectDisabledReason,
+        reason: variant?.rejectDisabledReason,
+        onClick: () => bar.review("rejected"),
+      }}
+      approve={{
+        disabled: blocked || !selectedTarget || !!variant?.approveDisabledReason,
+        reason: variant?.approveDisabledReason,
+        onClick: () => bar.review("approved"),
+      }}
+      wholeItem={wholeItem}
+      runApproval={runApproval}
+      onActionDone={bar.onFocusPage}
+    />
   );
 }

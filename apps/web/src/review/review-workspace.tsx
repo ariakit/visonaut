@@ -8,7 +8,6 @@ import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button
 import {
   Shell,
   ShellMain,
-  ShellMainFull,
   ShellMainBody,
   ShellFooter,
   ShellSidebar,
@@ -25,7 +24,7 @@ import { useScreenshotList } from "../components/kit/list/use-screenshot-list.ts
 import type { ScreenshotListState } from "../components/kit/list/use-screenshot-list.ts";
 import { ShortcutsProvider, useShortcuts } from "../components/kit/keys.tsx";
 import { ResultPage } from "../components/kit/result/result-page.tsx";
-import { PanelSheet } from "../components/kit/surfaces.tsx";
+import { besideList, PanelSheet } from "../components/kit/surfaces.tsx";
 import { shellRadius } from "../components/kit/tokens.ts";
 import { VariantNav } from "../components/kit/variants/variant-nav.tsx";
 import { BarHost, reviewActionsId, useBarHost } from "./bar-host.tsx";
@@ -245,10 +244,7 @@ function ReviewSession({
     if (showResult) setResultLeft(true);
   };
   const nextRun = useNextRun(model.run.id, showResult);
-  // Beside an open list, the column of the result starts at the edge of the
-  // list, as the panel of the lab does. The gutter of the main area is a grid
-  // column, so a margin of one gutter takes it back.
-  const besideList = showResult && sidebarOpen && "@5xl/shell:-ms-(--shell-gutter)";
+  const besideListClass = cx(sidebarOpen && besideList);
 
   if (
     !route &&
@@ -536,23 +532,25 @@ function ReviewSession({
         >
           {!narrow && itemNavigation}
         </ShellSidebar>
-        {/* The result sheet has the gutter of the lab panel, and it takes the
-            height that the page has left, or more with its content. */}
-        <ShellMain
-          $maxWidth="100%"
-          $p={showResult ? 2 : "clamp(1rem,2.5vw,2rem)"}
-          className="review-main"
-        >
-          <ShellMainBody className={showResult ? "grid-rows-[auto_1fr] content-stretch" : "pb-0!"}>
+        {/* The panel has the gutter of the lab panel. The result takes the
+            height that the page has left, or more with its content, and the
+            stage takes the height that the page has left. */}
+        <ShellMain $maxWidth="100%" $p={2} className="review-main">
+          <ShellMainBody
+            className={
+              showResult
+                ? "grid-rows-[auto_1fr] content-stretch"
+                : "grid-rows-[auto_minmax(0,1fr)] content-stretch"
+            }
+          >
             <Heading className="sr-only">{`Review of ${identity.full}`}</Heading>
             <HeadingLevel>
-              {/* Above the result, the row keeps its margin only while it
-                  shows the stepper of a narrow window or a notice. */}
+              {/* Above the panel, the row keeps its margin only while it shows
+                  the stepper of a narrow window or a notice. */}
               <div
                 className={cx(
-                  "grid min-w-0 gap-3",
-                  showResult ? "mb-2 @3xl/shell:mb-0 @3xl/shell:has-[>p]:mb-2" : "mb-3",
-                  besideList,
+                  "mb-2 grid min-w-0 gap-3 @3xl/shell:mb-0 @3xl/shell:has-[>p]:mb-2",
+                  besideListClass,
                 )}
               >
                 <ScreenshotStepper
@@ -577,47 +575,9 @@ function ReviewSession({
                     Review is unavailable until the run is sealed and all comparisons are complete.
                   </Frame>
                 )}
-                {!showResult && sessionItem && sessionVariant && variant && (
-                  <div
-                    ref={variantRow}
-                    className="review-variant-row @container flex flex-wrap items-center gap-x-3 gap-y-2"
-                  >
-                    <div className="flex min-w-[min(100%,27.5em)] flex-1">
-                      <VariantNav
-                        item={sessionItem}
-                        variant={sessionVariant}
-                        onStep={stepVariant}
-                        onSelect={(variantKey) =>
-                          selectVariant(
-                            sessionItem.variants.findIndex((entry) => entry.key === variantKey),
-                          )
-                        }
-                      />
-                    </div>
-                    {pixelLine && (
-                      <Text className="flex-none text-xs ak-ink-60 tabular-nums @max-[44rem]:hidden">
-                        {pixelLine}
-                      </Text>
-                    )}
-                    <Button
-                      $border
-                      ref={detailsTrigger}
-                      className="ms-auto flex-none"
-                      aria-label="Details"
-                      aria-expanded={detailsOpen}
-                      aria-controls="capture-details"
-                      onClick={() => setDetailsOpen((open) => !open)}
-                    >
-                      <ButtonSlot>
-                        <Settings2 />
-                      </ButtonSlot>
-                      <ButtonLabel>Details</ButtonLabel>
-                    </Button>
-                  </div>
-                )}
               </div>
               {showResult && runResult ? (
-                <PanelSheet className={cx(besideList)}>
+                <PanelSheet className={besideListClass}>
                   <ResultPage
                     {...runResult}
                     next={nextRun}
@@ -626,28 +586,73 @@ function ReviewSession({
                     onUndo={session.canUndo ? bar.undo : null}
                   />
                 </PanelSheet>
-              ) : item && variant ? (
-                <ShellMainFull>
-                  <StageHost
-                    stage={stage}
-                    model={model}
-                    variant={variant}
-                    terminal={terminalComparison}
-                    busy={busy}
-                    onRetryImages={retryImages}
-                  />
-                </ShellMainFull>
               ) : (
-                <Frame $p={6} $border $rounded="xl">
-                  <Text render={<h2 />}>No comparison items</Text>
-                  <Text render={<p />}>
-                    {model.reviewReady
-                      ? "This run contains no review items."
-                      : "Images will appear after the complete run is processed."}
-                  </Text>
-                </Frame>
+                <PanelSheet className={besideListClass}>
+                  {/* A frame, so the variant control takes the radius that is
+                      concentric with the panel. */}
+                  {item && variant && sessionItem && sessionVariant && (
+                    <Frame
+                      $p={2}
+                      ref={variantRow}
+                      className="review-variant-row @container flex flex-none flex-wrap items-center gap-x-3 gap-y-2"
+                    >
+                      <div className="flex min-w-[min(100%,27.5em)] flex-1">
+                        <VariantNav
+                          item={sessionItem}
+                          variant={sessionVariant}
+                          onStep={stepVariant}
+                          onSelect={(variantKey) =>
+                            selectVariant(
+                              sessionItem.variants.findIndex((entry) => entry.key === variantKey),
+                            )
+                          }
+                        />
+                      </div>
+                      {pixelLine && (
+                        <Text className="flex-none text-xs ak-ink-60 tabular-nums @max-[44rem]:hidden">
+                          {pixelLine}
+                        </Text>
+                      )}
+                      <Button
+                        $border
+                        ref={detailsTrigger}
+                        className="ms-auto flex-none"
+                        aria-label="Details"
+                        aria-expanded={detailsOpen}
+                        aria-controls="capture-details"
+                        onClick={() => setDetailsOpen((open) => !open)}
+                      >
+                        <ButtonSlot>
+                          <Settings2 />
+                        </ButtonSlot>
+                        <ButtonLabel>Details</ButtonLabel>
+                      </Button>
+                    </Frame>
+                  )}
+                  <Frame $p={2} className="flex min-h-0 flex-1 flex-col gap-2 pt-0">
+                    {item && variant ? (
+                      <StageHost
+                        stage={stage}
+                        model={model}
+                        variant={variant}
+                        terminal={terminalComparison}
+                        busy={busy}
+                        onRetryImages={retryImages}
+                      />
+                    ) : (
+                      <div className="grid min-h-0 flex-1 content-start gap-1 p-4">
+                        <Text render={<h2 />}>No comparison items</Text>
+                        <Text render={<p />}>
+                          {model.reviewReady
+                            ? "This run contains no review items."
+                            : "Images will appear after the complete run is processed."}
+                        </Text>
+                      </div>
+                    )}
+                    <BarHost bar={bar} />
+                  </Frame>
+                </PanelSheet>
               )}
-              {!showResult && <BarHost bar={bar} />}
             </HeadingLevel>
           </ShellMainBody>
         </ShellMain>

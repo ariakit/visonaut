@@ -90,7 +90,7 @@ function BarFrame({ id, tint, children }: BarFrameProps) {
       $lighten={2}
       $rounded="3xl"
       $forceRounded
-      className="pointer-events-auto flex w-full max-w-[72rem] shadow-xl"
+      className="flex w-full max-w-[72rem] shadow-xl"
     >
       <Frame
         id={id}
@@ -162,13 +162,7 @@ export function ReviewBar({
     onActionDone?.();
   }, [takeover, onActionDone]);
   return (
-    <div
-      ref={rootRef}
-      className={cx(
-        "@container pointer-events-none flex justify-center px-2 pb-2 @min-[36rem]:pb-4",
-        className,
-      )}
-    >
+    <div ref={rootRef} className={cx("@container flex justify-center", className)}>
       <BarFrame id={id} tint={getTint(message)}>
         {/* The siblings of the status line keep their places in the tree, so
             the live region stays mounted. */}

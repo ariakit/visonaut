@@ -231,17 +231,7 @@ export function StageHost({
     status = <StateChip state={{ kind: "comparing" }} />;
   }
   return (
-    <Frame
-      $cover
-      $border
-      $borderType="border"
-      $rounded="none"
-      $orientation="vertical"
-      $p={0}
-      render={<section />}
-      aria-label="Selected variant"
-      tabIndex={-1}
-    >
+    <section aria-label="Selected variant" tabIndex={-1} className="flex min-h-0 flex-1 flex-col">
       {!model.archived && (variant.approveDisabledReason || variant.rejectDisabledReason) && (
         <p className="text-xs ak-ink-60 px-3 py-2">
           {variant.rejectDisabledReason ?? variant.approveDisabledReason}
@@ -257,7 +247,7 @@ export function StageHost({
       ) : (
         <>
           <div
-            className="review-evidence grid"
+            className="review-evidence grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)]"
             data-evidence={terminal ? "terminal" : evidence.status}
           >
             <ReviewStage
@@ -269,11 +259,11 @@ export function StageHost({
               onReport={evidence.report}
               status={status}
               aria-busy={evidence.status === "loading" || undefined}
-              className="mx-3 mb-3 h-[min(75dvh,60rem)] min-h-80"
+              className="min-h-80"
             />
           </div>
         </>
       )}
-    </Frame>
+    </section>
   );
 }
