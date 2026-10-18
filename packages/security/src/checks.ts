@@ -84,7 +84,8 @@ export function storedEndTime(
   return typeof check.completed_at === "string" ? check.completed_at : undefined;
 }
 
-function reviewUrl(url: string, origin: string): string {
+/** The review link of a run on this origin. Any other link throws. */
+export function reviewUrl(url: string, origin: string): string {
   const parsed = new URL(url);
   if (
     parsed.origin !== origin ||
@@ -109,7 +110,7 @@ function changes(count: number, singular: string, plural: string) {
   return count === 1 ? `1 change ${singular}` : `${count} changes ${plural}`;
 }
 
-interface CheckText {
+export interface CheckText {
   title: string;
   /** Who acts next. */
   next: string;
@@ -119,7 +120,8 @@ interface CheckText {
 
 // The maintainer approved each sentence on 2026-10-09 (the table of #267).
 // GitHub shows the text on each pull request, so a change needs a new approval.
-function checkText({ state, pending, rejected, approved }: CheckReview): CheckText {
+// The check and the pull request comment both read it.
+export function checkText({ state, pending, rejected, approved }: CheckReview): CheckText {
   switch (state) {
     case "needs-review":
       return {

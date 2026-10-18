@@ -98,14 +98,14 @@ it("closes the alert of each step of a pass with one statement", async () => {
   const { reports } = await runOperations(pass);
   // The name of each step is the kind of its alert.
   const steps = Object.keys(reports) as AlertKind[];
-  expect(steps).toHaveLength(12);
+  expect(steps).toHaveLength(13);
   for (const kind of steps) {
     await recordEvent(native, { kind, subject: "scheduler", code: "step-failed", now: 1 });
   }
   measured.reset();
   await runOperations(pass);
   const closing = measured.costs.filter((cost) => closesStepAlerts(cost.sql));
-  expect(closing.map((cost) => cost.rows_written)).toEqual([12]);
+  expect(closing.map((cost) => cost.rows_written)).toEqual([13]);
   expect(
     await native.prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL").all(),
   ).toMatchObject({ results: [] });

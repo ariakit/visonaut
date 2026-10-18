@@ -2,6 +2,7 @@ export * from "./auth.js";
 export * from "./authorization.js";
 export * from "./capabilities.js";
 export * from "./checks.js";
+export * from "./comments.js";
 export * from "./errors.js";
 export * from "./github.js";
 export * from "./http.js";
