@@ -48,7 +48,7 @@
     "@types/pngjs": "6.0.5",
     "@visonaut/compare": "workspace:*",
     "@visonaut/protocol": "workspace:*",
-    "tsup": "8.5.1",
+    "tsup": "9.0.0",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vitest": "5.0.4"
   },
