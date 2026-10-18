@@ -1,5 +1,18 @@
 # @visonaut/web
 
+## 0.3.10
+
+### Pull request comment with a link to the run
+
+Visonaut keeps one comment on each pull request with visual changes. The comment shows the result of the check and links directly to the run in Visonaut, because a click on the check opens the check page of GitHub. Each new result edits the same comment.
+
+The GitHub App needs the "Pull requests" read and write permission.
+
+### Other updates
+
+- Added the region stepper to the decision bar of the review page: **Previous region**, a counter such as `1/3`, and **Next region**. A step zooms the stage to that changed region. The stepper is off for a variant with no region, and a bar that is less than 65rem wide leaves it out.
+- Updated dependencies: `@visonaut/security@0.1.3`
+
 ## 0.3.9
 
 ### The review page shows the result of a run
