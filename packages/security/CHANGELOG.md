@@ -1,5 +1,13 @@
 # @visonaut/security
 
+## 0.1.3
+
+### Pull request comment with a link to the run
+
+Visonaut keeps one comment on each pull request with visual changes. The comment shows the result of the check and links directly to the run in Visonaut, because a click on the check opens the check page of GitHub. Each new result edits the same comment.
+
+The GitHub App needs the "Pull requests" read and write permission.
+
 ## 0.1.2
 
 - Fixed Submit to check the repository claims of the GitHub token before it reads the database. A Submit request with a valid GitHub token of another repository, or of another repository owner, now gets the same `403 untrusted_run` answer for each workflow run number, also for a run that has no staged attempt, which got `404 not_found` before.
