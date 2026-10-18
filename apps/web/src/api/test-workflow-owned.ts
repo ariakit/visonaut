@@ -437,8 +437,8 @@ export async function fixture(
     githubResponses,
     registerPreRunCheck,
     /**
-     * The fields of the page index that only the CLI sets. A test can set the
-     * fields of another CLI, such as CLI 0.6.6, before it stages the run.
+     * The fields of the page index that only the CLI sets. A test can change
+     * them before it stages the run.
      */
     cliFields: { cliVersion: "0.7.0" } as Record<string, unknown>,
   };
