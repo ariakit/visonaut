@@ -112,6 +112,13 @@ The labels of this table are from [Modifying a GitHub App registration](https://
 
 The service keeps one comment on each pull request whose run has a change. The comment has the title and the next step of the check, and a link to the newest run, because a click on the check opens the check page of GitHub and not the run. Each newer status of the check edits the same comment. A pull request with no change gets no comment. The table `operations_pull_request_comments` stores the comment and the status that it shows. A comment that a person deletes gets no new comment. A failed send changes no check: it raises the alert `pull-request-comment`, and the next pass tries again.
 
+## Webhook delivery
+
+The service receives the events of the GitHub App at `/v1/webhooks`. In each pass, it reads the recent deliveries of the App from GitHub. For a failed delivery, it asks GitHub to send the delivery again at most 5 times, and waits longer each time (5, 10, 20, and 40 minutes). The Status page lists the alert "GitHub webhook delivery needs attention" when this recovery cannot continue. Open the alert: its last line has the kind `upstream-webhook`, the code, and the subject.
+
+- **The code `production-receiver-mismatch`.** The webhook URL of the App is not the `/v1/webhooks` receiver of this origin, so the service reads no delivery. On the settings page of the App, set the webhook URL to `https://visonaut.com/v1/webhooks`, and save. In Advanced, "Recent deliveries", find the next delivery: the answer is 202. The next pass closes the alert.
+- **The code `redelivery-exhausted`.** The service asked for each redelivery of one delivery, and each one failed. The subject is the GUID of the delivery. On the settings page of the App, open Advanced, "Recent deliveries", and find the GUID. Read the answer of the last attempt, and repair its cause, for example a wrong `GITHUB_WEBHOOK_SECRET` (the answer is 401, see [Secret rotation](#secret-rotation)). Then select "Redeliver". The next pass after a successful attempt closes the alert. GitHub permits a redelivery for 3 days. After that time, nobody can redeliver the delivery, and the alert closes by itself.
+
 ## Secret rotation
 
 The production Worker `visonaut` has five secrets. `secrets.required` in the production part of the [Wrangler configuration](../../wrangler.jsonc) lists them. Each secret has one accepted value: the service does not accept an old value and a new value at the same time. The preview Worker needs none of these secrets. The Deploy workflow does not read or write them.

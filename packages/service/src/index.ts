@@ -1,3 +1,4 @@
+export type * from "./alert-kinds.ts";
 export * from "./database.ts";
 export * from "./types.ts";
 export * from "./service.ts";

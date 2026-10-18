@@ -82,6 +82,19 @@ test("a pull request of the preview opens the sample run and not the no access p
   expect(paths).toEqual(["/api/pulls/7", `/api/runs/${previewRunId}`]);
 });
 
+test("the sample run links to no place on GitHub", async ({ page }) => {
+  await servePreview(page);
+  await open(page, "/");
+  const card = page.getByRole("article", { name: "Dialog review example" });
+  await expect(card).toContainText("5c1e7a9");
+  await expect(card.locator('a[href^="https://github.com"]')).toHaveCount(0);
+  await open(page, `/runs/${previewRunId}`);
+  await page.getByRole("button", { name: /^Run / }).click();
+  const facts = page.getByRole("dialog", { name: "Dialog review example" });
+  await expect(facts).toContainText("5c1e7a9");
+  await expect(facts.locator('a[href^="https://github.com"]')).toHaveCount(0);
+});
+
 test("a pull request of the preview with a check opens the sample run too", async ({ page }) => {
   await servePreview(page);
   await open(page, `/pulls/12?check=${encodeURIComponent(`visonaut:pre:${"d".repeat(40)}`)}`);

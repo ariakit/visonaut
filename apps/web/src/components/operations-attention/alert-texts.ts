@@ -1,4 +1,4 @@
-import type { AlertKind } from "../../operations/alert-kinds.ts";
+import type { AlertKind } from "@visonaut/service";
 
 const guideUrl = "https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md";
 
@@ -9,6 +9,7 @@ const guideUrl = "https://github.com/ariakit/visonaut/blob/main/apps/web/src/ope
 export const guideParts = {
   "locked-check": "Locked check",
   "native-database-recovery": "Native database recovery",
+  "webhook-delivery": "Webhook delivery",
 } as const;
 
 export type GuidePart = keyof typeof guideParts;
@@ -146,11 +147,13 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
     codes: {
       "production-receiver-mismatch": {
         action:
-          "Set the GitHub App webhook URL to the production /v1/webhooks receiver after preview sessions are retired. Verify the signed ping and authorization revocation delivery.",
+          "The webhook URL of the GitHub App is not the production /v1/webhooks receiver, so the service reads no delivery. Follow the part “Webhook delivery” of the operations guide.",
+        guide: "webhook-delivery",
       },
       "redelivery-exhausted": {
         action:
-          "Inspect this delivery ID in the GitHub App settings. Fix the receiver, request manual redelivery, then verify that GitHub lists the new delivery as successful. GitHub permits a redelivery for 3 days. After that time, nobody can redeliver it, and this alert closes by itself.",
+          "Each redelivery of this delivery failed. Repair the cause, redeliver it by hand, and verify that GitHub lists the new delivery as successful. Follow the part “Webhook delivery” of the operations guide with the GUID of this alert. After 3 days, nobody can redeliver it, and this alert closes by itself.",
+        guide: "webhook-delivery",
       },
     },
   },

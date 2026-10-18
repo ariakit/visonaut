@@ -1,10 +1,13 @@
 import type { RunClosedReason } from "@visonaut/protocol";
+import type { AlertKind } from "./alert-kinds.ts";
 import { assertion, atomic, ConflictError, statement } from "./database.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
 import type { Service } from "./service.ts";
 import { projectGuard, activeGuard } from "./run-guards.ts";
 import { auditRunChange } from "./service-audit.ts";
 import { replacedMainRunSql } from "./review-status.ts";
+
+const expiredAlertKind: AlertKind = "staged-reconciliation";
 
 export async function retireRun(
   service: Service,
@@ -126,12 +129,12 @@ export async function expireIncompleteWorkflowRun(
         service.database,
         `INSERT INTO operations_events
             (id, kind, subject_id, code, first_seen_at, last_seen_at)
-            SELECT 'staged-reconciliation:' || workflow_run_id || ':' || workflow_attempt || ':expired-incomplete',
-              'staged-reconciliation', workflow_run_id || ':' || workflow_attempt,
-              'expired-incomplete', ?, ? FROM ingest_staged_runs WHERE id = ?
+            SELECT ?1 || ':' || workflow_run_id || ':' || workflow_attempt || ':' || ?2,
+              ?1, workflow_run_id || ':' || workflow_attempt, ?2, ?3, ?3
+              FROM ingest_staged_runs WHERE id = ?4
             ON CONFLICT(id) DO UPDATE SET last_seen_at = excluded.last_seen_at,
               resolved_at = NULL`,
-        [input.now, input.now, run.id],
+        [expiredAlertKind, "expired-incomplete", input.now, run.id],
       ),
       ...touchRunStatusStatements(
         service.database,

@@ -1,12 +1,12 @@
 /**
  * The kind of each alert that the service stores in `operations_events`.
- * `recordEvent` takes only these kinds, and the Status page has one text for
- * each kind, so a new kind with no text fails the type check.
+ * `recordEvent` of the web app takes only these kinds, and the Status page has
+ * one text for each kind, so a new kind with no text fails the type check.
  *
- * Two kinds are written by a statement and not by `recordEvent`:
- * `staged-reconciliation` (code `expired-incomplete`) in `@visonaut/service`,
- * and `restore` in `recovery.ts`. A new statement of that form needs its kind
- * here too.
+ * Two statements write an alert without `recordEvent`: the expired staged run
+ * here (`staged-reconciliation`) and the restore of the web app (`restore`).
+ * Each binds a kind of this type, and a test fails when a statement writes a
+ * kind as SQL text.
  */
 export type AlertKind =
   // One alert for each record that needs attention.

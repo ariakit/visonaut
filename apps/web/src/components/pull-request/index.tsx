@@ -1,5 +1,5 @@
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { CloudOff } from "lucide-react";
+import { Clock3, CloudOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ClientError, fetchOrFail, readFailure, readSuccess } from "../../client-error.ts";
 import { LiveRegion, useAnnouncement, useKeepFocus, useReadLoop } from "../../page-reads.tsx";
@@ -18,6 +18,9 @@ const readsPerLookup = 4;
 // The time after a failed read. A service that fails is not helped by a
 // request each 15 seconds.
 const failedPollInterval = 45_000;
+// A check that is still pending after this time is likely dead, so the page
+// stops to read it. `Check again` reads it again and starts a new wait.
+const waitLimit = 60 * 60_000;
 
 const notFound = "This check was not found.";
 const noAccess = "Write access to this repository is required to open its review.";
@@ -91,11 +94,15 @@ export function PullRequestPage({
   const [failure, setFailure] = useState<ReadFailure>();
   const [reading, setReading] = useState(false);
   const [reload, setReload] = useState(0);
+  const [stopped, setStopped] = useState(false);
   const [announcement, announce] = useAnnouncement();
   const announced = useRef<string>(undefined);
   // The page waits while its last answer is pending. A failed read keeps it.
   const waiting = useRef(false);
   const lastReadFailed = useRef(false);
+  // The check of this wait and the time after its first answer. A newer check,
+  // or `Check again`, starts a new wait.
+  const wait = useRef<{ check?: string; start?: number }>(undefined);
   // The check that the last lookup named, and the reads since that lookup began.
   const polled = useRef<{ check: string; reads: number }>(undefined);
   // The alert count of the header is read once. It has no index in the service,
@@ -184,6 +191,9 @@ export function PullRequestPage({
         }
       }
       waiting.current = next.state === "pending";
+      if (!wait.current || wait.current.check !== next.check) {
+        wait.current = { check: next.check };
+      }
       lastReadFailed.current = false;
       noteFocus();
       setPull(next);
@@ -202,6 +212,19 @@ export function PullRequestPage({
     restart: reload,
     nextDelay: () => {
       if (!waiting.current) return;
+      const now = Date.now();
+      const start = wait.current ? (wait.current.start ??= now) : now;
+      // A failed read keeps its band and its longer wait. The next read that
+      // works can stop.
+      if (!lastReadFailed.current && now - start >= waitLimit) {
+        // A status that is inserted with its text is often not said, so the
+        // live region of the page says it.
+        announce("Stopped checking.");
+        // The next pending answer after `Check again` is said again.
+        announced.current = undefined;
+        setStopped(true);
+        return;
+      }
       return lastReadFailed.current ? failedPollInterval : pollInterval;
     },
     read: readPull,
@@ -209,6 +232,8 @@ export function PullRequestPage({
   const tryAgain = () => {
     // The person asks for the newest state, so the read looks up the pull request again.
     polled.current = undefined;
+    wait.current = undefined;
+    setStopped(false);
     setReload((value) => value + 1);
   };
   const repository = pull?.repository ?? failure?.repository ?? knownRepository;
@@ -256,7 +281,7 @@ export function PullRequestPage({
             reading={reading}
             onCheckAgain={tryAgain}
             band={
-              failure && (
+              failure ? (
                 <ErrorBand
                   tone="warning"
                   // The state is still on screen, so the band waits its turn.
@@ -271,6 +296,17 @@ export function PullRequestPage({
                     </ErrorBandButton>
                   }
                 />
+              ) : (
+                stopped && (
+                  <ErrorBand
+                    tone="neutral"
+                    role="status"
+                    icon={Clock3}
+                    title="Stopped checking"
+                    // `Check again` of the steps starts the reads again.
+                    detail="the capture is still pending after 1 hour"
+                  />
+                )
               )
             }
           />

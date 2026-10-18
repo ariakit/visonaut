@@ -2,6 +2,7 @@ import { ChevronDown, LogOut, UserRound } from "lucide-react";
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { ButtonLabel, ButtonSlot } from "./ariakit/components/button.ariakit.react.tsx";
+import { HeadingLevel } from "./ariakit/components/heading.ariakit.react.tsx";
 import {
   Popover,
   PopoverDescription,
@@ -66,7 +67,11 @@ export function UserMenu({
         className="flex w-64 max-w-[calc(100vw-24px)] flex-col gap-3 text-sm"
       >
         <div className="grid gap-1">
-          <PopoverHeading className="break-all text-base!">{accountLabel}</PopoverHeading>
+          {/* The header is outside the heading level of the page, so the
+              heading would be a second h1 of the page. */}
+          <HeadingLevel level={2}>
+            <PopoverHeading className="break-all text-base!">{accountLabel}</PopoverHeading>
+          </HeadingLevel>
           <PopoverDescription className="text-xs leading-5">
             {preview
               ? "This preview uses sample data. Account actions are unavailable."

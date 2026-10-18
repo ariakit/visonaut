@@ -19,6 +19,8 @@ interface Answer {
   headSha?: string;
   attempt?: number;
   workflowUrl?: string;
+  /** The check that the answer is for. */
+  check?: string;
 }
 
 /** The answer of `GET /api/pulls/7`, with the fields that a test sets. */
@@ -232,6 +234,103 @@ test("one failed poll keeps the waiting state, and the page tries again after a 
   await expect(steps(page)).toBeVisible();
 });
 
+/**
+ * Answers each lookup with a pending state whose title has the number of the
+ * read. The title is on the page after the page has the answer, and the timer
+ * of the next read exists then.
+ */
+async function serveNumbered(page: Page, check = () => "") {
+  let reads = 0;
+  const lookup = await serve(page, (route) => {
+    reads += 1;
+    const title = `Read ${reads}`;
+    return route.fulfill({
+      json: answer({ state: "pending", title, check: check() || undefined }),
+    });
+  });
+  const answered = async (requests: number) => {
+    await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(
+      `#7 Read ${requests}`,
+    );
+    expect(lookup.requests()).toBe(requests);
+  };
+  return { lookup, answered };
+}
+
+test("a check that stays pending for 1 hour gets no more reads until Check again", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const { lookup, answered } = await serveNumbered(page);
+  await page.goto(entry);
+  await answered(1);
+  // The title of the band. The live region says "Stopped checking." too.
+  const band = page.getByText("Stopped checking", { exact: true });
+  // A jump fires the timer of the next read one time.
+  await page.clock.fastForward(59 * 60 * second);
+  await answered(2);
+  await expect(band).toHaveCount(0);
+  await page.clock.fastForward(60 * second);
+  await answered(3);
+  await expect(band).toBeVisible();
+  await expect(liveRegion(page)).toHaveText("Stopped checking.");
+  await expect(page.getByRole("main")).toContainText("the capture is still pending after 1 hour");
+  await expect(steps(page)).toBeVisible();
+  await page.clock.fastForward(5 * 60 * second);
+  await page.waitForTimeout(150);
+  expect(lookup.requests()).toBe(3);
+  await page.getByRole("button", { name: "Check again" }).click();
+  await answered(4);
+  await expect(band).toHaveCount(0);
+  await expect(liveRegion(page)).toHaveText("Waiting for screenshots.");
+  // The new wait reads again after the normal time.
+  await page.clock.fastForward(15 * second);
+  await answered(5);
+});
+
+test("a read that fails after 1 hour keeps its band and tries again", async ({ page }) => {
+  await page.clock.install();
+  const { lookup, answered } = await serveNumbered(page);
+  await page.goto(entry);
+  await answered(1);
+  await page.clock.fastForward(59 * 60 * second);
+  await answered(2);
+  lookup.reply(failure(500, "internal_error"));
+  await page.clock.fastForward(60 * second);
+  const failed = page.getByText("Could not refresh the pull request", { exact: true });
+  // The band has the answer of the failed read. The timer of the longer wait
+  // exists then.
+  await expect(failed).toBeVisible();
+  await expect(page.getByText("Stopped checking", { exact: true })).toHaveCount(0);
+  await expect(liveRegion(page)).toHaveText("Waiting for screenshots.");
+  // The next read works, and the page stops after it.
+  lookup.reply((route) => route.fulfill({ json: answer({ state: "pending", title: "Read 4" }) }));
+  await page.clock.fastForward(45 * second);
+  await answered(4);
+  await expect(failed).toHaveCount(0);
+  await expect(page.getByText("Stopped checking", { exact: true })).toBeVisible();
+});
+
+test("a newer check of the pull request starts a new wait of 1 hour", async ({ page }) => {
+  await page.clock.install();
+  let check = `visonaut:pre:${"a".repeat(40)}`;
+  const { answered } = await serveNumbered(page, () => check);
+  await page.goto(entryWithoutCheck);
+  await answered(1);
+  await page.clock.fastForward(50 * 60 * second);
+  await answered(2);
+  // A new head commit has a new check, which a later lookup names.
+  check = `visonaut:pre:${"b".repeat(40)}`;
+  await page.clock.fastForward(15 * second);
+  await answered(3);
+  // 1 hour after the first read, the newer check is 10 minutes old.
+  await page.clock.fastForward(10 * 60 * second);
+  await answered(4);
+  await expect(page.getByText("Stopped checking", { exact: true })).toHaveCount(0);
+  await page.clock.fastForward(15 * second);
+  await answered(5);
+});
+
 test("a hidden tab sends no lookup, and a return to the tab reads again", async ({ page }) => {
   await page.clock.install();
   await page.addInitScript(() => {
@@ -387,6 +486,17 @@ test("a check that is not found says so, and the page links to GitHub only when 
     "https://github.com/ariakit/ariakit/pull/7",
   );
   await expect(page.getByRole("main")).toContainText("This check was not found.");
+});
+
+test("the open account menu adds no second h1 to the page", async ({ page }) => {
+  await serve(page, { state: "pending", ...decided });
+  await page.goto(entry);
+  await expect(steps(page)).toBeVisible();
+  await page.getByRole("button", { name: "Account menu", exact: true }).click();
+  const menu = page.getByRole("dialog");
+  await expect(menu.getByRole("heading", { level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName(`#7 ${decided.title}`);
 });
 
 test("a PR deep link preserves its path through sign-in", async ({ page }) => {

@@ -1,9 +1,8 @@
-import type { OperationsMessage } from "@visonaut/service";
+import type { AlertKind, OperationsMessage } from "@visonaut/service";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { measureD1 } from "../api/test-d1-costs.ts";
-import type { AlertKind } from "./alert-kinds.ts";
 import { recordEvent } from "./common.ts";
 import { runOperations } from "./index.ts";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
