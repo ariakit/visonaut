@@ -39,8 +39,6 @@ export interface PaneMeasure extends Size {
   em: number;
   /** The padding of the pane: the space that an image at Fit leaves free. */
   padding: Insets;
-  /** The height at the bottom that a floating bar covers. */
-  clearance: number;
 }
 
 function isSameMeasure(first: PaneMeasure | null, second: PaneMeasure) {
@@ -48,7 +46,6 @@ function isSameMeasure(first: PaneMeasure | null, second: PaneMeasure) {
   if (first.width !== second.width) return false;
   if (first.height !== second.height) return false;
   if (first.em !== second.em) return false;
-  if (first.clearance !== second.clearance) return false;
   const sides = ["top", "right", "bottom", "left"] as const;
   return sides.every((side) => first.padding[side] === second.padding[side]);
 }
@@ -56,15 +53,13 @@ function isSameMeasure(first: PaneMeasure | null, second: PaneMeasure) {
 /**
  * Measures a pane and follows its size. The first result is null: the server
  * and the first browser render do not know the size. The gutters are the
- * padding of the pane, and the element with `data-stage-clearance` gives the
- * height that a floating bar covers, so both follow the CSS of the stage.
+ * padding of the pane, so they follow the CSS of the stage.
  */
 function usePaneMeasure() {
   const [element, setElement] = useState<HTMLElement | null>(null);
   const [measure, setMeasure] = useState<PaneMeasure | null>(null);
   useLayoutEffect(() => {
     if (!element) return;
-    const probe = element.querySelector<HTMLElement>("[data-stage-clearance]");
     const read = () => {
       const style = getComputedStyle(element);
       const next: PaneMeasure = {
@@ -77,16 +72,12 @@ function usePaneMeasure() {
           bottom: Number.parseFloat(style.paddingBottom) || 0,
           left: Number.parseFloat(style.paddingLeft) || 0,
         },
-        clearance: probe?.offsetHeight ?? 0,
       };
       setMeasure((current) => (isSameMeasure(current, next) ? current : next));
     };
     read();
     const observer = new ResizeObserver(read);
     observer.observe(element);
-    if (probe) {
-      observer.observe(probe);
-    }
     return () => observer.disconnect();
   }, [element]);
   return [setElement, element ? measure : null] as const;
@@ -220,10 +211,6 @@ const noRegions: readonly ChangedRegion[] = [];
  * - The zoom level stays between variants and screenshots. The place starts
  *   again with each variant: Fit shows the whole image, a tall image opens on
  *   its first changed region, and a kept zoom opens on that region too.
- * - A pane with a `data-stage-clearance` element has a clearance: the height
- *   that a floating bar covers. An image that would reach under the bar then
- *   fits the room above it. A smaller image keeps the full stage. The stage
- *   of today has no floating bar, so it has no such element.
  * @example
  * const stored = useStoredView();
  * const view = useStageView({ variant, mode: stored.mode });
@@ -259,25 +246,15 @@ export function useStageView({
   // A stage without an image has no place, no scale, and no zoom.
   const ready = !!pane && (!!subject.baseline || !!subject.current);
   const padding = pane?.padding ?? { top: 0, right: 0, bottom: 0, left: 0 };
-  const fullRoom: Box = {
+  const room: Box = {
     x: padding.left,
     y: padding.top,
     width: Math.max(1, (pane?.width ?? 0) - padding.left - padding.right),
     height: Math.max(1, (pane?.height ?? 0) - padding.top - padding.bottom),
   };
-  const clearance = Math.min(pane?.clearance ?? 0, fullRoom.height / 2);
-  const clearRoom: Box = { ...fullRoom, height: fullRoom.height - clearance };
 
-  // The room and the scale of a level. An image that would reach under the
-  // floating bar when it is in the middle of the stage uses the room above
-  // the bar, so the bar covers no pixel at Fit.
-  const getFrame = (level: ZoomLevel) => {
-    const scale = getLevelScale(level, bounds, fullRoom);
-    if (!clearance) return { room: fullRoom, scale };
-    if (bounds.height * scale <= fullRoom.height - clearance * 2) return { room: fullRoom, scale };
-    return { room: clearRoom, scale: getLevelScale(level, bounds, clearRoom) };
-  };
-  const fitScale = getFrame("fit").scale;
+  const toScale = (level: ZoomLevel) => getLevelScale(level, bounds, room);
+  const fitScale = toScale("fit");
   const toLevel = (scale: number): ZoomLevel => {
     return Math.abs(scale - fitScale) < epsilon ? "fit" : scale;
   };
@@ -286,13 +263,12 @@ export function useStageView({
   // on its first changed region, not at its top, where the change can be out
   // of view. An image that fits shows whole, whatever the point is.
   const getHome = (level: ZoomLevel): Point => {
-    const { room, scale } = getFrame(level);
     const first = regions[0];
     if (!first) return { x: bounds.width / 2, y: 0 };
-    return getRegionAnchor(first, scale, room);
+    return getRegionAnchor(first, toScale(level), room);
   };
   const resolve = (level: ZoomLevel, center: Point | null): ViewPlace => {
-    const { room, scale } = getFrame(level);
+    const scale = toScale(level);
     const point = center ?? getHome(level);
     return {
       scale,
@@ -301,19 +277,18 @@ export function useStageView({
     };
   };
 
-  const { room } = getFrame(state.level);
   const place = resolve(state.level, state.center);
 
   // Each change starts from the newest state, so two events before a render
   // add up. The stored center is the one that the limits allow, so that a
   // pan against a limit does not add up out of sight.
-  const update = (compute: (now: ViewPlace, state: ViewState) => ViewChange, animated: boolean) => {
+  const update = (compute: (now: ViewPlace) => ViewChange, animated: boolean) => {
     if (!ready) return;
     setState((previous) => {
       const base = restart(previous);
-      const next = { ...base, ...compute(resolve(base.level, base.center), base), animated };
+      const next = { ...base, ...compute(resolve(base.level, base.center)), animated };
       const allowed = resolve(next.level, next.center);
-      return { ...next, center: getCenter(allowed, getFrame(next.level).room) };
+      return { ...next, center: getCenter(allowed, room) };
     });
   };
   const zoomAbout = (
@@ -324,11 +299,10 @@ export function useStageView({
     update((now) => {
       const scale = getScale(now);
       const level = toLevel(scale);
-      const frame = getFrame(level);
-      const point = anchor ?? getBoxCenter(frame.room);
+      const point = anchor ?? getBoxCenter(room);
       const imagePoint = { x: (point.x - now.x) / now.scale, y: (point.y - now.y) / now.scale };
       const next = { scale, x: point.x - imagePoint.x * scale, y: point.y - imagePoint.y * scale };
-      return { level, center: getCenter(next, frame.room) };
+      return { level, center: getCenter(next, room) };
     }, animated);
   };
 
@@ -349,17 +323,15 @@ export function useStageView({
     const region = regions[index];
     if (!region) return;
     update(() => {
-      const fit = getFrame("fit");
       const wanted = Math.min(
-        (fit.room.width * regionFill) / region.width,
-        (fit.room.height * regionFill) / region.height,
+        (room.width * regionFill) / region.width,
+        (room.height * regionFill) / region.height,
       );
       const step = jumpSteps.findLast((value) => value <= wanted) ?? 1;
-      const scale = Math.max(step, fit.scale);
-      const level = toLevel(scale);
+      const scale = Math.max(step, fitScale);
       return {
-        level,
-        center: getRegionAnchor(region, scale, getFrame(level).room),
+        level: toLevel(scale),
+        center: getRegionAnchor(region, scale, room),
         region: index,
       };
     }, true);
@@ -376,8 +348,7 @@ export function useStageView({
       const target = focused ?? regions[0];
       if (!pannable && target) {
         update(() => {
-          const level = toLevel(stepUp);
-          return { level, center: getRegionAnchor(target, stepUp, getFrame(level).room) };
+          return { level: toLevel(stepUp), center: getRegionAnchor(target, stepUp, room) };
         }, true);
         return;
       }
@@ -396,10 +367,7 @@ export function useStageView({
         const nextLevel = toLevel(next);
         // A zoom from an image that shows whole goes to the change.
         if (pannable || !target) return { level: nextLevel };
-        return {
-          level: nextLevel,
-          center: getRegionAnchor(target, next, getFrame(nextLevel).room),
-        };
+        return { level: nextLevel, center: getRegionAnchor(target, next, room) };
       }, true);
     },
     regionCount: regions.length,
@@ -426,9 +394,8 @@ export function useStageView({
         getCenter({ ...place, x: place.x + x, y: place.y + y }, room),
       );
       if (moved.x === place.x && moved.y === place.y) return false;
-      update((now, base) => {
-        const frame = getFrame(base.level);
-        return { center: getCenter({ ...now, x: now.x + x, y: now.y + y }, frame.room) };
+      update((now) => {
+        return { center: getCenter({ ...now, x: now.x + x, y: now.y + y }, room) };
       }, false);
       return true;
     },
