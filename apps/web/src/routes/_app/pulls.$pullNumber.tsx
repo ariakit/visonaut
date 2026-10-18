@@ -30,7 +30,8 @@ function PullRequest() {
       key={`${pullNumber}:${check ?? ""}`}
       pullNumber={pullNumber}
       check={check}
-      knownRepository={known.repository}
+      // The repository of the preview is in no place on GitHub.
+      knownRepository={known.preview ? undefined : known.repository}
       onAccessDenied={deny}
       onFacts={onFacts}
     />

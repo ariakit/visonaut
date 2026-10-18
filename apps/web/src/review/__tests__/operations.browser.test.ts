@@ -187,20 +187,27 @@ for (const [kind, code, title, part] of [
   });
 }
 
-for (const [code, action] of [
-  ["production-receiver-mismatch", "production /v1/webhooks receiver"],
+for (const [code, action, guidePart] of [
+  ["production-receiver-mismatch", "production /v1/webhooks receiver", "webhook-delivery"],
   // A webhook that can start no work gets no receipt, so the text asks for none.
-  ["redelivery-exhausted", "verify that GitHub lists the new delivery as successful"],
-  ["recovery-unavailable", "retries delivery recovery automatically"],
+  [
+    "redelivery-exhausted",
+    "verify that GitHub lists the new delivery as successful",
+    "webhook-delivery",
+  ],
+  ["recovery-unavailable", "retries delivery recovery automatically", null],
 ] as const) {
-  test(`the webhook alert ${code} has the words of its code and no link to the guide`, async ({
-    page,
-  }) => {
+  test(`the webhook alert ${code} has the words of its code`, async ({ page }) => {
     await serve(page, status([alert("upstream-webhook", code)]));
     await page.goto(path);
     await alertButton(page, "GitHub webhook delivery needs attention").click();
     await expect(page.getByRole("main")).toContainText(action);
-    await expect(page.getByRole("link", { name: "Open guide" })).toHaveCount(0);
+    const guideLink = page.getByRole("link", { name: "Open guide" });
+    if (guidePart) {
+      await expect(guideLink).toHaveAttribute("href", `${guide}#${guidePart}`);
+    } else {
+      await expect(guideLink).toHaveCount(0);
+    }
   });
 }
 

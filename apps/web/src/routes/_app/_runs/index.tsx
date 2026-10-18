@@ -11,8 +11,13 @@ export const Route = createFileRoute("/_app/_runs/")({
 function QueueRoute() {
   return (
     <DashboardPage {...queueShape}>
-      {({ actionable, baselineRevision, repository }) => (
-        <Queue runs={actionable} baselineRevision={baselineRevision} repository={repository} />
+      {({ actionable, baselineRevision, repository, preview }) => (
+        <Queue
+          runs={actionable}
+          baselineRevision={baselineRevision}
+          // The sample runs of the preview are in no repository on GitHub.
+          repository={preview ? undefined : repository}
+        />
       )}
     </DashboardPage>
   );

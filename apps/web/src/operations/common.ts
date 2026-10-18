@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Database } from "@visonaut/service";
-import type { AlertKind } from "./alert-kinds.ts";
+import type { AlertKind, Database } from "@visonaut/service";
 import type { ObjectStore, OperationsBudget } from "./types.ts";
 
 export function validateBudget(budget: OperationsBudget) {

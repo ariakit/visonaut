@@ -9,10 +9,9 @@ import {
 import { Service } from "@visonaut/service";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { deliverPullRequestComments } from "./comments.ts";
-import type { AlertKind } from "./alert-kinds.ts";
 import { eventId, recordEvent, resolveEventIds, validateBudget } from "./common.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
-import type { OperationsMessage } from "@visonaut/service";
+import type { AlertKind, OperationsMessage } from "@visonaut/service";
 import { expireExports } from "./exports.ts";
 import { noteCause, type CountedCause } from "./failure.ts";
 import { promoteBaselines } from "./promotions.ts";

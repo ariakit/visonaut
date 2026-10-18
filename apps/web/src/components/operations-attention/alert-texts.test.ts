@@ -42,7 +42,12 @@ it("names the guide only in the words of an alert that has a procedure in the gu
       expect(text.action).toContain(`“${guideParts[text.guide]}”`);
     }
   }
-  expect(withGuide).toEqual(["check-delivery: ambiguous", "restore"]);
+  expect(withGuide).toEqual([
+    "check-delivery: ambiguous",
+    "restore",
+    "upstream-webhook: production-receiver-mismatch",
+    "upstream-webhook: redelivery-exhausted",
+  ]);
 });
 
 it("gives each alert a title and a sentence of what to do", () => {

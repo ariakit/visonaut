@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { cx } from "clava";
 import { useId } from "react";
+import type { ReactNode } from "react";
 import type { DashboardRun } from "../api/dashboard.ts";
 import { Button, ButtonLabel } from "../components/ariakit/components/button.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
@@ -65,8 +66,26 @@ function CardFrame({ className, ...props }: FrameProps) {
 export interface NextRunProps {
   /** The next run to review: the first run of the review group. */
   run: DashboardRun;
-  /** The repository as `owner/name`, for the links to GitHub. */
-  repository: string;
+  /** The repository as `owner/name`, for the links to GitHub. Without it, no link. */
+  repository?: string;
+}
+
+interface GitHubTextProps {
+  /** The page on GitHub. Without it, the text links nowhere. */
+  href?: string;
+  /** The name of the link. */
+  label: string;
+  className?: string;
+  children: ReactNode;
+}
+
+function GitHubText({ href, label, className, children }: GitHubTextProps) {
+  if (!href) return <span className={className}>{children}</span>;
+  return (
+    <TextLink {...getExternalLinkProps(href)} aria-label={label} className={className}>
+      {children}
+    </TextLink>
+  );
 }
 
 /**
@@ -80,7 +99,7 @@ export function NextRun({ run, repository }: NextRunProps) {
   const headingId = useId();
   const heading = getRunHeading(run);
   const row = getRunRow(run);
-  const github = `https://github.com/${repository}`;
+  const github = repository && `https://github.com/${repository}`;
   const pullRequest = run.pullRequestNumber != null && heading.has !== "number";
   return (
     <CardFrame
@@ -95,24 +114,24 @@ export function NextRun({ run, repository }: NextRunProps) {
           <StatusPill status={row.status} compact className="me-0.5" />
           {pullRequest && (
             <>
-              <TextLink
-                {...getExternalLinkProps(`${github}/pull/${run.pullRequestNumber}`)}
-                aria-label={`Pull request ${getRunReference(run)} on GitHub`}
+              <GitHubText
+                href={github && `${github}/pull/${run.pullRequestNumber}`}
+                label={`Pull request ${getRunReference(run)} on GitHub`}
               >
                 {getRunReference(run)}
-              </TextLink>
+              </GitHubText>
               <span aria-hidden>·</span>
             </>
           )}
           {heading.has !== "commit" && (
             <>
-              <TextLink
-                {...getExternalLinkProps(`${github}/commit/${run.testedSha}`)}
-                aria-label={`Commit ${row.sha} on GitHub`}
+              <GitHubText
+                href={github && `${github}/commit/${run.testedSha}`}
+                label={`Commit ${row.sha} on GitHub`}
                 className={mono}
               >
                 {row.sha}
-              </TextLink>
+              </GitHubText>
               <span aria-hidden>·</span>
             </>
           )}

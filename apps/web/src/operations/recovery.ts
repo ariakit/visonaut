@@ -1,15 +1,24 @@
-import { digestStream } from "./common.ts";
+import { digestStream, eventId } from "./common.ts";
 import type { ValidatedImage } from "@visonaut/service";
 import { openCaptureInventory } from "../capture-inventory.ts";
 import type { OperationsContext } from "./types.ts";
 import type { Database } from "@visonaut/service";
 
-export const restoreCutoffSql =
-  "COALESCE((SELECT last_seen_at FROM operations_events WHERE id='restore:activation:secrets-required'),0)";
+// The restore writes its alert with its own statement, because the latest
+// time of the alert is the cutoff that the statements below read.
+const restoreAlert = {
+  kind: "restore",
+  subject: "activation",
+  code: "secrets-required",
+} satisfies Parameters<typeof eventId>[0];
+
+const restoreAlertId = eventId(restoreAlert);
+
+export const restoreCutoffSql = `COALESCE((SELECT last_seen_at FROM operations_events WHERE id='${restoreAlertId}'),0)`;
 
 /** Keep restored evidence outside work selection without changing its history. */
 export function afterRestoreSql(timestampColumn: string) {
-  return `NOT EXISTS(SELECT 1 FROM operations_events restore WHERE restore.id='restore:activation:secrets-required' AND ${timestampColumn}<=restore.last_seen_at)`;
+  return `NOT EXISTS(SELECT 1 FROM operations_events restore WHERE restore.id='${restoreAlertId}' AND ${timestampColumn}<=restore.last_seen_at)`;
 }
 
 /**
@@ -19,7 +28,7 @@ export function afterRestoreSql(timestampColumn: string) {
  */
 export function restoredDeliveryGuidSql(guidExpression: string) {
   return `EXISTS(SELECT 1 FROM github_webhook_recovery recovery JOIN operations_events restore
-    ON restore.id='restore:activation:secrets-required'
+    ON restore.id='${restoreAlertId}'
     WHERE recovery.guid=${guidExpression} AND recovery.last_requested_at<=restore.last_seen_at)`;
 }
 
@@ -96,9 +105,9 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
     // The cutoff must commit with access/work fencing, before any new capture.
     database
       .prepare(
-        "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES('restore:activation:secrets-required','restore','activation','secrets-required',?,?) ON CONFLICT(id) DO UPDATE SET resolved_at=NULL,last_seen_at=MAX(last_seen_at,excluded.last_seen_at)",
+        "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET resolved_at=NULL,last_seen_at=MAX(last_seen_at,excluded.last_seen_at)",
       )
-      .bind(now, now),
+      .bind(restoreAlertId, restoreAlert.kind, restoreAlert.subject, restoreAlert.code, now, now),
   ]);
   const violations = await database.prepare("PRAGMA foreign_key_check").all();
   if (violations.results?.length) throw new Error("Restored database contains broken references.");

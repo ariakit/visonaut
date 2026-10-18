@@ -6,6 +6,8 @@ import type { ReviewImage, ReviewModel, ReviewPollState } from "./model.ts";
 export const previewRunId = "00000000-0000-4000-8000-000000000001";
 const comparisonId = "00000000-0000-4000-8000-000000000002";
 const readOnlyReason = "Preview fixtures are read-only. GitHub login is disabled.";
+// The name of no repository on GitHub, so the pages make no GitHub link of it.
+// The sample run has no repository, and the Queue gets none in the preview.
 const previewRepository = "Preview fixtures";
 // A sample commit. It is not the commit of any repository.
 const previewSha = "5c1e7a94d2b08f36e4a9c0d17b3f62e85a4d9c70";
@@ -29,7 +31,6 @@ export function previewReviewModel(): ReviewModel {
     preview: true,
     run: {
       id: previewRunId,
-      repository: previewRepository,
       kind: "pull_request",
       testedSha: previewSha,
       attempt: 1,

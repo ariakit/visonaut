@@ -27,8 +27,8 @@ export interface QueueProps {
   runs: DashboardRun[];
   /** The revision of the baseline. It is 0 before the first baseline. */
   baselineRevision: number;
-  /** The repository as `owner/name`. */
-  repository: string;
+  /** The repository as `owner/name`. The preview has none. */
+  repository?: string;
 }
 
 /**
