@@ -557,21 +557,19 @@ describe("the page index", () => {
     expect(parseCapturePageIndex(first, limits)).toBe(first);
   });
 
-  it("accepts each CLI version, and the engine and codec names of CLI 0.6.6", () => {
+  it("accepts each CLI version", () => {
     // The CLI version is provenance only, so the service checks no list of versions.
     for (const cliVersion of ["0.7.0", "1.0.0-next.1", "local build"]) {
       const value = index({ cliVersion });
       expect(parseCapturePageIndex(value, limits)).toBe(value);
     }
-    const { cliVersion: _cliVersion, ...older } = index();
-    // CLI 0.6.6 sends no version, and it sends names that the service ignores.
-    const value = {
-      ...older,
-      comparison: { engineVersion: "playwright-pixelmatch-1.63.0", codecVersion: "pngjs-7.0.0" },
-    };
-    expect(parseCapturePageIndex(value, limits)).toBe(value);
-    const other = { ...older, comparison: { engineVersion: "other", codecVersion: "other" } };
-    expect(parseCapturePageIndex(other, limits)).toBe(other);
+  });
+
+  it("accepts an index with no CLI version, and keeps an unknown field", () => {
+    const { cliVersion: _cliVersion, ...stored } = index();
+    expect(parseCapturePageIndex(stored, limits)).toBe(stored);
+    const unknown = { ...index(), extra: { name: "value" } };
+    expect(parseCapturePageIndex(unknown, limits)).toBe(unknown);
   });
 
   it("takes the bounds of the two lists that grow with a run from the caller", () => {

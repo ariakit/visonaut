@@ -298,7 +298,8 @@ export interface CapturePageIndex {
   job: { id: string; attempt: number };
   /**
    * The version of the CLI that sent the index. It is provenance only: the
-   * service does not check it, and a decision does not depend on it.
+   * service does not check it, and a decision does not depend on it. The
+   * stored index of an earlier run can have no version.
    */
   cliVersion?: string;
   reference: CaptureReferenceIdentity;

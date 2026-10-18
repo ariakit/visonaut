@@ -923,8 +923,6 @@ function assertCapturePageIndex(
   decimalId(field(job, "id"), "job.id");
   const attempt = field(job, "attempt");
   integer(attempt, "job.attempt", 1);
-  // CLI 0.6.6 also sends the field `comparison` with its engine and codec
-  // names. The parser ignores it, as it ignores each other unknown field.
   if (Object.hasOwn(value, "cliVersion")) {
     string(value.cliVersion, "cliVersion", 256);
   }

@@ -1370,15 +1370,9 @@ describe("trusted local Submit", () => {
     expect(added).toMatchObject({ kind: "added", cli: "0.8.1" });
   });
 
-  it("accepts the engine and codec names of CLI 0.6.6 with no new D1 write", async () => {
+  it("stores the CLI version with no new D1 write", async () => {
     const written: string[][] = [];
-    for (const cliFields of [
-      { cliVersion: "0.8.1" },
-      // CLI 0.6.6 sends no version, and names that the service ignores.
-      {
-        comparison: { engineVersion: "playwright-pixelmatch-1.63.0", codecVersion: "pngjs-7.0.0" },
-      },
-    ]) {
+    for (const cliFields of [{ cliVersion: "0.8.1" }, {}]) {
       const test = await fixture();
       await acceptedReference(test);
       test.manifest.captures[0]!.itemKey = "new-dialog";

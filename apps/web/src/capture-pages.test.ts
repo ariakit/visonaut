@@ -641,14 +641,10 @@ describe("capture list of a run as pages of rows", () => {
     );
   });
 
-  it("gives no engine and no CLI version to the captures of a Submit of CLI 0.6.6", async () => {
+  it("gives no CLI version to the captures of an index with no version", async () => {
     const input = runInput("run", await newCaptures("run", 2));
-    // CLI 0.6.6 sends no version, and engine and codec names that no check reads.
-    const comparison = {
-      engineVersion: "playwright-pixelmatch-1.63.0",
-      codecVersion: "pngjs-7.0.0",
-    };
-    const receipt = await submitIndex(input, [["item-00001", "light"]], { comparison });
+    // The stored index of an earlier run can have no version.
+    const receipt = await submitIndex(input, [["item-00001", "light"]], {});
     const store = new MemoryStore();
     const pointer = await writeCapturePages(store, { ...input, receipt });
     for (const capture of (await readCaptureInventory(store, pointer)).captures) {
