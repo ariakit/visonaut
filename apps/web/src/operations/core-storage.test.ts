@@ -253,7 +253,12 @@ it("runs a status wakeup without scanning history, byte retention, or comparison
     comparisonId: "comparison-run",
   });
   expect((await service.status("run")).status).toBe("rejected");
-  expect(Object.keys(result.reports)).toEqual(["review-decisions", "checks", "promotion"]);
+  expect(Object.keys(result.reports)).toEqual([
+    "review-decisions",
+    "checks",
+    "comments",
+    "promotion",
+  ]);
   expect(result.reports["review-decisions"]?.completed).toEqual([
     reviewTaskId("queued-status-review"),
   ]);

@@ -240,6 +240,8 @@ The maintainer also selected server storage for pending decisions, with processi
 
 W09 now gives [useReviewSession](../apps/web/src/review/use-review-session.ts) ownership of commands, durable receipts, retry, and Undo. The workspace keeps layout, image readiness, selection, focus, and navigation. Newer supplied evidence survives pending or failed saves, and older receipts cannot replace it. The [combined W09 record](history/evidence/issue-204-completion.md#w09-combined-verification) links the source, browser regressions, local built-app flow, and production deployment.
 
+On 2026-10-18, the maintainer selected a pull request comment with a link to the run, because a click on the App check opens the check page of GitHub. The comment exists only for a pull request whose run has a change. It reuses the approved title and next step of the check, so it adds one approved link label for each case ("Review the changes in Visonaut" or "Open the run in Visonaut") and the commit and access line. Each newer delivered check status edits the same comment. The App needs the "Pull requests" read and write permission. The check stays the required result: a failed comment changes no check.
+
 Keep the zero-pixel rules and distinct local/legacy settings in [comparison settings and rendering identity](#comparison-settings-and-rendering-identity). A profile change with nonzero changed pixels still needs review. Immutable comparisons, exact approval-copy identities, and promoted-history rules remain binding.
 
 ## Approved decision-permission supersession

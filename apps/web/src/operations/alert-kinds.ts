@@ -16,6 +16,7 @@ export type AlertKind =
   | "database-capacity"
   | "history"
   | "promotion"
+  | "pull-request-comment"
   | "reference-retention"
   | "restore"
   | "retention"
@@ -26,6 +27,7 @@ export type AlertKind =
   // One alert for each step of a pass that failed. Its subject is `scheduler`.
   // Six kinds above are also the name of a step.
   | "checks"
+  | "comments"
   | "exports"
   | "finalization"
   | "main-retirement"

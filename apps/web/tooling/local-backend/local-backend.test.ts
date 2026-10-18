@@ -1,6 +1,12 @@
 import { generateKeyPairSync, randomBytes } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { validateImage } from "@visonaut/compare";
+import {
+  GitHubUnavailableError,
+  PULL_REQUEST_COMMENT_MARKER,
+  sendPullRequestComment,
+  type GitHubClient,
+} from "@visonaut/security";
 import type { OperationsMessage } from "@visonaut/service";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, expect, it, vi } from "vitest";
@@ -289,6 +295,33 @@ it("keeps the check runs of the stub for the next start", async () => {
     new Request(checkRuns, { method: "POST", body: JSON.stringify({ name: "Visonaut" }) }),
   );
   expect(await next.json()).toMatchObject({ id: 2 });
+});
+
+it("creates and edits the pull request comment of the service", async () => {
+  const stub = createGitHubStub({
+    appId: "11",
+    installationId: "12",
+    repository: "local/fixture",
+    maintainer,
+  });
+  const client: GitHubClient = {
+    appId: "11",
+    repository: "local/fixture",
+    repositoryId: "1",
+    async request(path, init) {
+      const response = await stub(new Request(`https://api.github.com${path}`, init));
+      if (!response.ok) throw new GitHubUnavailableError(response.status);
+      return response.json();
+    },
+  };
+  const send = (body: string) =>
+    sendPullRequestComment({ github: client, pullRequestNumber: 12, commentId: null, body });
+  const marked = `${PULL_REQUEST_COMMENT_MARKER}\n\n`;
+  expect(await send(`${marked}first`)).toBe("1");
+  expect(await send(`${marked}second`)).toBe("1");
+  expect(await client.request("/repos/local/fixture/issues/12/comments")).toEqual([
+    expect.objectContaining({ id: 1, body: `${marked}second` }),
+  ]);
 });
 
 it("answers only the GitHub requests that the stub knows", async () => {

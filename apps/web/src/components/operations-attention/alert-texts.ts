@@ -73,6 +73,11 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
       },
     },
   },
+  "pull-request-comment": {
+    title: "A pull request comment needs attention",
+    action:
+      "The service could not send the Visonaut comment of this pull request. The check is not affected. Check that the GitHub App has the Pull requests write permission, and check GitHub availability.",
+  },
   "comparison-finalization": {
     title: "A comparison could not finish",
     action:
@@ -150,6 +155,7 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
     },
   },
   checks: stepText("check delivery"),
+  comments: stepText("pull request comment"),
   exports: stepText("export cleanup"),
   finalization: stepText("comparison finalization"),
   "main-retirement": stepText("main run retirement"),

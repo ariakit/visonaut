@@ -2,7 +2,7 @@
 
 The [current guide](../../../../docs/current-contract.md) owns current requirements and the issue #204 targets. Apply all numbered web D1 migrations in order. Preserve applied migrations as history, including both `0030_*` files and the narrow zero-pixel correction. The live service uses one D1 database, IMAGES, QUARANTINE, and the existing queues. The web Worker owns comparison recovery.
 
-Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs review decisions, checks, and promotion without scanning closed history or retention.
+Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs review decisions, checks, pull request comments, and promotion without scanning closed history or retention.
 
 ```ts
 await operationsQueue.send({ kind: "status", comparisonId });
@@ -97,15 +97,20 @@ The local recovery test restores an actual SQLite snapshot into a separate datab
 
 ## GitHub App settings
 
-Sign-in and the repository checks use one GitHub App. `GITHUB_APP_ID` in the production variables of the [Wrangler configuration](../../wrangler.jsonc) is its ID. The registration of this App must have the three settings below. This file records the requirement, not the state. Read the settings on the settings page of the App, and read them again after each change of the registration.
+Sign-in, the repository checks, and the pull request comments use one GitHub App. `GITHUB_APP_ID` in the production variables of the [Wrangler configuration](../../wrangler.jsonc) is its ID. The registration of this App must have the four settings below. This file records the requirement, not the state. Read the settings on the settings page of the App, and read them again after each change of the registration.
 
 | Setting                         | Required value | Place on the settings page of the App                                                                                                           |
 | ------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Visibility                      | Private        | Advanced, "Danger zone". A private App shows the button "Make public".                                                                          |
 | User-to-server token expiration | On             | Optional Features. The page has the button "Opt-in" or "Opt-out". The documentation does not say which button an App with the setting on shows. |
 | Device flow                     | Off            | "Identifying and authorizing users". "Enable Device Flow" has no mark.                                                                          |
+| Pull requests permission        | Read and write | "Permissions & events", "Repository permissions". The installation must accept the new permission before the comments work.                     |
 
 The labels of this table are from [Modifying a GitHub App registration](https://docs.github.com/en/apps/maintaining-github-apps/modifying-a-github-app-registration) and [Refreshing user access tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens), read on 2026-10-08.
+
+## Pull request comment
+
+The service keeps one comment on each pull request whose run has a change. The comment has the title and the next step of the check, and a link to the newest run, because a click on the check opens the check page of GitHub and not the run. Each newer status of the check edits the same comment. A pull request with no change gets no comment. The table `operations_pull_request_comments` stores the comment and the status that it shows. A comment that a person deletes gets no new comment. A failed send changes no check: it raises the alert `pull-request-comment`, and the next pass tries again.
 
 ## Secret rotation
 
