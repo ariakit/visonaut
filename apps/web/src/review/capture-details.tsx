@@ -30,6 +30,12 @@ export function CaptureDetails({ model, variant, runStatus }: CaptureDetailsProp
       <p className="text-xs wrap-anywhere">
         {variant.label} · {verdictLabel(variant)}
         {variant.reviewer ? ` · ${variant.reviewer}` : ""}
+        {variant.copiedFrom && (
+          <>
+            {" · "}
+            <a href={`/runs/${encodeURIComponent(variant.copiedFrom.runId)}`}>Open that run</a>
+          </>
+        )}
       </p>
       <p className="text-xs">{runStatus}</p>
       <p className="review-run-identity text-xs">

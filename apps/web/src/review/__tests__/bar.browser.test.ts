@@ -170,6 +170,60 @@ test("a decision key while the images load prints why nothing changed, until the
   await expect(statusLine(page)).toHaveText("");
 });
 
+test("an approval of the whole screenshot keeps a copied approval and counts the others", async ({
+  page,
+}) => {
+  await open(page);
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const copied = model.items[0]?.variants[0];
+    if (!copied) throw new Error("Missing the first variant.");
+    Object.assign(copied, {
+      verdict: "approved",
+      source: "human",
+      revision: 1,
+      reviewer: "Aiko Tanaka",
+      copiedFrom: { runId: "run-7", pullRequestNumber: 7999 },
+    });
+    window.reviewFixture.update(model);
+  });
+  // A copy has the mark of an automatic approval, and the details name the
+  // pull request and link the run where a person approved it.
+  await expect(selectedVariant(page)).toHaveAccessibleName(/^Variant: React\. Auto-approved\./);
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  const details = page.getByRole("complementary", { name: "Capture details" });
+  await expect(details).toContainText("Approved in #7999 · Aiko Tanaka");
+  await expect(details.getByRole("link", { name: "Open that run" })).toHaveAttribute(
+    "href",
+    "/runs/run-7",
+  );
+  await page.getByLabel("Review workspace", { exact: true }).focus();
+  await page.keyboard.press("Shift+A");
+  await expect(statusLine(page)).toHaveText("Saved. 6 variants approved.");
+  expect(
+    await page.evaluate(() => window.reviewFixture.model().items[0]?.variants[0]?.copiedFrom),
+  ).toEqual({ runId: "run-7", pullRequestNumber: 7999 });
+});
+
+test("an approval of a whole screenshot whose variants are each approved saves nothing", async ({
+  page,
+}) => {
+  await open(page);
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    for (const variant of model.items[0]?.variants ?? []) {
+      Object.assign(variant, { verdict: "approved", source: "automatic", revision: 1 });
+    }
+    window.reviewFixture.update(model);
+  });
+  await expect(selectedVariant(page)).toHaveAccessibleName(/^Variant: React\. Auto-approved\./);
+  await page.keyboard.press("Shift+A");
+  await expect(statusLine(page)).toHaveText(
+    "Nothing changed. Each variant of this screenshot is approved.",
+  );
+  expect(await page.evaluate(() => window.reviewFixture.calls.length)).toBe(0);
+});
+
 test("a decision key on a variant with no change prints why nothing changed", async ({ page }) => {
   await open(page);
   await page.evaluate(() => {

@@ -1563,6 +1563,58 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     expect(model.run.status).toBe("passed");
     expect(model.items[0]?.variants[0]).toMatchObject({ verdict: "approved", source: "automatic" });
   });
+  it("names the run and the pull request of a copied approval", async () => {
+    const test = await fixture();
+    await test.upload();
+    await test.complete();
+    const source = await fixture();
+    await source.upload();
+    await source.complete();
+    const run = await test.service.run(test.runId);
+    const sourceRun = await source.service.run(source.runId);
+    await database
+      .prepare("UPDATE visonaut_runs SET lineage_key = 'pr:7999' WHERE id = ?")
+      .bind(sourceRun.id)
+      .run();
+    // The copy names the decision of the other run as its source, as the
+    // comparison of the run writes it.
+    await database.batch([
+      database
+        .prepare(
+          "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, tuple_json, created_at, source_decision_id) SELECT 'copied:' || row.id, row.id, row.decision_revision + 1, 'approved', 'human', '42', row.tuple_json, 1, (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? LIMIT 1) FROM visonaut_comparison_rows row WHERE row.comparison_id = ?",
+        )
+        .bind(sourceRun.comparison_id, run.comparison_id),
+      database
+        .prepare(
+          "UPDATE visonaut_comparison_rows SET decision_id = 'copied:' || id, decision_revision = decision_revision + 1 WHERE comparison_id = ?",
+        )
+        .bind(run.comparison_id),
+    ]);
+    const response = await test.send(`/api/runs/${run.id}`, {
+      headers: { authorization: `Bearer ${test.token}` },
+    });
+    const model = await reviewResponse(response);
+    const variant = model.items[0]?.variants[0];
+    expect(variant).toMatchObject({
+      verdict: "approved",
+      source: "human",
+      reviewer: "Maintainer",
+      copiedFrom: { runId: sourceRun.id, pullRequestNumber: 7999 },
+    });
+    // The person of the page made the approval in the other run, not here.
+    expect(variant).not.toHaveProperty("ownDecision");
+    // A copy from an earlier run of the same lineage names no pull request.
+    await database
+      .prepare("UPDATE visonaut_runs SET lineage_key = ? WHERE id = ?")
+      .bind(run.lineage_key, sourceRun.id)
+      .run();
+    const same = await reviewResponse(
+      await test.send(`/api/runs/${run.id}`, {
+        headers: { authorization: `Bearer ${test.token}` },
+      }),
+    );
+    expect(same.items[0]?.variants[0]?.copiedFrom).toEqual({ runId: sourceRun.id });
+  });
   it("refuses private access when the configured authorization repository differs from the project", async () => {
     const test = await fixture();
     test.bindings.configuration.github.repositoryId = "999999";

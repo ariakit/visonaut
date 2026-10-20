@@ -69,6 +69,15 @@ function oneOf<const Values extends readonly string[]>(
   throw new Error("The service returned an unsupported review state.");
 }
 
+function copySource(value: unknown): NonNullable<ReviewVariant["copiedFrom"]> {
+  const data = record(value);
+  const pullRequestNumber = optionalNumber(data.pullRequestNumber);
+  return {
+    runId: string(data.runId),
+    ...(pullRequestNumber === undefined ? {} : { pullRequestNumber }),
+  };
+}
+
 function image(value: unknown): ReviewImage | null {
   if (value === null) return null;
   const data = record(value);
@@ -131,6 +140,7 @@ function variant(value: unknown, shared: SharedReviewEvidence): ReviewVariant {
     source: data.source === null ? null : oneOf(data.source, ["human", "automatic"]),
     reviewer: optionalString(data.reviewer),
     ownDecision: data.ownDecision == null ? undefined : boolean(data.ownDecision),
+    copiedFrom: data.copiedFrom == null ? undefined : copySource(data.copiedFrom),
     reference: evidence(data.reference),
     candidate: evidence(data.candidate),
     diff: evidence(data.diff),

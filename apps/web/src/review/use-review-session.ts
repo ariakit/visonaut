@@ -18,6 +18,7 @@ import {
   applyPendingReviews,
   applySavedReview,
   decisionConflict,
+  keepsApproval,
   latestReviewModel,
   nextPending,
   reviewTargets,
@@ -598,7 +599,9 @@ export function useReviewSession({
             ]);
           }
           const remaining = session.queue.map((entry) => entry.command);
-          const count = currentCommand.run?.count ?? currentCommand.targets.length;
+          // An approval of a whole screenshot keeps each approval in force, so
+          // the receipt names only the variants that it decided.
+          const count = currentCommand.run?.count ?? result.revisions.length;
           setPendingReviews(remaining);
           setSaveState(
             remaining.length
@@ -685,6 +688,16 @@ export function useReviewSession({
       refuseUnchanged();
       return;
     }
+    const wholeItemKey = wholeItem ? item.key : undefined;
+    if (
+      wholeItem &&
+      selectedTargets.every((entry) => keepsApproval({ verdict, wholeItemKey }, entry))
+    ) {
+      announce("Nothing changed. Each variant of this screenshot is approved.", "warning", {
+        selection,
+      });
+      return;
+    }
     const protectedTarget = selectedTargets.find((entry) =>
       verdict === "approved" ? entry.approveDisabledReason : entry.rejectDisabledReason,
     );
@@ -706,7 +719,7 @@ export function useReviewSession({
       comparisonId: model.comparisonId,
       verdict,
       targets: selectedTargets.map((entry) => ({ id: entry.id, expectedRevision: entry.revision })),
-      wholeItemKey: wholeItem ? item.key : undefined,
+      wholeItemKey,
       expectedPromotionId: model.promotionId ?? undefined,
       expectedBaselineRevision: model.baselineRevision,
       expectedRunRevision: model.comparisonRevision,

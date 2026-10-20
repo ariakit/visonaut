@@ -115,7 +115,9 @@ function toSessionItem(item: ReviewItem): SessionItem {
     name: names[index] ?? variant.label,
     axes: sources[index]?.axes ?? getVariantAxes(variant),
     status: getVariantStatus(variant),
-    automatic: variant.source === "automatic",
+    // A copy needed no person on this run, so it has the mark of an automatic
+    // approval. The capture details name the run that it came from.
+    automatic: variant.source === "automatic" || variant.copiedFrom !== undefined,
   }));
   return {
     ...item,

@@ -190,7 +190,10 @@ export function getRunResultName(run: RunResultSource): StatusName {
 
 export interface StatusSource {
   status: ReviewStatus;
-  /** True when the service approved the variant, not a person. */
+  /**
+   * True when the service approved the variant, not a person on this run: an
+   * automatic acceptance, or a copy of an approval from an earlier run.
+   */
   automatic?: boolean;
 }
 

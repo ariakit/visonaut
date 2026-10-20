@@ -370,6 +370,32 @@ test("conflict responses carry current evidence and reviewer without inventing s
   });
 });
 
+test("a copied approval keeps the run and the pull request that it came from", async () => {
+  const model = fixtureModel();
+  const [copied, earlier] = model.items[0]?.variants ?? [];
+  if (!copied || !earlier) throw new Error("Missing review variants.");
+  Object.assign(copied, {
+    verdict: "approved",
+    source: "human",
+    revision: 1,
+    copiedFrom: { runId: "run-7", pullRequestNumber: 7999 },
+  });
+  Object.assign(earlier, {
+    verdict: "approved",
+    source: "human",
+    revision: 1,
+    copiedFrom: { runId: "run-6" },
+  });
+  vi.stubGlobal("fetch", async () => json(compactReviewModel(model)));
+  const review = await loadReview("run-42");
+  expect(review.model.items[0]?.variants.slice(0, 2).map((variant) => variant.copiedFrom)).toEqual([
+    { runId: "run-7", pullRequestNumber: 7999 },
+    { runId: "run-6" },
+  ]);
+  Object.assign(copied, { copiedFrom: { pullRequestNumber: 7999 } });
+  await expect(loadReview("run-42")).rejects.toThrow();
+});
+
 test("HTML failures and invalid review models cannot become review data", async () => {
   vi.stubGlobal(
     "fetch",

@@ -19,7 +19,7 @@ import type {
   ReviewSaveResult,
   UndoCommand,
 } from "../model.ts";
-import { runApprovalTargets } from "../navigation.ts";
+import { keepsApproval, runApprovalTargets } from "../navigation.ts";
 
 import { fixtureModel } from "./fixture-model.ts";
 
@@ -163,6 +163,9 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
   const previous = structuredClone(model);
   model = structuredClone(model);
   model.comparisonRevision += 2;
+  // As in the service, an approval of the whole screenshot keeps each
+  // approval in force, and the receipt names only the decided variants.
+  const decided: typeof targets = [];
   for (const item of model.items) {
     for (const entry of item.variants) {
       const target = targets.find((target) => target.id === entry.id);
@@ -170,6 +173,9 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
       if (target.expectedRevision !== entry.revision) {
         throw new ReviewCommandError("Stale revision.", { conflict: true, model });
       }
+      if (keepsApproval(command, entry)) continue;
+      decided.push(target);
+      entry.copiedFrom = undefined;
       entry.verdict = command.verdict;
       entry.source = "human";
       entry.reviewer = "maintainer-1";
@@ -192,7 +198,7 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
   const result = {
     commandId: command.commandId,
     selection: command.selection,
-    revisions: command.targets.map((target) => ({
+    revisions: (command.run ? command.targets : decided).map((target) => ({
       id: target.id,
       expectedRevision: target.expectedRevision + 1,
     })),

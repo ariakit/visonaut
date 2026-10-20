@@ -1,6 +1,13 @@
 import { expect, test } from "vitest";
-import type { ReviewItem, ReviewVariant } from "../model.ts";
-import { decisionConflict, nextPending, withUnchangedItems } from "../navigation.ts";
+import type { ReviewItem, ReviewModel, ReviewVariant } from "../model.ts";
+import {
+  applyPendingReviews,
+  applySavedReview,
+  decisionConflict,
+  nextPending,
+  verdictLabel,
+  withUnchangedItems,
+} from "../navigation.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
 function variant(key: string, kind: ReviewVariant["kind"]): ReviewVariant {
@@ -140,4 +147,76 @@ test("the sentence of a conflict names the person of the newer decision", () => 
   expect(
     decisionConflict(model, { ...selected, targets: [{ id: third.id, expectedRevision: 1 }] }),
   ).toBeNull();
+});
+
+test("an approval of the whole screenshot keeps each approval of the screenshot", () => {
+  const model = fixtureModel();
+  const [copied, pending] = model.items[0]?.variants ?? [];
+  if (!copied || !pending) throw new Error("Missing review variants.");
+  Object.assign(copied, {
+    revision: 1,
+    verdict: "approved",
+    source: "human",
+    reviewer: "Aiko Tanaka",
+    copiedFrom: { runId: "run-7", pullRequestNumber: 7999 },
+  });
+  const command = {
+    commandId: "command",
+    comparisonId: model.comparisonId,
+    verdict: "approved" as const,
+    targets: [copied, pending].map((variant) => ({
+      id: variant.id,
+      expectedRevision: variant.revision,
+    })),
+    wholeItemKey: "dialog/open",
+    expectedBaselineRevision: model.baselineRevision,
+    expectedRunRevision: model.comparisonRevision,
+    selection: { itemKey: "dialog/open", variantKey: pending.key },
+  };
+  const variants = (result: ReviewModel | null) => result?.items[0]?.variants.slice(0, 2);
+  expect(variants(applyPendingReviews(model, [command]))).toEqual([
+    copied,
+    { ...pending, revision: 1, verdict: "approved", source: "human", ownDecision: true },
+  ]);
+  const result = {
+    commandId: "command",
+    selection: command.selection,
+    revisions: [{ id: pending.id, expectedRevision: 1 }],
+    baselineRevision: model.baselineRevision,
+    promotionId: model.promotionId,
+    previousRunRevision: model.comparisonRevision,
+    runRevision: model.comparisonRevision + 1,
+    reviewer: "Aiko Tanaka",
+    runStatus: "needs-review",
+    counts: { pending: 9, rejected: 0, approved: 2 },
+  };
+  expect(variants(applySavedReview(model, command, result))).toEqual([
+    copied,
+    {
+      ...pending,
+      revision: 1,
+      verdict: "approved",
+      source: "human",
+      reviewer: "Aiko Tanaka",
+      ownDecision: true,
+    },
+  ]);
+  // A rejection of the whole screenshot changes each variant, so the page
+  // reads the model again when the receipt has no revision for one.
+  expect(applySavedReview(model, { ...command, verdict: "rejected" }, result)).toBeNull();
+});
+
+test("a copied approval names the pull request where a person approved it", () => {
+  const copied = {
+    ...variant("light", "changed"),
+    verdict: "approved" as const,
+    source: "human" as const,
+  };
+  expect(verdictLabel({ ...copied, copiedFrom: { runId: "run-7", pullRequestNumber: 7999 } })).toBe(
+    "Approved in #7999",
+  );
+  expect(verdictLabel({ ...copied, copiedFrom: { runId: "run-7" } })).toBe(
+    "Approved in an earlier run",
+  );
+  expect(verdictLabel(copied)).toBe("Approved");
 });

@@ -1249,16 +1249,13 @@ describe("rejection of inherited acceptance", () => {
     expect(await copiedSource(service, "third")).toBe(await currentDecision(service, "second"));
   });
 
-  it.each([
-    ["other pixels of the same item", { color: "green" }],
-    ["the same pixels with another rendering profile", { captureProfileDigest: "other-profile" }],
-  ])("copies after a Reject of %s", async (_name, otherTuple) => {
+  it("copies after a Reject of other pixels of the same item", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
     await timedRun(service, { id: "first", finalizedAt: 10 });
     await review(service, "comparison-first", { now: 11 });
-    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20, ...otherTuple });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20, color: "green" });
     expect((await service.status("second")).status).toBe("needs-review");
     await review(service, "comparison-second", { verdict: "rejected", now: 21 });
     await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
@@ -1305,6 +1302,23 @@ describe("rejection of inherited acceptance", () => {
     expect(await copiedSource(service, "right")).toBe(await currentDecision(service, "first"));
     await timedRun(service, { id: "joined", related: ["first", "left", "right"], finalizedAt: 40 });
     expect((await service.status("joined")).status).toBe("needs-review");
+  });
+
+  it("makes no copy after a Reject of the same images under another profile", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { now: 11 });
+    await timedRun(service, {
+      id: "second",
+      related: ["first"],
+      captureProfileDigest: "new-runner-image",
+      finalizedAt: 20,
+    });
+    await review(service, "comparison-second", { verdict: "rejected", now: 21 });
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect((await service.status("third")).status).toBe("needs-review");
   });
 
   it("does not count a newer automatic acceptance as a first-hand approval", async () => {
@@ -2114,7 +2128,7 @@ describe("exact acceptance and automatic reservations", () => {
     expect((await service.status("independent")).status).toBe("passed");
   });
 
-  it("reuses only exact acceptance from verified related runs", async () => {
+  it("reuses only acceptance of the same images from verified related runs", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service);
@@ -2123,6 +2137,10 @@ describe("exact acceptance and automatic reservations", () => {
     await review(service, "comparison-pr");
     await fixture(service, { id: "unrelated", kind: "pull_request", color: "red" });
     expect((await service.status("unrelated")).status).toBe("needs-review");
+    await fixture(service, { id: "different-image", color: "green", related: ["pr"] });
+    expect((await service.status("different-image")).status).toBe("needs-review");
+    // A new runner image changes the profile of a run that captures the same
+    // bytes, and the approval of those bytes still applies.
     await fixture(service, {
       id: "different-profile",
       kind: "pull_request",
@@ -2130,7 +2148,10 @@ describe("exact acceptance and automatic reservations", () => {
       captureProfileDigest: "different-profile",
       related: ["pr"],
     });
-    expect((await service.status("different-profile")).status).toBe("needs-review");
+    expect((await service.status("different-profile")).status).toBe("passed");
+    expect(await copiedSource(service, "different-profile")).toBe(
+      await currentDecision(service, "pr"),
+    );
     await fixture(service, { id: "merged", color: "red", related: ["pr"] });
     expect((await service.status("merged")).status).toBe("passed");
     const reused = await service.comparisonRows("comparison-merged");
@@ -2229,6 +2250,78 @@ describe("exact acceptance and automatic reservations", () => {
 });
 
 describe("atomic review, rollback, and session Undo", () => {
+  it("keeps a copied approval when a person approves the whole screenshot", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "first", kind: "pull_request", color: "red" });
+    await review(service, "comparison-first");
+    await fixture(service, { id: "merged", color: "red", related: ["first"] });
+    const [copied] = await service.comparisonRows("comparison-merged");
+    if (!copied) throw new Error("Missing copied row");
+    expect(copied.decision_id).toBe(`copied:${copied.id}`);
+    // The fixture captures one variant, so this adds a second variant of the
+    // same screenshot that has no copy and needs review.
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, tuple_json, outcome, result_json) SELECT id || ':dark', comparison_id, item_key, 'dark', ordinal + 1, json_set(tuple_json, '$.variantKey', 'dark'), outcome, result_json FROM visonaut_comparison_rows WHERE id = ?",
+      )
+      .run(copied.id);
+    const rows = await service.comparisonRows("comparison-merged");
+    const result = await service.review({
+      commandId: "whole-screenshot",
+      actorId: "maintainer-1",
+      sessionId: "session",
+      comparisonId: "comparison-merged",
+      verdict: "approved",
+      targets: rows.map((row) => ({ id: row.id, expectedRevision: row.decision_revision })),
+      wholeItemKey: "dialog",
+      selection: { itemKey: "dialog", variantKey: "dark" },
+      now: 10,
+    });
+    expect(result.revisions).toEqual([{ id: `${copied.id}:dark`, expectedRevision: 1 }]);
+    const decisions = () =>
+      service
+        .comparisonRows("comparison-merged")
+        .then((entries) =>
+          entries.map((row) => [row.variant_key, row.decision_id, row.decision_revision]),
+        );
+    expect(await decisions()).toEqual([
+      ["light", `copied:${copied.id}`, 1],
+      ["dark", expect.any(String), 1],
+    ]);
+    expect((await service.status("merged")).status).toBe("passed");
+    // Each variant is approved now, so another approval would decide nothing.
+    const commands = count(database, "visonaut_commands");
+    const approved = await service.comparisonRows("comparison-merged");
+    await expect(
+      service.review({
+        commandId: "whole-screenshot-again",
+        actorId: "maintainer-1",
+        sessionId: "session",
+        comparisonId: "comparison-merged",
+        verdict: "approved",
+        targets: approved.map((row) => ({ id: row.id, expectedRevision: row.decision_revision })),
+        wholeItemKey: "dialog",
+        selection: { itemKey: "dialog", variantKey: "dark" },
+        now: 10,
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    expect(count(database, "visonaut_commands")).toBe(commands);
+    await service.undo({
+      commandId: "whole-screenshot",
+      undoCommandId: "undo-whole-screenshot",
+      actorId: "maintainer-1",
+      sessionId: "session",
+      expectedBaselineRevision: 1,
+      now: 11,
+    });
+    expect(await decisions()).toEqual([
+      ["light", `copied:${copied.id}`, 1],
+      ["dark", null, 2],
+    ]);
+  });
+
   it.each(["approved", "rejected"] as const)(
     "persists a fresh %s command in three database round trips",
     async (verdict) => {
