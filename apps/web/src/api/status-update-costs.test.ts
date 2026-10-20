@@ -176,7 +176,7 @@ it("sends a waiting update with its stored review values and no status read", as
   expect(await waitingUpdateCosts()).toEqual({
     writingStatements: 5,
     rowsWritten: 7,
-    roundTrips: 26,
+    roundTrips: 25,
     patches: 1,
   });
 });
