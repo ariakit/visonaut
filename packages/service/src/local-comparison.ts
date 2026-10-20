@@ -21,13 +21,22 @@ async function readRows<T>(database: Database, sql: string, values: SqlValue[] =
   return (await statement(database, sql, values).all<T>()).results ?? [];
 }
 
+/**
+ * The part of a comparison tuple that a decision of another row must match.
+ * The image digests already name the exact bytes, so the capture profiles are
+ * not part of it: a new runner image changes the profile of the same pixels.
+ */
+function reuseKeySql(alias: string) {
+  return `json_remove(${alias}.tuple_json,'$.referenceProfileDigest','$.candidateProfileDigest')`;
+}
+
 function acceptanceValiditySql() {
-  // Narrow through the existing image index before checking the complete tuple.
+  // Narrow through the existing image index before checking the complete key.
   // IS also matches the missing image in an introduction or removal.
   return `decision.verdict = 'approved' AND decision.revoked = 0
       AND json_extract(decision.tuple_json,'$.referenceDigest') IS json_extract(row.tuple_json,'$.referenceDigest')
       AND json_extract(decision.tuple_json,'$.candidateDigest') IS json_extract(row.tuple_json,'$.candidateDigest')
-      AND decision.tuple_json = row.tuple_json
+      AND ${reuseKeySql("decision")} = ${reuseKeySql("row")}
       AND EXISTS (SELECT 1 FROM visonaut_comparison_rows source_row
         JOIN visonaut_comparisons source_comparison ON source_comparison.id = source_row.comparison_id
         JOIN visonaut_runs source_run ON source_run.id = source_comparison.run_id
@@ -47,7 +56,7 @@ function newerRejectionSql() {
               JOIN visonaut_commands undone_command ON undone_command.id = undone.command_id
               JOIN visonaut_commands undo ON undo.id = undone_command.undone_by
               WHERE undone.row_id = rejection.row_id AND undo.created_at >= decision.created_at)`;
-  // A current Reject of the same tuple in the target lineage stops a new copy.
+  // A current Reject of the same images in the target lineage stops a new copy.
   // Only a reviewer's own approval that is newer than the Reject is still a
   // source. A copy, an automatic acceptance, and an equal time are not newer.
   return `EXISTS (SELECT 1 FROM visonaut_decisions rejection
@@ -57,7 +66,7 @@ function newerRejectionSql() {
           WHERE rejection.verdict = 'rejected' AND rejection.revoked = 0
           AND json_extract(rejection.tuple_json,'$.referenceDigest') IS json_extract(row.tuple_json,'$.referenceDigest')
           AND json_extract(rejection.tuple_json,'$.candidateDigest') IS json_extract(row.tuple_json,'$.candidateDigest')
-          AND rejection.tuple_json = row.tuple_json
+          AND ${reuseKeySql("rejection")} = ${reuseKeySql("row")}
           AND (decision.kind != 'human' OR decision.source_decision_id IS NOT NULL
             OR rejection.created_at >= decision.created_at OR ${undoAfterApproval})
           AND (rejected_comparison.run_id = target_run.id OR EXISTS (SELECT 1 FROM visonaut_lineage lineage

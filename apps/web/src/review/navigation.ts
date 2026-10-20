@@ -60,24 +60,47 @@ export function runApprovalTargets(items: ReviewItem[]) {
   return items.flatMap(reviewTargets).filter((variant) => variant.verdict === null);
 }
 
+/**
+ * True when a command keeps the decision of a variant: the service keeps each
+ * approval in force when a person approves the whole screenshot.
+ */
+export function keepsApproval(
+  command: Pick<ReviewCommand, "verdict" | "wholeItemKey">,
+  variant: ReviewVariant,
+) {
+  if (command.wholeItemKey === undefined) return false;
+  if (command.verdict !== "approved") return false;
+  return variant.verdict === "approved";
+}
+
 export function applyPendingReviews(model: ReviewModel, commands: ReviewCommand[]): ReviewModel {
-  const changes = new Map<string, { revision: number; verdict: ReviewCommand["verdict"] }>();
+  const variants = new Map(
+    model.items.flatMap((item) => item.variants).map((variant) => [variant.id, variant]),
+  );
+  // Each queued command applies to the result of the commands before it.
+  const changes = new Map<string, ReviewVariant>();
   for (const command of commands) {
     for (const target of command.targets) {
-      // Later queued decisions follow the preceding decision's revision.
-      changes.set(target.id, { revision: target.expectedRevision + 1, verdict: command.verdict });
+      const variant = changes.get(target.id) ?? variants.get(target.id);
+      if (!variant) continue;
+      if (keepsApproval(command, variant)) continue;
+      // The receipt of the decision brings the name of the reviewer.
+      changes.set(target.id, {
+        ...variant,
+        revision: target.expectedRevision + 1,
+        verdict: command.verdict,
+        source: "human",
+        reviewer: undefined,
+        ownDecision: true,
+        copiedFrom: undefined,
+      });
     }
   }
   return {
     ...model,
     items: model.items.map((item) => ({
       ...item,
-      variants: item.variants.map((variant) => {
-        const change = changes.get(variant.id);
-        if (!change) return variant;
-        // The receipt of the decision brings the name of the reviewer.
-        return { ...variant, ...change, source: "human", reviewer: undefined, ownDecision: true };
-      }),
+      variants: item.variants.map((variant) => changes.get(variant.id) ?? variant),
     })),
   };
 }
@@ -149,9 +172,17 @@ export function applySavedReview(
   if (result.baselineRevision !== model.baselineRevision) return null;
   if (result.promotionId !== model.promotionId) return null;
   const revisions = new Map(result.revisions.map((entry) => [entry.id, entry.expectedRevision]));
-  if (revisions.size !== command.targets.length) return null;
+  const variants = new Map(
+    model.items.flatMap((item) => item.variants).map((variant) => [variant.id, variant]),
+  );
+  const targetIds = new Set(command.targets.map((target) => target.id));
+  if ([...revisions.keys()].some((id) => !targetIds.has(id))) return null;
   for (const target of command.targets) {
-    if (revisions.get(target.id) !== target.expectedRevision + 1) return null;
+    const revision = revisions.get(target.id);
+    const variant = variants.get(target.id);
+    // The receipt has no revision for a variant whose approval stays.
+    if (revision === undefined && variant && keepsApproval(command, variant)) continue;
+    if (revision !== target.expectedRevision + 1) return null;
   }
   let updated = 0;
   const items = model.items.map((item) => ({
@@ -169,6 +200,7 @@ export function applySavedReview(
         // run model.
         reviewer,
         ownDecision: true,
+        copiedFrom: undefined,
       };
     }),
   }));
@@ -224,6 +256,10 @@ export function verdictLabel(variant: ReviewVariant) {
   if (variant.verdict === "rejected") return "Rejected";
   if (variant.verdict === "approved" && variant.source === "automatic") {
     return "Accepted automatically";
+  }
+  if (variant.verdict === "approved" && variant.copiedFrom) {
+    const { pullRequestNumber } = variant.copiedFrom;
+    return pullRequestNumber ? `Approved in #${pullRequestNumber}` : "Approved in an earlier run";
   }
   if (variant.verdict === "approved") return "Approved";
   return "Needs review";

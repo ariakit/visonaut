@@ -40,6 +40,12 @@ export interface ReviewVariant {
   reviewer?: string;
   /** True for a human decision of the person who has this page open. */
   ownDecision?: boolean;
+  /**
+   * The run of the approval that the service copied to this variant. The
+   * pull request is missing for a copy from main, a merge queue, or an earlier
+   * run of the same pull request.
+   */
+  copiedFrom?: { runId: string; pullRequestNumber?: number };
   reference: ReviewImage | null;
   candidate: ReviewImage | null;
   diff: ReviewImage | null;

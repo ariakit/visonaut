@@ -295,7 +295,7 @@ export async function applyReviewCommand(
       input.wholeItemKey
         ? statement(
             service.database,
-            "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND item_key = ? AND outcome = 'changed' ORDER BY ordinal, id",
+            `SELECT row.*, ${eligibleAcceptanceSql} AS accepted FROM visonaut_comparison_rows row WHERE row.comparison_id = ? AND row.item_key = ? AND row.outcome = 'changed' ORDER BY row.ordinal, row.id`,
             [input.comparisonId, input.wholeItemKey],
           )
         : // The unary plus keeps the comparison index out of the plan. D1 then
@@ -309,7 +309,7 @@ export async function applyReviewCommand(
       promotionRead(service.database, input.comparisonId),
     ]);
   const { comparison, run, project } = commandState([comparisonResult, runResult, projectResult]);
-  const rows = batchRows<ReviewRow>(rowsResult);
+  const rows = batchRows<ReviewRow & { accepted?: number }>(rowsResult);
   const selected = input.targets.map((target) => {
     const row = rows.find((entry) => entry.id === target.id);
     if (!row || row.outcome !== "changed" || row.decision_revision !== target.expectedRevision) {
@@ -343,6 +343,10 @@ export async function applyReviewCommand(
     previousRunRevision: run.revision,
     runRevision: run.revision + 1,
   };
+  // An approval of the whole screenshot keeps each approval in force, such as
+  // a copy from an earlier run, so it does not show as a new decision.
+  const keepsApproval = (row: (typeof selected)[number]) =>
+    Boolean(input.wholeItemKey) && input.verdict === "approved" && Boolean(row.accepted);
   for (const row of selected) {
     statements.push(
       assertion(
@@ -351,6 +355,7 @@ export async function applyReviewCommand(
         [row.id, comparison.id, row.decision_revision],
       ),
     );
+    if (keepsApproval(row)) continue;
     previous.decisions.push({
       id: row.id,
       decisionId: row.decision_id,
@@ -387,6 +392,11 @@ export async function applyReviewCommand(
       ),
     );
     result.revisions.push({ id: row.id, expectedRevision: row.decision_revision + 1 });
+  }
+  // A command that decides nothing would only add an audit entry and a run
+  // revision. The page refuses it before it sends one.
+  if (!result.revisions.length) {
+    throw new ConflictError("Each variant of this screenshot is already approved.");
   }
   const action = input.verdict === "approved" ? "approve" : "reject";
   statements.push(

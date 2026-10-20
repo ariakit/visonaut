@@ -71,6 +71,8 @@ interface VariantView {
   reviewer?: string;
   /** True for a human decision of the person who reads this model. */
   ownDecision?: true;
+  /** The run of a copied approval, with its pull request when it is another one. */
+  copiedFrom?: { runId: string; pullRequestNumber?: number };
   reference: ImageView | null;
   candidate: ImageView | null;
   diff: ImageView | null;
@@ -106,6 +108,24 @@ interface DecisionRecord {
   kind: "human" | "automatic";
   actor_id: string | null;
   revoked: number;
+  /** The run of the decision that this copy came from, from `decisionsWithSourceSql`. */
+  source_run_id: string | null;
+  source_lineage_key: string | null;
+}
+
+/**
+ * Selects the decisions that match `where`, each with the run and the lineage
+ * of the decision that a copy came from. Both are null for a decision that is
+ * no copy, and for a copy whose source row is gone.
+ */
+function decisionsWithSourceSql(where: string) {
+  return `SELECT decision.*, source_run.id AS source_run_id, source_run.lineage_key AS source_lineage_key
+    FROM visonaut_decisions decision
+    LEFT JOIN visonaut_decisions source_decision ON source_decision.id = decision.source_decision_id
+    LEFT JOIN visonaut_comparison_rows source_row ON source_row.id = source_decision.row_id
+    LEFT JOIN visonaut_comparisons source_comparison ON source_comparison.id = source_row.comparison_id
+    LEFT JOIN visonaut_runs source_run ON source_run.id = source_comparison.run_id
+    WHERE ${where}`;
 }
 
 function batchRows<T>(result: { results?: unknown[] } | undefined): T[] {
@@ -258,6 +278,10 @@ function historyDecision(row: HistoryRow): DecisionRecord {
     kind,
     actor_id: historyOptionalString(row, "actor_id"),
     revoked: historyNumber(row, "revoked"),
+    // The closed summary keeps each stored decision as it is, with no source
+    // run, so the page of a closed run shows a copy as a plain approval.
+    source_run_id: null,
+    source_lineage_key: null,
   };
 }
 
@@ -303,6 +327,20 @@ function profileName(name: string | undefined) {
   return name?.trim() || undefined;
 }
 
+/**
+ * The run that a copied decision came from. A copy from another pull request
+ * names its number, so the page can say where the approval was made.
+ */
+function copySource(decision: DecisionRecord, lineageKey: string) {
+  if (!decision.source_run_id) return;
+  const pullRequest = /^pr:([1-9][0-9]*)$/u.exec(decision.source_lineage_key ?? "");
+  const otherPullRequest = pullRequest?.[1] && decision.source_lineage_key !== lineageKey;
+  return {
+    runId: decision.source_run_id,
+    ...(otherPullRequest ? { pullRequestNumber: Number(pullRequest[1]) } : {}),
+  };
+}
+
 interface ReviewItemsParams {
   rows: ReviewRow[];
   captures: Map<string, CaptureRecord>;
@@ -312,6 +350,8 @@ interface ReviewItemsParams {
   reviewerNames: Map<string, string>;
   /** The GitHub user ID of the person who reads the model. */
   viewerId: string;
+  /** The lineage of the run, so a copy from the same pull request names no number. */
+  lineageKey: string;
   eligibleApprovals: Set<string>;
   /** The capture lists, for a capture or a baseline that D1 does not hold. */
   inventory: Pick<ReviewPageEvidence, "candidateByIdentity" | "referenceByIdentity"> | null;
@@ -330,6 +370,7 @@ function reviewItems({
   decisions,
   reviewerNames,
   viewerId,
+  lineageKey,
   eligibleApprovals,
   inventory,
   comparisonStopped,
@@ -390,6 +431,7 @@ function reviewItems({
         ? decision
         : null;
     const reviewer = profileName(reviewerNames.get(effective?.actor_id ?? ""));
+    const copiedFrom = effective ? copySource(effective, lineageKey) : undefined;
     const item = items.get(row.item_key) ?? {
       key: row.item_key,
       name: typeof metadata.name === "string" ? metadata.name : row.item_key,
@@ -427,7 +469,9 @@ function reviewItems({
       verdict: effective?.verdict ?? null,
       source: effective?.kind ?? null,
       ...(reviewer ? { reviewer } : {}),
-      ...(effective?.actor_id === viewerId ? { ownDecision: true as const } : {}),
+      // A copy is a decision of an earlier run, not one made on this page.
+      ...(effective?.actor_id === viewerId && !copiedFrom ? { ownDecision: true as const } : {}),
+      ...(copiedFrom ? { copiedFrom } : {}),
       reference: imageView(reference?.image_id),
       candidate: candidateOmitted ? null : imageView(candidate?.image_id),
       ...(candidateOmitted ? { candidateOmitted: true } : {}),
@@ -532,6 +576,8 @@ export async function reviewCapturePage(
     decisions: new Map(),
     reviewerNames: new Map(),
     viewerId: context.identity.githubUserId,
+    // Unchanged rows have no decision, so they have no copy.
+    lineageKey: "",
     eligibleApprovals: new Set(),
     inventory: evidence,
     comparisonStopped: false,
@@ -660,7 +706,9 @@ export async function reviewModel(
                   .bind(comparison.id, comparison.id),
                 context.database
                   .prepare(
-                    "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
+                    decisionsWithSourceSql(
+                      "decision.id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
+                    ),
                   )
                   .bind(comparison.id, comparison.id),
               ]),
@@ -725,6 +773,7 @@ export async function reviewModel(
     decisions: decisionById,
     reviewerNames,
     viewerId: context.identity.githubUserId,
+    lineageKey: run.lineage_key,
     eligibleApprovals,
     inventory,
     comparisonStopped,
