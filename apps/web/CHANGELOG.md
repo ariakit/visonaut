@@ -1,5 +1,23 @@
 # @visonaut/web
 
+## 0.3.11
+
+### Approvals from earlier runs carry over
+
+Approvals of a pull request now carry over to its main run more reliably, and the review shows where each one came from:
+
+- **New runner images.** An approval now copies to a later run with the same image bytes when that run used another GitHub runner image or another rendering profile. Before, each such change needed a new review.
+- **Whole screenshot.** **Approve all** of a screenshot now keeps the approvals that are already in force, such as copied ones, and decides only the other variants.
+- **Copy source.** A copied approval now shows the mark of an automatic approval, and the capture details say "Approved in #N" with a link to the run that it came from.
+
+### Other updates
+
+- Fixed the open account menu adding a second level 1 heading to the page. Its heading is now level 2.
+- Fixed the preview linking the commit of its sample run to `https://github.com/Preview fixtures`. The Queue card and the facts of the run page now show the commit as text.
+- The pull request page now stops checking a capture that is still pending after 1 hour, and says "Stopped checking". A newer check of the pull request, or **Check again** in the steps, starts a new wait.
+- The Status page alerts `production-receiver-mismatch` and `redelivery-exhausted` of GitHub webhook delivery now link to the new "Webhook delivery" procedure of the operations guide.
+- Updated dependencies: `@visonaut/service@0.0.9`
+
 ## 0.3.10
 
 ### Pull request comment with a link to the run
