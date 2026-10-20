@@ -1,5 +1,15 @@
 # @visonaut/service
 
+## 0.0.9
+
+### Approvals from earlier runs carry over
+
+Approvals of a pull request now carry over to its main run more reliably, and the review shows where each one came from:
+
+- **New runner images.** An approval now copies to a later run with the same image bytes when that run used another GitHub runner image or another rendering profile. Before, each such change needed a new review.
+- **Whole screenshot.** **Approve all** of a screenshot now keeps the approvals that are already in force, such as copied ones, and decides only the other variants.
+- **Copy source.** A copied approval now shows the mark of an automatic approval, and the capture details say "Approved in #N" with a link to the run that it came from.
+
 ## 0.0.8
 
 - Fixed approvals of earlier runs of a merged pull request that were reused by later runs of `main` and of other pull requests. Only the newest run of a merged pull request is now a lineage source of these runs, with the approvals that it holds, also the approvals that it copied from its earlier runs. While a pull request is open, its earlier approvals still apply to its own newer runs, and a merge group still uses each run of its queued pull requests.
