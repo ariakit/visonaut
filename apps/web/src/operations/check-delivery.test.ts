@@ -191,6 +191,45 @@ it("sends no text of an update when a decision commits after the claim", async (
   expect(patches.map((patch) => patch.output.title)).toEqual(["1 change rejected"]);
 });
 
+it("sends an update two minutes after the invocation that claimed it stopped", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  // The production budget, so the check lease does not come from a short test budget.
+  fixture.context.budget.leaseMilliseconds = 12 * 60 * 1000;
+  await captured(fixture.context);
+  const patches = shownPatches(fixture);
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  let claim = () => {};
+  const claimed = new Promise<void>((resolve) => {
+    claim = resolve;
+  });
+  // The platform cancels the invocation while it reads the check after the
+  // claim, so the pass never settles its lease.
+  fixture.context.github.request = async (path, init) => {
+    if (path === checkPath && !init?.method) {
+      claim();
+      return new Promise(() => {});
+    }
+    return request(path, init);
+  };
+  void deliverGitHubStatuses(fixture.context);
+  await claimed;
+  fixture.context.github.request = request;
+
+  fixture.state.time += 2 * 60 * 1000 - 1;
+  const early = await deliverGitHubStatuses(fixture.context);
+
+  expect(early).toMatchObject({ completed: [], deferred: [], attention: [] });
+  expect(patches).toEqual([]);
+
+  fixture.state.time += 1;
+  const late = await deliverGitHubStatuses(fixture.context);
+
+  expect(late).toMatchObject({ completed: ["1"], attention: [] });
+  expect(patches).toHaveLength(1);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+});
+
 // D-OPS-02: a review that waits for a maintainer must block the merge.
 it("keeps the check completed with the conclusion failure while a review waits", async () => {
   using database = new TestDatabase();
