@@ -162,6 +162,62 @@ function failStatements(database: TestDatabase, sql: RegExp) {
   };
 }
 
+// The statement of a status claim that takes the lease.
+const statusLeaseSql = /UPDATE work_checks SET lease_token = \?, lease_until = \?/;
+
+class CommitHookStatement extends SqliteStatement {
+  constructor(
+    database: DatabaseSync,
+    sql: string,
+    values: SqlValue[],
+    readonly afterCommit: () => Promise<void>,
+  ) {
+    super(database, sql, values);
+  }
+
+  override bind(...values: SqlValue[]) {
+    return new CommitHookStatement(this.database, this.sql, values, this.afterCommit);
+  }
+
+  override async run() {
+    const result = this.execute<Record<string, unknown>>();
+    await this.afterCommit();
+    return result;
+  }
+}
+
+/**
+ * Runs `write` once, directly after the statement with matching SQL commits,
+ * as a concurrent writer would. A batch commits once, after its last statement.
+ */
+function writeAfterCommit(database: TestDatabase, sql: RegExp, write: () => Promise<unknown>) {
+  let pending: (() => Promise<unknown>) | undefined = write;
+  const afterCommit = async () => {
+    const next = pending;
+    pending = undefined;
+    await next?.();
+  };
+  const prepare = database.prepare;
+  const batch = database.batch;
+  database.prepare = (text) =>
+    sql.test(text)
+      ? new CommitHookStatement(database.connection, text, [], afterCommit)
+      : prepare.call(database, text);
+  database.batch = async (statements) => {
+    const results = await batch.call(database, statements);
+    if (statements.some((item) => item instanceof SqliteStatement && sql.test(item.sql))) {
+      await afterCommit();
+    }
+    return results;
+  };
+  return {
+    [Symbol.dispose]() {
+      database.prepare = prepare;
+      database.batch = batch;
+    },
+  };
+}
+
 describe("durable comparison work", () => {
   it("keeps enqueue repeat-safe and rejects a conflicting identity", async () => {
     using database = new TestDatabase();
@@ -400,6 +456,57 @@ describe("serialized GitHub status outbox", () => {
       }),
     ).toBe("delivered");
     expect(sent).toEqual(["failure"]);
+  });
+
+  // A review decision can write a new revision while a delivery pass claims the
+  // check. The lease of that claim must not block the new revision.
+  it("leaves no unusable lease when a new revision lands during a claim", async () => {
+    using database = new TestDatabase();
+    await database.batch(statusIntentStatements(database, statusInput(1, "failure")));
+    {
+      using _write = writeAfterCommit(database, statusLeaseSql, () =>
+        database.batch(statusIntentStatements(database, statusInput(2))),
+      );
+      const claim = await claimStatus(database, {
+        id: "github:123",
+        token: "old",
+        now: 100,
+        leaseMs: 10,
+      });
+      expect(claim?.revision).toBe(1);
+    }
+    const sent: string[] = [];
+    expect(
+      await deliverStatus(database, {
+        id: "github:123",
+        token: "old",
+        revision: 1,
+        now: () => 101,
+        send: async (intent) => {
+          sent.push(intent.conclusion);
+        },
+      }),
+    ).toBe("stale");
+    // The lease would expire at 110. The new revision goes out before that.
+    const claim = await claimStatus(database, {
+      id: "github:123",
+      token: "new",
+      now: 102,
+      leaseMs: 10,
+    });
+    expect(claim?.revision).toBe(2);
+    expect(
+      await deliverStatus(database, {
+        id: "github:123",
+        token: "new",
+        revision: 2,
+        now: () => 103,
+        send: async (intent) => {
+          sent.push(intent.conclusion);
+        },
+      }),
+    ).toBe("delivered");
+    expect(sent).toEqual(["success"]);
   });
 
   it("prevents duplicate sends under the same token", async () => {

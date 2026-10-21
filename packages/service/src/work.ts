@@ -275,27 +275,32 @@ export function statusIntentStatements(database: Database, input: StatusIntent):
 
 export async function claimStatus(database: Database, params: LeaseParams) {
   validateLease(params);
-  await database
-    .prepare(`
-    UPDATE work_checks SET lease_token = ?, lease_until = ?, lease_revision = desired_revision,
-      request_started = 0
-    WHERE id = ? AND lease_token IS NULL AND EXISTS (
-      SELECT 1 FROM work_status_outbox WHERE check_id = work_checks.id
-      AND revision = work_checks.desired_revision AND state = 'pending'
-      AND attempts < max_attempts AND available_at <= ?)
-  `)
-    .bind(params.token, params.now + params.leaseMs, params.id, params.now)
-    .run();
-  return database
-    .prepare(`
-    UPDATE work_status_outbox SET state = 'sending', attempts = attempts + 1
-    WHERE check_id = ? AND state = 'pending' AND attempts < max_attempts AND EXISTS (
-      SELECT 1 FROM work_checks WHERE id = check_id AND lease_token = ?
-      AND lease_until > ? AND lease_revision = revision AND desired_revision = revision)
-    RETURNING *
-  `)
-    .bind(params.id, params.token, params.now)
-    .first<StatusDelivery>();
+  // One transaction: a new revision between the two statements would leave a
+  // lease that no row can use, and the check would wait until it expires.
+  const results = await database.batch([
+    database
+      .prepare(`
+      UPDATE work_checks SET lease_token = ?, lease_until = ?, lease_revision = desired_revision,
+        request_started = 0
+      WHERE id = ? AND lease_token IS NULL AND EXISTS (
+        SELECT 1 FROM work_status_outbox WHERE check_id = work_checks.id
+        AND revision = work_checks.desired_revision AND state = 'pending'
+        AND attempts < max_attempts AND available_at <= ?)
+    `)
+      .bind(params.token, params.now + params.leaseMs, params.id, params.now),
+    database
+      .prepare(`
+      UPDATE work_status_outbox SET state = 'sending', attempts = attempts + 1
+      WHERE check_id = ? AND state = 'pending' AND attempts < max_attempts AND EXISTS (
+        SELECT 1 FROM work_checks WHERE id = check_id AND lease_token = ?
+        AND lease_until > ? AND lease_revision = revision AND desired_revision = revision)
+      RETURNING *
+    `)
+      .bind(params.id, params.token, params.now),
+  ]);
+  // D1 types each batch result as a plain row. This statement returns the
+  // outbox row.
+  return (results[1]?.results?.[0] as StatusDelivery | undefined) ?? null;
 }
 
 /** A sender returns this when a GitHub read failed before it started a write request. */
