@@ -25,6 +25,10 @@ interface CheckCreation {
 
 // Bound GitHub request fan-out while letting independent checks finish together.
 const maximumConcurrentStatusDeliveries = 3;
+// A send takes seconds, and each GitHub request stops after 15 seconds. A short
+// lease lets a later pass send the update of a stopped invocation sooner, and
+// still outlasts the PATCH that follows the request mark.
+const statusLeaseMilliseconds = 2 * 60 * 1000;
 
 function reviewDetailsUrl(run: { id: string }, origin: string) {
   return new URL(`/runs/${encodeURIComponent(run.id)}`, origin).href;
@@ -307,7 +311,7 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
         id: delivery.id,
         token,
         now: context.now(),
-        leaseMs: budget.leaseMilliseconds,
+        leaseMs: Math.min(budget.leaseMilliseconds, statusLeaseMilliseconds),
       });
       if (!intent) return "skipped" as const;
       const run = await service.run(intent.run_id);

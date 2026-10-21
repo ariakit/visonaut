@@ -56,7 +56,7 @@ The identity test of the check also sets no lock. The sender reads the check bef
 
 ### Unlock
 
-Wait until `lease_until` has passed. The lease of a check lasts 12 minutes by default. Unlocking is then safe in practice. If a very late request of the first send reaches GitHub after the new one, the check shows an older text until the next change of the result. The sender reads the check on GitHub first. For the check of a run, it sends no PATCH when the check already shows the same completed result. It sends the PATCH again when the result is not there.
+Wait until `lease_until` has passed. The lease of a check lasts 2 minutes. Unlocking is then safe in practice. If a very late request of the first send reaches GitHub after the new one, the check shows an older text until the next change of the result. The sender reads the check on GitHub first. For the check of a run, it sends no PATCH when the check already shows the same completed result. It sends the PATCH again when the result is not there.
 
 If the run of the check is closed or replaced, the update is not sent, and the first status or recovery pass after the change closes the alert.
 
