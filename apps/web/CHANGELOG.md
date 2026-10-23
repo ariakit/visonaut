@@ -1,5 +1,13 @@
 # @visonaut/web
 
+## 0.3.12
+
+- Fixed the GitHub check of a run staying on an old result for up to 12 minutes when a review decision changed the result while Visonaut started to send the check.
+- Fixed the GitHub check of a run staying on an old result until a manual database change when the platform stopped the Worker while it sent the check.
+- Fixed the GitHub check of a run staying on an old result for up to 17 minutes when the platform stopped the Worker before it sent the check.
+- Fixed Submit failing after 30 seconds when the service was slow to begin the run.
+- Updated dependencies: `@visonaut/service@0.0.10`, `@visonaut/security@0.1.4`
+
 ## 0.3.11
 
 ### Approvals from earlier runs carry over

@@ -1,5 +1,9 @@
 # visonaut
 
+## 0.6.8
+
+- Fixed Submit failing after 30 seconds when the service was slow to begin the run.
+
 ## 0.6.7
 
 ### Comparison with pixelmatch 8

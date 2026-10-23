@@ -1,5 +1,9 @@
 # @visonaut/security
 
+## 0.1.4
+
+- Fixed the GitHub check of a run staying on an old result until a manual database change when the platform stopped the Worker while it sent the check.
+
 ## 0.1.3
 
 ### Pull request comment with a link to the run
