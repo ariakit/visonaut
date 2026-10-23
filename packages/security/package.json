@@ -14,7 +14,7 @@
   "dependencies": {
     "@visonaut/protocol": "workspace:*",
     "better-auth": "1.7.12",
-    "jose": "6.2.12"
+    "jose": "6.2.13"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "5.20261019.1",
