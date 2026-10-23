@@ -6,6 +6,12 @@ import { githubToken, request, serverOrigin } from "./http.js";
 import { downloadCaptures } from "./github-artifacts.js";
 import { bindSubmission } from "./signed-context.js";
 
+// The service took 74 to 92 seconds to answer a begin call during a Cloudflare
+// network incident. Each attempt sends the same OIDC token, and the deadline
+// starts before the token request, so it stays below the 5 minute token expiry.
+const BEGIN_TIMEOUT_MS = 240_000;
+const BEGIN_ATTEMPT_TIMEOUT_MS = 120_000;
+
 /** The time of the work before Submit reads the prepared directory. */
 export interface Preparation {
   /** The `performance.now()` value at the start of the preparation. */
@@ -67,6 +73,7 @@ export async function submitWithoutVisuals(environment: Record<string, string | 
 export async function beginSubmission(environment: Record<string, string | undefined>) {
   const origin = serverOrigin(required(environment, "VISONAUT_SERVER"));
   const { runId, attempt, testedSha } = workflowIdentity(environment);
+  const started = performance.now();
   const token = await githubToken(origin, environment, "submit");
   await request({
     url: new URL(`/v1/runs/${runId}/begin`, origin),
@@ -74,6 +81,11 @@ export async function beginSubmission(environment: Record<string, string | undef
     method: "POST",
     mediaType: "application/json",
     body: JSON.stringify({ schemaVersion: "1.0", workflowAttempt: attempt, testedSha }),
+    idempotent: {
+      timeoutMs: BEGIN_TIMEOUT_MS - (performance.now() - started),
+      attemptTimeoutMs: BEGIN_ATTEMPT_TIMEOUT_MS,
+      pendingCode: "check_pending",
+    },
   });
 }
 

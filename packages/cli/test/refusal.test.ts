@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runCli } from "../src/index.js";
 
 const environment = {
@@ -11,7 +11,24 @@ const environment = {
 };
 const reference = "0b8f2d6e-5c1a-4e0b-9a77-3f6d2c1e8a90";
 
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => {
+  // Begin retries a 503 with no code or with `check_pending` before it prints
+  // the refusal. End each backoff wait at once, and count it as elapsed time.
+  let skipped = 0;
+  const realNow = performance.now.bind(performance);
+  vi.spyOn(performance, "now").mockImplementation(() => realNow() + skipped);
+  const realSetTimeout = globalThis.setTimeout;
+  vi.stubGlobal("setTimeout", (handler: () => void, delay?: number) => {
+    if (delay === undefined || delay < 1000) return realSetTimeout(handler, delay);
+    skipped += delay;
+    return realSetTimeout(handler, 0);
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 async function begin() {
   let stdout = "";

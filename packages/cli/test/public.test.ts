@@ -10,7 +10,10 @@ const environment = {
   ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
 };
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 async function execute(argv: string[], selectedEnvironment = environment) {
   let stdout = "";
@@ -126,6 +129,128 @@ it("binds begin to the current tested commit, attempt, and signed Submit audienc
   expect(requests).toHaveLength(2);
   expect(result.stdout).toContain("does not grant visual approval");
   expect(result.stdout + result.stderr).not.toContain("secret");
+});
+
+/** End each backoff wait at once, record its delay, and count it as elapsed time. */
+function skipBackoffWaits() {
+  const delays: number[] = [];
+  const realNow = performance.now.bind(performance);
+  vi.spyOn(performance, "now").mockImplementation(
+    () => realNow() + delays.reduce((total, delay) => total + delay, 0),
+  );
+  const realSetTimeout = globalThis.setTimeout;
+  vi.stubGlobal("setTimeout", (handler: () => void, delay?: number) => {
+    if (delay === undefined || delay < 1000) return realSetTimeout(handler, delay);
+    delays.push(delay);
+    return realSetTimeout(handler, 0);
+  });
+  return delays;
+}
+
+function pendingCheck() {
+  return Response.json(
+    { error: { code: "check_pending", message: "Check creation is in progress." } },
+    { status: 503, headers: { "Retry-After": "1" } },
+  );
+}
+
+/** Answer the OIDC token request, and each begin attempt with the next answer. */
+function answerBeginAttempts(answers: (() => Response)[]) {
+  const requests: string[] = [];
+  vi.stubGlobal("fetch", async (input: URL | string) => {
+    const url = new URL(input);
+    requests.push(url.pathname);
+    if (url.hostname.endsWith(".actions.githubusercontent.com")) {
+      return Response.json({ value: "oidc-secret" });
+    }
+    const answer = answers.shift();
+    if (!answer) throw new Error("Unexpected begin attempt");
+    return answer();
+  });
+  return requests;
+}
+
+it("retries begin after a dropped connection, a time limit, an edge error, and a pending check", async () => {
+  const delays = skipBackoffWaits();
+  const limits: number[] = [];
+  const realTimeout = AbortSignal.timeout.bind(AbortSignal);
+  vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+    limits.push(milliseconds);
+    return realTimeout(milliseconds);
+  });
+  const answers: (() => Response)[] = [
+    () => {
+      throw new TypeError("fetch failed");
+    },
+    () => {
+      throw new DOMException("The operation timed out", "TimeoutError");
+    },
+    () => new Response("bad gateway", { status: 502 }),
+    pendingCheck,
+    () => Response.json({ state: "pending" }),
+  ];
+  const requests = answerBeginAttempts(answers);
+  const result = await execute(["begin", "--run", "456"]);
+  expect(result.code).toBe(0);
+  expect(requests).toEqual(["/id-token", ...Array<string>(5).fill("/v1/runs/456/begin")]);
+  expect(delays).toHaveLength(4);
+  // The begin attempts have a longer limit than the 30 s of other requests.
+  const beginLimits = limits.slice(-5);
+  expect(beginLimits).toHaveLength(5);
+  for (const limit of beginLimits) {
+    expect(limit).toBeGreaterThan(30_000);
+    expect(limit).toBeLessThanOrEqual(120_000);
+  }
+  expect(result.stdout + result.stderr).not.toContain("secret");
+});
+
+it("waits for a check that an earlier begin attempt holds, beyond the attempt limit", async () => {
+  const delays = skipBackoffWaits();
+  const requests = answerBeginAttempts([
+    ...Array<() => Response>(8).fill(pendingCheck),
+    () => Response.json({ state: "pending" }),
+  ]);
+  const result = await execute(["begin", "--run", "456"]);
+  expect(result.code).toBe(0);
+  expect(requests.filter((path) => path === "/v1/runs/456/begin")).toHaveLength(9);
+  // The service asks for 1 s, but the lease of the earlier attempt lasts longer.
+  expect(delays).toHaveLength(8);
+  for (const delay of delays) {
+    expect(delay).toBe(5_000);
+  }
+});
+
+it("stops waiting for a pending check at the begin deadline", async () => {
+  const delays = skipBackoffWaits();
+  const requests = answerBeginAttempts(Array<() => Response>(100).fill(pendingCheck));
+  const result = await execute(["begin", "--run", "456"]);
+  expect(result.code).toBe(1);
+  expect(result.stderr).toContain("HTTP 503, check_pending");
+  // The deadline is 4 minutes from before the OIDC token request.
+  const waited = delays.reduce((total, delay) => total + delay, 0);
+  expect(waited).toBeLessThan(240_000);
+  expect(waited).toBeGreaterThan(230_000);
+  expect(requests.filter((path) => path === "/v1/runs/456/begin")).toHaveLength(delays.length + 1);
+});
+
+it("does not retry begin after a refusal that a later attempt cannot change", async () => {
+  skipBackoffWaits();
+  const requests: string[] = [];
+  vi.stubGlobal("fetch", async (input: URL | string) => {
+    const url = new URL(input);
+    requests.push(url.pathname);
+    if (url.hostname.endsWith(".actions.githubusercontent.com")) {
+      return Response.json({ value: "oidc-secret" });
+    }
+    return Response.json(
+      { error: { code: "workflow_candidate", message: "The signed candidate is unavailable." } },
+      { status: 503 },
+    );
+  });
+  const result = await execute(["begin", "--run", "456"]);
+  expect(result.code).toBe(1);
+  expect(requests).toEqual(["/id-token", "/v1/runs/456/begin"]);
+  expect(result.stderr).toContain("HTTP 503, workflow_candidate");
 });
 
 it("refuses begin for another run before requesting OIDC", async () => {
