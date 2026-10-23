@@ -308,22 +308,111 @@ interface ShownResultParams {
 }
 
 /**
- * True when the check on GitHub already shows this completed result.
- * A check that is not completed has no conclusion, so "pending" never matches.
+ * True when the check on GitHub shows this result. A pending result shows as a
+ * check in progress, which has no conclusion.
  */
-function showsCompletedResult({ existing, href, conclusion, output }: ShownResultParams) {
+function showsResult({ existing, href, conclusion, output }: ShownResultParams) {
   const shown =
     typeof existing.output === "object" && existing.output !== null ? existing.output : {};
+  const status = conclusion === "pending" ? "in_progress" : "completed";
   return (
     existing.name === CHECK_NAME &&
     existing.details_url === href &&
-    existing.status === "completed" &&
-    existing.conclusion === conclusion &&
+    existing.status === status &&
+    (conclusion === "pending" || existing.conclusion === conclusion) &&
     "title" in shown &&
     shown.title === output.title &&
     "summary" in shown &&
     shown.summary === output.summary
   );
+}
+
+/** True when GitHub shows the stored update. An update with no review state never matches. */
+function showsUpdate(existing: Record<string, unknown>, update: StatusDelivery, origin: string) {
+  const review = checkReview(update);
+  if (!review) return false;
+  const href = reviewUrl(update.details_url, origin);
+  const output = genericCheckOutput(review, href);
+  return showsResult({ existing, href, conclusion: update.conclusion, output });
+}
+
+/** True when the check still shows the text of its creation, which no stored update has. */
+function showsStartingText(existing: Record<string, unknown>) {
+  const shown =
+    typeof existing.output === "object" && existing.output !== null ? existing.output : {};
+  return (
+    existing.name === CHECK_NAME &&
+    existing.status === "in_progress" &&
+    "title" in shown &&
+    shown.title === startingCheckOutput.title &&
+    "summary" in shown &&
+    shown.summary === startingCheckOutput.summary
+  );
+}
+
+interface CheckOwnerParams {
+  github: GitHubClient;
+  existing: Record<string, unknown>;
+  intent: StatusDelivery;
+  testedSha: string;
+  checkIdentity?: { headSha: string; externalId: string };
+}
+
+/** Throw when the check is not the check of this App and of the tested commit. */
+function assertCheckOwner({
+  github,
+  existing,
+  intent,
+  testedSha,
+  checkIdentity,
+}: CheckOwnerParams) {
+  const legacyCheck =
+    existing.name === legacyCheckName && existing.external_id === `ariviso:${intent.run_id}`;
+  if (
+    existing.head_sha !== (checkIdentity?.headSha ?? testedSha) ||
+    (checkIdentity && existing.external_id !== checkIdentity.externalId) ||
+    (existing.name !== CHECK_NAME && !legacyCheck) ||
+    numericId(record(existing.app).id) !== github.appId
+  ) {
+    throw new SecurityError(
+      "wrong_check",
+      409,
+      "The check does not belong to this application and tested commit.",
+    );
+  }
+}
+
+interface ShownCheckUpdateParams {
+  github: GitHubClient;
+  /** Updates of one check. The first one that GitHub shows is the result. */
+  updates: StatusDelivery[];
+  testedSha: string;
+  checkIdentity?: { headSha: string; externalId: string };
+  origin: string;
+}
+
+/**
+ * The first of the updates that the check on GitHub shows, "starting" when it
+ * still shows the text of its creation, or undefined when it shows neither.
+ * It only reads, so each error throws.
+ */
+export async function shownCheckUpdate({
+  github,
+  updates,
+  testedSha,
+  checkIdentity,
+  origin,
+}: ShownCheckUpdateParams) {
+  const intent = updates[0];
+  if (!intent) return;
+  const path = `/repos/${github.repository}/check-runs/${numericId(intent.check_id)}`;
+  const existing = record(await github.request(path));
+  assertCheckOwner({ github, existing, intent, testedSha, checkIdentity });
+  const shown = updates.find((update) => showsUpdate(existing, update, origin));
+  if (shown) {
+    return shown;
+  }
+  if (showsStartingText(existing)) return "starting" as const;
 }
 
 /** Use only as deliverStatus's callback; its persistent lock owns serialization. */
@@ -348,25 +437,13 @@ export async function sendGitHubCheck({
     // Keep the PATCH outside this block: a failed PATCH can still write.
     return statusReadFailure(error);
   }
-  const legacyCheck =
-    existing.name === legacyCheckName && existing.external_id === `ariviso:${intent.run_id}`;
-  if (
-    existing.head_sha !== (checkIdentity?.headSha ?? testedSha) ||
-    (checkIdentity && existing.external_id !== checkIdentity.externalId) ||
-    (existing.name !== CHECK_NAME && !legacyCheck) ||
-    numericId(record(existing.app).id) !== github.appId
-  ) {
-    throw new SecurityError(
-      "wrong_check",
-      409,
-      "The check does not belong to this application and tested commit.",
-    );
-  }
+  assertCheckOwner({ github, existing, intent, testedSha, checkIdentity });
   const href = reviewUrl(intent.details_url, origin);
   const output = genericCheckOutput(review, href);
   // Each PATCH of a completed check writes its end time. Send none for the same
   // result, and so set no request mark.
-  if (showsCompletedResult({ existing, href, conclusion: intent.conclusion, output })) {
+  const completed = intent.conclusion !== "pending";
+  if (completed && showsResult({ existing, href, conclusion: intent.conclusion, output })) {
     return (await isCurrent({ request: false })) ? undefined : "not-sent";
   }
   if (!(await isCurrent())) return "not-sent";

@@ -16,8 +16,10 @@ import {
   enqueueWork,
   failWork,
   getWork,
+  readStatusLock,
   reconcileStatus,
   releasePromotionLeaseStatement,
+  releaseStatusLock,
   releaseRetentionPinStatement,
   retainedRunStatement,
   retentionPinStatement,
@@ -1058,6 +1060,125 @@ describe("serialized GitHub status outbox", () => {
         request_started: 1,
         state: "sending",
         last_error: "Error: Lost PATCH response.",
+      });
+    });
+  });
+
+  describe("the release of a lock", () => {
+    // A write request that fails at once leaves the lease of 100 to 110.
+    async function lockedCheck(database: TestDatabase) {
+      await database.batch(statusIntentStatements(database, statusInput()));
+      await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+      await deliverStatus(database, {
+        id: "github:123",
+        token: "worker",
+        revision: 1,
+        now: () => 101,
+        send: async (_intent, isCurrent) => {
+          await isCurrent();
+          throw new Error("Lost PATCH response.");
+        },
+      });
+    }
+
+    function readCheck(database: TestDatabase) {
+      return database
+        .prepare(`SELECT checks.ambiguous, checks.lease_token, checks.delivered_revision,
+          outbox.state FROM work_checks AS checks
+          JOIN work_status_outbox AS outbox ON outbox.check_id = checks.id`)
+        .first();
+    }
+
+    const release = {
+      id: "github:123",
+      token: "worker",
+      revision: 1,
+      deliveredRevision: null,
+      endedBefore: 110,
+      now: 120,
+    };
+
+    it("finds no lock before the lease ended", async () => {
+      using database = new TestDatabase();
+      await lockedCheck(database);
+      expect(await readStatusLock(database, { id: "github:123", endedBefore: 109 })).toBeNull();
+      expect(await readStatusLock(database, { id: "github:123", endedBefore: 110 })).toMatchObject({
+        token: "worker",
+        locked: { revision: 1 },
+        delivered: null,
+      });
+    });
+
+    it("sets the locked update as delivered or due again, and removes the lock", async () => {
+      using database = new TestDatabase();
+      await lockedCheck(database);
+      expect(await releaseStatusLock(database, { ...release, outcome: "not-sent" })).toBe(true);
+      expect(await readCheck(database)).toEqual({
+        ambiguous: 0,
+        lease_token: null,
+        delivered_revision: null,
+        state: "pending",
+      });
+
+      using delivered = new TestDatabase();
+      await lockedCheck(delivered);
+      expect(await releaseStatusLock(delivered, { ...release, outcome: "delivered" })).toBe(true);
+      expect(await readCheck(delivered)).toEqual({
+        ambiguous: 0,
+        lease_token: null,
+        delivered_revision: 1,
+        state: "complete",
+      });
+    });
+
+    it("counts the attempt of a not-sent update", async () => {
+      using database = new TestDatabase();
+      await lockedCheck(database);
+      expect(await releaseStatusLock(database, { ...release, outcome: "not-sent" })).toBe(true);
+      expect(
+        await database.prepare("SELECT state, attempts FROM work_status_outbox").first(),
+      ).toEqual({ state: "pending", attempts: 1 });
+
+      using last = new TestDatabase();
+      await lockedCheck(last);
+      await last.prepare("UPDATE work_status_outbox SET attempts = max_attempts").run();
+      expect(await releaseStatusLock(last, { ...release, outcome: "not-sent" })).toBe(true);
+      expect(await last.prepare("SELECT state, attempts FROM work_status_outbox").first()).toEqual({
+        state: "dead",
+        attempts: 2,
+      });
+    });
+
+    it("keeps the lock of a database restore", async () => {
+      using database = new TestDatabase();
+      await lockedCheck(database);
+      // The two statements of the restore that fence the checks.
+      await database.batch([
+        database.prepare("UPDATE work_checks SET ambiguous=1"),
+        database.prepare("UPDATE work_status_outbox SET state='obsolete' WHERE state!='complete'"),
+      ]);
+      expect(await readStatusLock(database, { id: "github:123", endedBefore: 110 })).toBeNull();
+      expect(await releaseStatusLock(database, { ...release, outcome: "not-sent" })).toBe(false);
+      expect(await readCheck(database)).toMatchObject({ ambiguous: 1, state: "obsolete" });
+    });
+
+    it("keeps a lock that changed after the read", async () => {
+      using database = new TestDatabase();
+      await lockedCheck(database);
+      await database.prepare("UPDATE work_checks SET lease_token = 'other'").run();
+      expect(await releaseStatusLock(database, { ...release, outcome: "not-sent" })).toBe(false);
+      expect(
+        await releaseStatusLock(database, {
+          ...release,
+          token: "other",
+          deliveredRevision: 1,
+          outcome: "not-sent",
+        }),
+      ).toBe(false);
+      expect(await readCheck(database)).toMatchObject({
+        ambiguous: 1,
+        lease_token: "other",
+        state: "sending",
       });
     });
   });

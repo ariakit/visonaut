@@ -476,6 +476,7 @@ export interface SettleStatusParams {
 /**
  * Call after a confirmed HTTP response, or proof that no request can still write.
  * Reading GitHub's current status alone does not prove an old request settled.
+ * `releaseStatusLock` also requires a delay after the end of the lease.
  */
 export async function settleStatus(database: Database, params: SettleStatusParams) {
   // A settle with no write request must not remove a lock, such as the lock of a
@@ -529,6 +530,103 @@ export async function settleStatus(database: Database, params: SettleStatusParam
       ),
   ]);
   return (results[1]?.results?.length ?? 0) > 0;
+}
+
+export interface StatusLock {
+  token: string;
+  /** The update whose write request got no answer. */
+  locked: StatusDelivery;
+  /** The last update that GitHub confirmed. Null when GitHub confirmed none. */
+  delivered: StatusDelivery | null;
+}
+
+export interface ReadStatusLockParams {
+  id: string;
+  /** Only a lease that ended at or before this time can have a releasable lock. */
+  endedBefore: number;
+}
+
+/**
+ * The lock of a write request with no answer, after its lease ended. A lock of
+ * a database restore has no update in the state `sending`, so it returns null.
+ */
+export async function readStatusLock(database: Database, params: ReadStatusLockParams) {
+  const check = await database
+    .prepare(`
+    SELECT lease_token, lease_revision, delivered_revision FROM work_checks
+    WHERE id = ? AND ambiguous = 1 AND request_started = 1 AND lease_token IS NOT NULL
+      AND lease_until <= ?
+  `)
+    .bind(params.id, params.endedBefore)
+    .first<{ lease_token: string; lease_revision: number; delivered_revision: number | null }>();
+  if (!check) return null;
+  const update = (revision: number) =>
+    database
+      .prepare("SELECT * FROM work_status_outbox WHERE check_id = ? AND revision = ?")
+      .bind(params.id, revision)
+      .first<StatusDelivery & { state: string }>();
+  const locked = await update(check.lease_revision);
+  if (locked?.state !== "sending") return null;
+  const delivered =
+    check.delivered_revision == null ? null : await update(check.delivered_revision);
+  return { token: check.lease_token, locked, delivered } satisfies StatusLock;
+}
+
+export interface ReleaseStatusLockParams extends ReadStatusLockParams {
+  token: string;
+  revision: number;
+  /** The confirmed revision that the caller compared, so a change keeps the lock. */
+  deliveredRevision: number | null;
+  /**
+   * "delivered" when GitHub shows the locked update, and "not-sent" when it
+   * still shows the last confirmed one, or the text of its creation.
+   */
+  outcome: "delivered" | "not-sent";
+  now: number;
+}
+
+/**
+ * Release a lock that `readStatusLock` returned, after GitHub showed which
+ * update it has. Returns true when the lock is released.
+ */
+export async function releaseStatusLock(database: Database, params: ReleaseStatusLockParams) {
+  const lease = [params.id, params.token, params.revision] as const;
+  // The first statement tests the lock and clears its two marks, and the next
+  // two statements require that result. So the batch changes nothing when the
+  // lock changed after the read. The release keeps the attempt of the update,
+  // so a send that fails each time ends dead and does not loop.
+  const results = await database.batch([
+    database
+      .prepare(`
+      UPDATE work_checks SET ambiguous = 0, request_started = 0,
+        delivered_revision = CASE WHEN ? = 'delivered' THEN lease_revision ELSE delivered_revision END
+      WHERE id = ? AND lease_token = ? AND lease_revision = ? AND ambiguous = 1
+        AND request_started = 1 AND lease_until <= ? AND delivered_revision IS ?
+        AND EXISTS (SELECT 1 FROM work_status_outbox WHERE check_id = work_checks.id
+          AND revision = work_checks.lease_revision AND state = 'sending')
+    `)
+      .bind(params.outcome, ...lease, params.endedBefore, params.deliveredRevision),
+    database
+      .prepare(`
+      UPDATE work_status_outbox SET state = CASE
+        WHEN revision != (SELECT desired_revision FROM work_checks WHERE id = check_id) THEN 'obsolete'
+        WHEN ? = 'delivered' THEN 'complete'
+        WHEN attempts >= max_attempts THEN 'dead' ELSE 'pending' END,
+        available_at = ?
+      WHERE check_id = ? AND revision = ? AND state = 'sending' AND EXISTS (
+        SELECT 1 FROM work_checks WHERE id = check_id AND lease_token = ?
+          AND lease_revision = revision AND ambiguous = 0 AND request_started = 0)
+    `)
+      .bind(params.outcome, params.now, params.id, params.revision, params.token),
+    database
+      .prepare(`
+      UPDATE work_checks SET lease_token = NULL, lease_until = NULL, lease_revision = NULL
+      WHERE id = ? AND lease_token = ? AND lease_revision = ? AND ambiguous = 0
+        AND request_started = 0 RETURNING id
+    `)
+      .bind(...lease),
+  ]);
+  return (results[2]?.results?.length ?? 0) > 0;
 }
 
 export interface ReconcileStatusParams {

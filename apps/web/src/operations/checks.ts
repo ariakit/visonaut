@@ -2,11 +2,19 @@ import {
   claimStatus,
   ConflictError,
   deliverStatus,
+  readStatusLock,
   reconcileStatus,
+  releaseStatusLock,
   Service,
   statusRunEligibleSql,
+  type StatusDelivery,
 } from "@visonaut/service";
-import { ensureGitHubCheck, findGitHubCheck, sendGitHubCheck } from "@visonaut/security";
+import {
+  ensureGitHubCheck,
+  findGitHubCheck,
+  sendGitHubCheck,
+  shownCheckUpdate,
+} from "@visonaut/security";
 import { mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 import { currentPreRunCheckSql, obsoleteCheckDeliverySql } from "./check-state.ts";
@@ -29,6 +37,10 @@ const maximumConcurrentStatusDeliveries = 3;
 // lease lets a later pass send the update of a stopped invocation sooner, and
 // still outlasts the PATCH that follows the request mark.
 const statusLeaseMilliseconds = 2 * 60 * 1000;
+// A write request with no answer stops after 15 seconds, and it started before
+// the end of its lease. One more lease after that end is a wide margin, so a
+// late request cannot change the check after the pass reads it.
+const lockReleaseDelayMilliseconds = statusLeaseMilliseconds;
 
 function reviewDetailsUrl(run: { id: string }, origin: string) {
   return new URL(`/runs/${encodeURIComponent(run.id)}`, origin).href;
@@ -221,6 +233,69 @@ async function prepareStatusUpdate(prepare: () => Promise<unknown>) {
   return conflict;
 }
 
+/** The tested commit of the run of an update, and the identity of its pre-run check. */
+async function checkTarget(context: OperationsContext, intent: StatusDelivery) {
+  const run = await new Service(context.database).run(intent.run_id);
+  const precreated = await context.database
+    .prepare(`SELECT check_head_sha,external_id FROM pre_run_checks
+      WHERE check_id=? AND repository_id=? AND tested_sha=?
+        AND workflow_run_id=? AND workflow_attempt=? AND external_id=(
+          SELECT external_id FROM operations_check_creations WHERE run_id=?)`)
+    .bind(
+      intent.check_id,
+      context.github.repositoryId,
+      run.tested_sha,
+      run.external_run_id,
+      run.attempt,
+      run.id,
+    )
+    .first<{ check_head_sha: string | null; external_id: string }>();
+  return {
+    testedSha: run.tested_sha,
+    checkIdentity: precreated
+      ? { headSha: precreated.check_head_sha ?? run.tested_sha, externalId: precreated.external_id }
+      : undefined,
+  };
+}
+
+/**
+ * Release the lock of a write request with no answer when GitHub shows which
+ * update the check has: the locked one, or the last confirmed one (the text of
+ * its creation when it has none). Any other text, or a failed read, keeps the
+ * lock for a person.
+ */
+async function releaseLock(context: OperationsContext, checkId: string, report: OperationReport) {
+  const endedBefore = context.now() - lockReleaseDelayMilliseconds;
+  try {
+    const lock = await readStatusLock(context.database, { id: checkId, endedBefore });
+    if (!lock) return false;
+    const { locked, delivered } = lock;
+    const shown = await shownCheckUpdate({
+      github: context.github,
+      // The locked update comes first: when both have the same text, GitHub shows it.
+      updates: delivered ? [locked, delivered] : [locked],
+      ...(await checkTarget(context, locked)),
+      origin: context.origin,
+    });
+    if (!shown) return false;
+    // A check with no confirmed update still shows the text of its creation
+    // when the first PATCH did not reach GitHub.
+    if (shown === "starting" && delivered) return false;
+    return await releaseStatusLock(context.database, {
+      id: checkId,
+      token: lock.token,
+      revision: locked.revision,
+      deliveredRevision: delivered?.revision ?? null,
+      outcome: shown === locked ? "delivered" : "not-sent",
+      endedBefore,
+      now: context.now(),
+    });
+  } catch (error) {
+    noteCause(report, error);
+    return false;
+  }
+}
+
 export async function deliverGitHubStatuses(context: OperationsContext): Promise<OperationReport> {
   const { database, budget } = context;
   const service = new Service(database);
@@ -287,7 +362,11 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     deliveries,
     maximumConcurrentStatusDeliveries,
     async (delivery) => {
-      if (!delivery.ambiguous) {
+      const released = delivery.ambiguous && (await releaseLock(context, delivery.id, report));
+      if (released) {
+        await resolveEvents(database, "check-delivery", delivery.id, context.now());
+      }
+      if (!delivery.ambiguous || released) {
         const obsolete = await database
           .prepare(`SELECT 1 AS found WHERE ${obsoleteCheckDeliverySql("?")}`)
           .bind(delivery.id)
@@ -296,7 +375,7 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
           return "skipped" as const;
         }
       }
-      if (delivery.ambiguous || delivery.state === "dead") {
+      if ((delivery.ambiguous && !released) || delivery.state === "dead") {
         await recordEvent(database, {
           kind: "check-delivery",
           subject: delivery.id,
@@ -314,21 +393,7 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
         leaseMs: Math.min(budget.leaseMilliseconds, statusLeaseMilliseconds),
       });
       if (!intent) return "skipped" as const;
-      const run = await service.run(intent.run_id);
-      const precreated = await database
-        .prepare(`SELECT check_head_sha,external_id FROM pre_run_checks
-          WHERE check_id=? AND repository_id=? AND tested_sha=?
-            AND workflow_run_id=? AND workflow_attempt=? AND external_id=(
-              SELECT external_id FROM operations_check_creations WHERE run_id=?)`)
-        .bind(
-          intent.check_id,
-          context.github.repositoryId,
-          run.tested_sha,
-          run.external_run_id,
-          run.attempt,
-          run.id,
-        )
-        .first<{ check_head_sha: string | null; external_id: string }>();
+      const target = await checkTarget(context, intent);
       const result = await deliverStatus(database, {
         id: delivery.id,
         token,
@@ -344,13 +409,7 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
             const outcome = await sendGitHubCheck({
               github: context.github,
               intent: latest,
-              testedSha: run.tested_sha,
-              checkIdentity: precreated
-                ? {
-                    headSha: precreated.check_head_sha ?? run.tested_sha,
-                    externalId: precreated.external_id,
-                  }
-                : undefined,
+              ...target,
               origin: context.origin,
               // The outbox sets the request mark, so its call is the last one.
               isCurrent: async (options) =>
