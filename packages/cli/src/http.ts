@@ -7,6 +7,9 @@ const REQUEST_TIMEOUT_MS = 30_000;
 const TRANSIENT_READ_TIMEOUT_MS = 60_000;
 const TRANSIENT_READ_ATTEMPT_TIMEOUT_MS = 10_000;
 const MAX_REQUEST_ATTEMPTS = 5;
+// The service sends Retry-After: 1 with each 503, but an earlier attempt can
+// hold the work for up to 2 minutes.
+const PENDING_WORK_DELAY_MS = 5_000;
 const MAX_ERROR_BODY_BYTES = 16 * 1024;
 // A server answer is untrusted. Print only values with these exact forms.
 const ERROR_CODE = /^[a-z_]{1,64}$/u;
@@ -65,6 +68,24 @@ interface RequestParams {
    * as a transient read, and a 500 counts as transient too.
    */
   githubOidc?: boolean;
+  /** The service gives the same result to the same POST again, so the POST retries. */
+  idempotent?: IdempotentRetry;
+}
+
+/**
+ * The retry of a POST that the service can repeat. It retries the failures of a transient read,
+ * with at most 5 attempts. The service can still run an attempt that ended at its time limit, so a
+ * 503 with `pendingCode` waits and retries until the deadline, and does not count as an attempt.
+ * The code can also mean work that does not end before the deadline. Then the request fails at
+ * the deadline with the same refusal.
+ */
+interface IdempotentRetry {
+  /** The deadline of all attempts and waits. */
+  timeoutMs: number;
+  /** The time limit of one attempt. */
+  attemptTimeoutMs: number;
+  /** The code of a 503 that means that an earlier attempt still holds the work. */
+  pendingCode: string;
 }
 
 async function responseBytes(
@@ -189,6 +210,7 @@ export async function request({
   onRetryWait,
   responseMediaType,
   githubOidc = false,
+  idempotent,
 }: RequestParams): Promise<unknown> {
   if (!Number.isSafeInteger(maximumResponseBytes) || maximumResponseBytes < 1) {
     throw new CliError("The response size limit is invalid.");
@@ -201,8 +223,13 @@ export async function request({
     headers.set("Content-Type", mediaType);
   }
   const transientRead = (retryTransient || githubOidc) && method === "GET";
+  const retriesTransient = transientRead || idempotent !== undefined;
   const deadline =
-    performance.now() + (transientRead ? TRANSIENT_READ_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
+    performance.now() +
+    (idempotent?.timeoutMs ?? (transientRead ? TRANSIENT_READ_TIMEOUT_MS : REQUEST_TIMEOUT_MS));
+  const attemptTimeout =
+    idempotent?.attemptTimeoutMs ??
+    (transientRead ? TRANSIENT_READ_ATTEMPT_TIMEOUT_MS : Number.POSITIVE_INFINITY);
   const canWait = (attempt: number, delay: number) =>
     attempt < MAX_REQUEST_ATTEMPTS && performance.now() + delay < deadline;
   const wait = async (delay: number) => {
@@ -232,9 +259,7 @@ export async function request({
       }
       onAttempt?.();
       // The signal also ends a body that stops after the headers.
-      const signal = AbortSignal.timeout(
-        transientRead ? Math.min(remaining, TRANSIENT_READ_ATTEMPT_TIMEOUT_MS) : remaining,
-      );
+      const signal = AbortSignal.timeout(Math.min(remaining, attemptTimeout));
       let response: Response;
       try {
         response = await fetch(url, {
@@ -250,7 +275,7 @@ export async function request({
         }
       } catch (error) {
         const delay = backoffDelay(attempt);
-        if (!transientRead || !transientNetworkError(error) || !canWait(attempt, delay)) {
+        if (!retriesTransient || !transientNetworkError(error) || !canWait(attempt, delay)) {
           throw error;
         }
         await wait(delay);
@@ -289,7 +314,21 @@ export async function request({
         );
       }
       const delay = retryDelay(response.headers.get("Retry-After"));
-      if (transientRead && isTransientStatus(response.status, error)) {
+      const pendingWork =
+        idempotent !== undefined &&
+        response.status === 503 &&
+        error?.code === idempotent.pendingCode;
+      if (pendingWork) {
+        const pendingDelay = Math.max(delay ?? 0, PENDING_WORK_DELAY_MS);
+        if (performance.now() + pendingDelay < deadline) {
+          await wait(pendingDelay);
+          // Only the deadline limits the waits for pending work. They do not
+          // count as failed attempts.
+          attempt -= 1;
+          continue;
+        }
+      }
+      if (retriesTransient && isTransientStatus(response.status, error)) {
         const transientDelay = delay ?? backoffDelay(attempt);
         if (canWait(attempt, transientDelay)) {
           await wait(transientDelay);

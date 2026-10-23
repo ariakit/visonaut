@@ -3352,6 +3352,80 @@ describe("a Submit that the signed identity alone proves", () => {
     expect(githubPaths.filter((path) => path.includes("/contents/"))).toEqual([]);
   });
 
+  it("accepts a repeated begin call that runs with the first one", async () => {
+    const test = await fixture();
+    const { workflowRunId, testedSha } = test.manifest.run;
+    const { token } = await submitJob({ test });
+    const base = `/repos/ariakit/ariakit/actions/runs/${workflowRunId}`;
+    const jobsPath = `${base}/attempts/1/jobs?per_page=100&page=1`;
+    const { jobs } = object(test.githubResponses.get(jobsPath));
+    if (!Array.isArray(jobs)) throw new Error("Expected the jobs of the attempt.");
+    const plan = {
+      id: 12345,
+      run_id: Number(workflowRunId),
+      run_attempt: 1,
+      name: "Plan",
+      head_sha: test.verified.sourceHead,
+      status: "completed",
+      conclusion: "success",
+      started_at: "2026-10-23T18:00:01Z",
+      steps: [{ name: "Plan CI", status: "completed", conclusion: "success" }],
+    };
+    test.githubResponses.set(jobsPath, { total_count: jobs.length + 1, jobs: [plan, ...jobs] });
+    test.githubResponses.set(`${base}/attempts/1`, {
+      ...object(test.githubResponses.get(`${base}/attempts/1`)),
+      run_started_at: "2026-10-23T18:00:00Z",
+    });
+    await database
+      .prepare(
+        "UPDATE pre_run_checks SET plan_visual_required=NULL,plan_reported_at=NULL,plan_job_id=NULL WHERE workflow_run_id=?",
+      )
+      .bind(workflowRunId)
+      .run();
+    // The other begin call records the same Plan job just before this one does.
+    // The binding is a runtime proxy, so a wrapper replaces it for this call.
+    const original = test.context.database;
+    const prepare = original.prepare.bind(original);
+    let raced = false;
+    const racingPrepare = (query: string) => {
+      const statement = prepare(query);
+      if (!query.startsWith("UPDATE pre_run_checks SET plan_visual_required=1")) {
+        return statement;
+      }
+      return {
+        bind: (...values: unknown[]) => ({
+          first: async () => {
+            raced = true;
+            await prepare(
+              "UPDATE pre_run_checks SET plan_visual_required=1,plan_reported_at=?,plan_job_id='12345' WHERE workflow_run_id=?",
+            )
+              .bind(Date.now(), workflowRunId)
+              .run();
+            return statement.bind(...values).first();
+          },
+        }),
+      };
+    };
+    test.context.database = new Proxy(original, {
+      get(target, property) {
+        if (property === "prepare") return racingPrepare;
+        const value: unknown = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    try {
+      const begun = await send(test, `/v1/runs/${workflowRunId}/begin`, {
+        token: await token(),
+        body: JSON.stringify({ schemaVersion: "1.0", workflowAttempt: 1, testedSha }),
+      });
+      expect(await begun.json()).toMatchObject({ state: "pending" });
+      expect(begun.status).toBe(200);
+      expect(raced).toBe(true);
+    } finally {
+      test.context.database = original;
+    }
+  });
+
   it("finishes an attempt that began before the deploy and holds the pinned values", async () => {
     const digests = await cli054Digests();
     const test = await fixture(undefined, digests);

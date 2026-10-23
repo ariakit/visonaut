@@ -143,9 +143,19 @@ export async function recordRequiredVisualPlan(
     )
     .bind(Date.now(), Date.now(), originalId, row.external_id)
     .first();
-  if (!recorded) {
-    throw new SecurityError("plan_conflict", 409, "The current Plan result changed.");
+  if (recorded) return;
+  // A repeated begin call can run with the first one and record the same Plan
+  // job first. That is the same result, not a changed one.
+  const current = await attemptCheck(context, identity.workflowRunId, identity.workflowAttempt);
+  if (
+    current?.external_id === row.external_id &&
+    current.state === "active" &&
+    current.plan_visual_required === 1 &&
+    current.plan_job_id === originalId
+  ) {
+    return;
   }
+  throw new SecurityError("plan_conflict", 409, "The current Plan result changed.");
 }
 
 export async function completeNoVisualPlan(
