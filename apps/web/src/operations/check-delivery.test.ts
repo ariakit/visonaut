@@ -230,6 +230,188 @@ it("sends an update two minutes after the invocation that claimed it stopped", a
   expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
 });
 
+/** GitHub applies each PATCH before the fixture loses its answer. */
+function applyLostPatches(fixture: Fixture) {
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  fixture.context.github.request = async (path, init) => {
+    if (init?.method === "PATCH") {
+      const check = fixture.state.checks.get(path.split("/").at(-1) ?? "");
+      Object.assign(check ?? {}, JSON.parse(String(init.body)));
+    }
+    return request(path, init);
+  };
+}
+
+function openCheckAlerts(database: TestDatabase) {
+  return database.connection
+    .prepare(
+      "SELECT code FROM operations_events WHERE kind='check-delivery' AND resolved_at IS NULL",
+    )
+    .all();
+}
+
+/** A shown first result, then a Reject whose PATCH gets no answer, so the check is locked. */
+async function lockAfterReject(database: TestDatabase, fixture: Fixture) {
+  await captured(fixture.context);
+  await addUndecidedChange(database, "comparison-run");
+  const patches = shownPatches(fixture);
+  await deliverGitHubStatuses(fixture.context);
+  fixture.state.losePatch = true;
+  await reject(fixture, "run", 0);
+  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
+  fixture.state.losePatch = false;
+  return patches;
+}
+
+// The lease of the test budget (1 minute), and then one more lease of 2 minutes.
+const lockReleaseTime = 3 * 60 * 1000;
+
+it("releases the lock of a PATCH that GitHub did not apply, and sends the newest update", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const patches = await lockAfterReject(database, fixture);
+  await reject(fixture, "run", 1);
+
+  fixture.state.time += lockReleaseTime - 1;
+  const early = await deliverGitHubStatuses(fixture.context);
+
+  expect(early).toMatchObject({ completed: [], attention: ["1"] });
+
+  fixture.state.time += 1;
+  const late = await deliverGitHubStatuses(fixture.context);
+
+  expect(late).toMatchObject({ completed: ["1"], attention: [] });
+  expect(patches.map((patch) => patch.output.title)).toEqual([
+    "1 change needs review",
+    "2 changes rejected",
+  ]);
+  expect(readDelivery(database)).toMatchObject({
+    ambiguous: 0,
+    lease_token: null,
+    state: "complete",
+  });
+  expect(openCheckAlerts(database)).toEqual([]);
+});
+
+it("settles a locked update that GitHub applied, and sends no PATCH again", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await captured(fixture.context);
+  await addUndecidedChange(database, "comparison-run");
+  await deliverGitHubStatuses(fixture.context);
+  applyLostPatches(fixture);
+  fixture.state.losePatch = true;
+  await reject(fixture, "run", 0);
+  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
+  fixture.state.losePatch = false;
+  const requests = fixture.state.patches;
+
+  fixture.state.time += lockReleaseTime;
+  const report = await deliverGitHubStatuses(fixture.context);
+
+  expect(report).toMatchObject({ completed: [], attention: [] });
+  expect(fixture.state.patches).toBe(requests);
+  expect(fixture.state.checks.get("1")).toMatchObject({
+    output: { title: "1 change rejected" },
+  });
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+  expect(
+    database.connection
+      .prepare("SELECT desired_revision - delivered_revision AS behind FROM work_checks")
+      .get(),
+  ).toEqual({ behind: 0 });
+  expect(openCheckAlerts(database)).toEqual([]);
+});
+
+it("settles a locked pending update that GitHub shows as a check in progress", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await reserve(fixture.context);
+  applyLostPatches(fixture);
+  fixture.state.losePatch = true;
+  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
+  fixture.state.losePatch = false;
+  expect(fixture.state.checks.get("1")).toMatchObject({
+    status: "in_progress",
+    output: { title: "Capturing screenshots" },
+  });
+
+  fixture.state.time += lockReleaseTime;
+  const report = await deliverGitHubStatuses(fixture.context);
+
+  expect(report).toMatchObject({ completed: [], attention: [] });
+  expect(fixture.state.patches).toBe(1);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+});
+
+it("releases the lock of the first update when GitHub still shows the text of its creation", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await reserve(fixture.context);
+  const patches = shownPatches(fixture);
+  fixture.state.losePatch = true;
+  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
+  fixture.state.losePatch = false;
+  expect(fixture.state.checks.get("1")).toMatchObject({
+    output: { title: "Checking visual coverage" },
+  });
+
+  fixture.state.time += lockReleaseTime;
+  const report = await deliverGitHubStatuses(fixture.context);
+
+  expect(report).toMatchObject({ completed: ["1"], attention: [] });
+  expect(patches.map((patch) => patch.output.title)).toEqual(["Capturing screenshots"]);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+  expect(openCheckAlerts(database)).toEqual([]);
+});
+
+it("keeps the lock when the read of the check fails, or the check has another commit", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const patches = await lockAfterReject(database, fixture);
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  fixture.context.github.request = async (path, init) => {
+    if (path === checkPath && !init?.method) {
+      throw new GitHubUnavailableError(502);
+    }
+    return request(path, init);
+  };
+
+  fixture.state.time += lockReleaseTime;
+  const failedRead = await deliverGitHubStatuses(fixture.context);
+
+  expect(failedRead).toMatchObject({
+    completed: [],
+    attention: ["1"],
+    causes: [expect.objectContaining({ code: "github_unavailable", upstreamStatus: 502 })],
+  });
+
+  fixture.context.github.request = request;
+  Object.assign(fixture.state.checks.get("1") ?? {}, { head_sha: "another" });
+  const otherCommit = await deliverGitHubStatuses(fixture.context);
+
+  expect(otherCommit).toMatchObject({ completed: [], attention: ["1"] });
+  expect(patches).toHaveLength(1);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 1, state: "sending" });
+  expect(openCheckAlerts(database)).toEqual([{ code: "ambiguous" }]);
+});
+
+it("keeps the lock when GitHub shows a text that the service did not send", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const patches = await lockAfterReject(database, fixture);
+  const check = fixture.state.checks.get("1");
+  Object.assign(check ?? {}, { output: { title: "Edited", summary: "Edited" } });
+
+  fixture.state.time += lockReleaseTime;
+  const report = await deliverGitHubStatuses(fixture.context);
+
+  expect(report).toMatchObject({ completed: [], attention: ["1"] });
+  expect(patches).toHaveLength(1);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 1, state: "sending" });
+  expect(openCheckAlerts(database)).toEqual([{ code: "ambiguous" }]);
+});
+
 // D-OPS-02: a review that waits for a maintainer must block the merge.
 it("keeps the check completed with the conclusion failure while a review waits", async () => {
   using database = new TestDatabase();

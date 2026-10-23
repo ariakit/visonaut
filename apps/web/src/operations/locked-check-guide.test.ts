@@ -26,6 +26,14 @@ function readLock(database: TestDatabase) {
     .get();
 }
 
+function openCheckAlerts(database: TestDatabase) {
+  return database.connection
+    .prepare(
+      "SELECT code FROM operations_events WHERE kind='check-delivery' AND resolved_at IS NULL",
+    )
+    .all();
+}
+
 function runGuide(database: TestDatabase, kind: "SELECT" | "UPDATE") {
   for (const sql of guideSql().filter((entry) => entry.startsWith(kind))) {
     if (kind === "SELECT") {
@@ -36,13 +44,40 @@ function runGuide(database: TestDatabase, kind: "SELECT" | "UPDATE") {
   }
 }
 
-it("has two read commands and two unlock commands, in this order", () => {
+it("has two read commands, two unlock commands, and one command for a dead update, in this order", () => {
   expect(guideSql().map((sql) => sql.split(" ").slice(0, 2).join(" "))).toEqual([
     "SELECT id,",
     "SELECT revision,",
     "UPDATE work_status_outbox",
     "UPDATE work_checks",
+    "UPDATE work_status_outbox",
   ]);
+});
+
+it("sends an update again after a release on its last attempt, with the command of the guide", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await reserve(fixture.context);
+  fixture.state.losePatch = true;
+  // Each pass after the lease and one more lease releases the lock, and the
+  // lost PATCH of the next attempt locks the check again.
+  const lockReleaseTime = 3 * 60 * 1000;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await deliverGitHubStatuses(fixture.context);
+    fixture.state.time += lockReleaseTime;
+  }
+  fixture.state.losePatch = false;
+  expect(readLock(database)).toMatchObject({ ambiguous: 0, request_started: 0, state: "dead" });
+  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
+  expect(openCheckAlerts(database)).toEqual([{ code: "exhausted" }]);
+
+  const [, , , , sendAgain] = guideSql();
+  database.connection.exec(sendAgain ?? "");
+  expect(readLock(database)).toMatchObject({ state: "pending" });
+
+  expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual(["1"]);
+  expect(readLock(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+  expect(openCheckAlerts(database)).toEqual([]);
 });
 
 it("unlocks a check after a PATCH with no answer, and the next pass sends the update", async () => {

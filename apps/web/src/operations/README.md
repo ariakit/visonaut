@@ -31,6 +31,15 @@ Closed runs keep their identity, status, all actor decisions, exact tuples, expl
 
 The service sends the result of a run to GitHub as the text of one required check. Each change of that result is one PATCH request. A check is locked when the service cannot know if such a PATCH reached GitHub. A locked check gets no update. It keeps the title and the conclusion of the last update that reached GitHub, also after a Reject or a new decision. The two tables that hold the lock are `work_checks` and `work_status_outbox`.
 
+### Release by the service
+
+Usually the service removes the lock itself. When the lease of the update ended 2 minutes ago or more, each pass reads the check on GitHub. A PATCH that got no answer stops after 15 seconds, so after this time it cannot change the check. The pass then compares the text, the conclusion, and the link of the check with two updates:
+
+- The locked update. The PATCH reached GitHub. The service records the update as delivered.
+- The last update that GitHub confirmed (`delivered_revision`), or the text "Checking visual coverage" of a new check when GitHub confirmed no update. The PATCH did not reach GitHub. The update becomes due again, or `obsolete` when a newer update exists. The release counts the attempt, so a send that fails each time does not loop: after the last attempt, the update is `dead`, and the alert has the code `exhausted`.
+
+In both cases, the lock and its alert go away, and the pass sends the newest update when it is due. A release on the last attempt ends the update `dead` instead: see "Send a dead update again". Do the procedure below only when the alert stays: the check shows another text, the read of the check fails, or the check does not belong to the App and the tested commit. The `causes` field of the `operations_pass` log has the cause of a failed read.
+
 A restore of the database also sets `ambiguous = 1` for each check and makes its unfinished updates `obsolete`. Do not use this section for that state: follow step 5 of "Native database recovery".
 
 ### See the lock
@@ -56,7 +65,7 @@ The identity test of the check also sets no lock. The sender reads the check bef
 
 ### Unlock
 
-Wait until `lease_until` has passed. The lease of a check lasts 2 minutes. Unlocking is then safe in practice. If a very late request of the first send reaches GitHub after the new one, the check shows an older text until the next change of the result. The sender reads the check on GitHub first. For the check of a run, it sends no PATCH when the check already shows the same completed result. It sends the PATCH again when the result is not there.
+Wait until `lease_until` has passed. The lease of a check lasts 2 minutes. Unlocking is then safe in practice. First compare the check on GitHub with the update of `delivered_revision` and with the locked update. When `delivered_revision` is empty, compare it with the text "Checking visual coverage" of a new check. If it shows one of them, the next pass removes the lock: wait for it. If a very late request of the first send reaches GitHub after the new one, the check shows an older text until the next change of the result. The sender reads the check on GitHub first. For the check of a run, it sends no PATCH when the check already shows the same completed result. It sends the PATCH again when the result is not there.
 
 If the run of the check is closed or replaced, the update is not sent, and the first status or recovery pass after the change closes the alert.
 
@@ -68,6 +77,14 @@ pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env producti
 ```
 
 The first command changes nothing for a check that has a lease and no lock: a sender can be at work. Run it again after the lease has ended and a pass has run.
+
+### Send a dead update again
+
+A release on the last attempt of the update ends it `dead`. The next pass shows the alert with the code `exhausted`, and the check on GitHub keeps its old text until the next change of the result. Read `last_error` with the second read command, and repair its cause first. When it is empty, a Worker stopped during the send: run the command when the platform problem has ended. Then replace `CHECK_ID` and run this command. It makes the newest update due again with all its attempts. It changes nothing for an older update, or for a check that has a lock or a lease. The identity test of "The lock that remains" also ends an update `dead`: do not use this command for it before you know why the check belongs to another commit, name, or App.
+
+```sh
+pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "UPDATE work_status_outbox SET state = 'pending', attempts = 0, available_at = 0 WHERE check_id = 'CHECK_ID' AND state = 'dead' AND revision = (SELECT desired_revision FROM work_checks WHERE id = 'CHECK_ID' AND ambiguous = 0 AND lease_token IS NULL)"
+```
 
 ### Check the result
 
