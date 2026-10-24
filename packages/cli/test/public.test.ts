@@ -80,6 +80,25 @@ it("reports only the native Plan's no-visual result without capture credentials"
   expect(result.stdout + result.stderr).not.toContain("secret");
 });
 
+it("retries the no-visual report after a network error", async () => {
+  const paths: string[] = [];
+  vi.stubGlobal("fetch", async (input: URL | string) => {
+    const url = new URL(input);
+    paths.push(url.pathname);
+    if (url.hostname.endsWith(".actions.githubusercontent.com")) {
+      return Response.json({ value: "oidc-secret" });
+    }
+    if (paths.filter((path) => path === "/v1/plan").length === 1) {
+      throw new TypeError("network-secret");
+    }
+    return new Response(null, { status: 204 });
+  });
+  const result = await execute(["submit", "--no-visual"]);
+  expect(result.code).toBe(0);
+  expect(paths).toEqual(["/id-token", "/v1/plan", "/v1/plan"]);
+  expect(result.stdout + result.stderr).not.toContain("secret");
+});
+
 it.each([{ GITHUB_RUN_ID: "0" }, { GITHUB_RUN_ATTEMPT: "invalid" }, { GITHUB_SHA: "main" }])(
   "rejects invalid no-visual run identity before OIDC: %j",
   async (invalid) => {

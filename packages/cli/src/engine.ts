@@ -32,7 +32,7 @@ import type { Preparation } from "./bundle-submit.js";
 import { captureLabel, CliError, protocolVersion, record, text } from "./errors.js";
 import type { ExitCode } from "./errors.js";
 import { readImageFile } from "./files.js";
-import { githubToken, request, serverOrigin } from "./http.js";
+import { githubToken, REPEATABLE_WRITE, request, serverOrigin } from "./http.js";
 import { compareCaptures, comparisonTimings, maskPath } from "./local-comparison.js";
 import { CAPABILITY_HEADROOM_MS, openSession, SUBMIT_SHARD_KEY } from "./session.js";
 import type { Session } from "./session.js";
@@ -47,6 +47,9 @@ const DEFAULT_CAPTURE_DIRECTORY = "visonaut";
 // Keep at most four byte-limited reuse requests in flight.
 const REUSE_PAGE_CONCURRENCY = 4;
 const IMAGE_PUT_CONCURRENCY = 5;
+// An image PUT of a passing Submit took about 0.7 s, so a PUT that lasts 10 s
+// is hung. It ends and retries within the 30 s deadline.
+const IMAGE_PUT_ATTEMPT_TIMEOUT_MS = 10_000;
 
 const HELP = `Usage:
   visonaut begin --run <GitHub-run-id> [--server <origin>]
@@ -322,6 +325,7 @@ async function stagePage({
       body,
       mediaType: "application/json",
       maximumResponseBytes,
+      idempotent: REPEATABLE_WRITE,
     });
     const declaration = pageDeclaration(response, pageDigest, sizes);
     if (declaration.uploads.some((upload) => completed.has(upload.imageDigest))) {
@@ -375,6 +379,7 @@ async function stagePage({
           }),
           mediaType: "application/json",
           retryUnavailable: true,
+          idempotent: REPEATABLE_WRITE,
         });
         return reusedImages(reuseResponse, new Set(proofs.map((proof) => proof.imageDigest)));
       };
@@ -432,6 +437,7 @@ async function stagePage({
             mediaType: "image/png",
             empty: true,
             retryUnavailable: true,
+            idempotent: { ...REPEATABLE_WRITE, attemptTimeoutMs: IMAGE_PUT_ATTEMPT_TIMEOUT_MS },
             onAttempt: () => {
               totals.putBytes += bytes.byteLength;
             },
@@ -680,6 +686,7 @@ async function submitPages({
     method: "POST",
     mediaType: "application/json",
     body: canonicalJson(index),
+    idempotent: REPEATABLE_WRITE,
   });
   stagedPages({ value: response, runId: session.runId, manifestDigest: receipt.manifestDigest });
   const submitted = await submitRun({
@@ -811,6 +818,7 @@ async function submitRun({
     method: "POST",
     mediaType: "application/json",
     body: JSON.stringify({ schemaVersion: SCHEMA_VERSION, workflowAttempt: attempt }),
+    idempotent: REPEATABLE_WRITE,
   });
   return submittedRun(response);
 }

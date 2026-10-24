@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { combineBundles } from "./bundles.js";
 import { CliError } from "./errors.js";
-import { githubToken, request, serverOrigin } from "./http.js";
+import { githubToken, REPEATABLE_WRITE, request, serverOrigin } from "./http.js";
 import { downloadCaptures } from "./github-artifacts.js";
 import { bindSubmission } from "./signed-context.js";
 
@@ -67,6 +67,7 @@ export async function submitWithoutVisuals(environment: Record<string, string | 
       planResult: "success",
       visualRequired: false,
     }),
+    idempotent: REPEATABLE_WRITE,
   });
 }
 
