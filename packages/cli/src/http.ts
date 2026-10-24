@@ -68,12 +68,12 @@ interface RequestParams {
    * as a transient read, and a 500 counts as transient too.
    */
   githubOidc?: boolean;
-  /** The service gives the same result to the same POST again, so the POST retries. */
+  /** The service gives the same result to the same write again, so the write retries. */
   idempotent?: IdempotentRetry;
 }
 
 /**
- * The retry of a POST that the service can repeat. It retries the failures of a transient read,
+ * The retry of a write that the service can repeat. It retries the failures of a transient read,
  * with at most 5 attempts. The service can still run an attempt that ended at its time limit, so a
  * 503 with `pendingCode` waits and retries until the deadline, and does not count as an attempt.
  * The code can also mean work that does not end before the deadline. Then the request fails at
@@ -85,8 +85,17 @@ interface IdempotentRetry {
   /** The time limit of one attempt. */
   attemptTimeoutMs: number;
   /** The code of a 503 that means that an earlier attempt still holds the work. */
-  pendingCode: string;
+  pendingCode?: string;
 }
+
+/**
+ * The retry of a write that the service answers the same way again. It keeps the 30 s deadline, so
+ * a write that starts with 45 s of capability left ends before the capability expires.
+ */
+export const REPEATABLE_WRITE: IdempotentRetry = {
+  timeoutMs: REQUEST_TIMEOUT_MS,
+  attemptTimeoutMs: Number.POSITIVE_INFINITY,
+};
 
 async function responseBytes(
   response: Response,
@@ -315,7 +324,7 @@ export async function request({
       }
       const delay = retryDelay(response.headers.get("Retry-After"));
       const pendingWork =
-        idempotent !== undefined &&
+        idempotent?.pendingCode !== undefined &&
         response.status === 503 &&
         error?.code === idempotent.pendingCode;
       if (pendingWork) {

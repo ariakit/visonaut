@@ -308,24 +308,32 @@ describe("public commands under temporary service backpressure", () => {
     });
   });
 
+  /** Whether the URL is of this write of `submit --shard`. */
+  const writeSelector = (operation: string) => (url: URL) => {
+    if (operation === "reserve") return url.pathname === "/v1/runs";
+    if (operation === "upload") return url.pathname.startsWith("/v1/uploads/");
+    if (operation === "page") return url.pathname.endsWith("/pages");
+    if (operation === "index") return url.pathname.endsWith("/index");
+    if (operation === "reuse") return url.pathname.endsWith("/reuse");
+    return url.pathname.endsWith("/submit");
+  };
+
   it.each(
-    ["reserve", "page", "upload", "index"].flatMap((operation) => [
+    ["reserve", "page", "reuse", "upload", "index", "submit"].flatMap((operation) => [
       [operation, "502"],
       [operation, "network error"],
     ]),
-  )("does not retry the %s write after a %s", async (operation, failure) => {
+  )("retries the %s write after a %s and completes", async (operation, failure) => {
     const local = await fixture();
     directories.push(local.directory);
-    const selected = (url: URL) =>
-      operation === "reserve"
-        ? url.pathname === "/v1/runs"
-        : operation === "upload"
-          ? url.pathname.startsWith("/v1/uploads/")
-          : url.pathname.endsWith(operation === "page" ? "/pages" : "/index");
+    const selected = writeSelector(operation);
+    let failed = false;
     const service = pageService({
       requestToken: "request-secret",
+      reuse: operation === "reuse",
       respond: (url) => {
-        if (!selected(url)) return;
+        if (failed || !selected(url)) return;
+        failed = true;
         if (failure === "network error") throw new TypeError("network-secret");
         return new Response("<html>Bad gateway</html>", {
           status: 502,
@@ -334,12 +342,35 @@ describe("public commands under temporary service backpressure", () => {
       },
     });
     const result = await submitShard(prepared, [local], environment);
-    expect(result.code).toBe(1);
-    expect(result.stderr).toContain(
-      failure === "502" ? "HTTP 502" : "The request failed, timed out, or redirected",
-    );
-    expect(result.stderr).not.toContain("network-secret");
-    expect(service.requests.filter(({ url }) => selected(url))).toHaveLength(1);
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(service.requests.filter(({ url }) => selected(url))).toHaveLength(2);
+  });
+
+  it("ends a hung image PUT at 10 s and retries it", async () => {
+    const local = await fixture();
+    directories.push(local.directory);
+    const limits: number[] = [];
+    const realTimeout = AbortSignal.timeout.bind(AbortSignal);
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      limits.push(milliseconds);
+      return realTimeout(milliseconds);
+    });
+    const selected = writeSelector("upload");
+    const putLimits: (number | undefined)[] = [];
+    pageService({
+      requestToken: "request-secret",
+      respond: (url) => {
+        if (!selected(url)) return;
+        // The CLI sets the limit of an attempt just before its fetch.
+        putLimits.push(limits.at(-1));
+        if (putLimits.length > 1) return;
+        throw new DOMException("The operation timed out", "TimeoutError");
+      },
+    });
+    const result = await submitShard(prepared, [local], environment);
+    expect(result.code).toBe(0);
+    expect(putLimits).toEqual([10_000, 10_000]);
   });
 
   it("replays exact image bytes through HTTP even if the local file changes", async () => {

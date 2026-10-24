@@ -6,7 +6,7 @@ import {
 } from "@visonaut/protocol";
 import type { CaptureReference, ReservePagesResponse, RunProvenance } from "@visonaut/protocol";
 import { CliError, protocolVersion, record, ServiceRefusal, text } from "./errors.js";
-import { githubToken, request } from "./http.js";
+import { githubToken, REPEATABLE_WRITE, request } from "./http.js";
 
 // Leave a full 30-second request deadline plus clock/scheduling headroom.
 export const CAPABILITY_HEADROOM_MS = 45_000;
@@ -87,6 +87,7 @@ async function reserve({
       shardKey: SUBMIT_SHARD_KEY,
       comparisonMode: CAPTURE_PAGES_MODE,
     }),
+    idempotent: REPEATABLE_WRITE,
   });
   const reservation = reservedRun(response);
   secrets.add(reservation.capability);
