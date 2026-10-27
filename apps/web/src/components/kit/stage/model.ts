@@ -123,6 +123,16 @@ export function getStageMode(subject: StageSubject, mode: ViewMode): ViewMode {
   return mode;
 }
 
+/**
+ * True when the mask switch has something to show: the stored mask, or the
+ * band of a size change, which has no stored mask.
+ */
+export function hasMaskLayer(subject: Pick<StageSubject, "current" | "mask" | "resize">) {
+  // The mask and the band lie on the current image.
+  if (subject.current?.expired) return false;
+  return !!subject.mask || !!subject.resize;
+}
+
 /** The name of each mode, for a live region and for a menu. */
 export const modeNames: Record<ViewMode, string> = {
   new: "Current",

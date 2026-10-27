@@ -1582,12 +1582,48 @@ test("a variant whose size changed says Size changed with the two sizes", async 
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
   // A band marks the rows that only the current image has. There is no
-  // mask, so the switch is off, and D does not hide the band.
+  // mask, but the switch hides the band, so that all the pixels show.
   const band = page.locator("[data-stage-pane] [data-size-band]");
   await expect(band).toHaveCount(1);
-  await expect(maskSwitch(page)).toHaveAttribute("aria-disabled", "true");
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("d");
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "false");
+  await expect(band).toHaveCount(0);
+  await expect(
+    stage(page)
+      .getByRole("status")
+      .filter({ hasText: /^Current, mask off$/ }),
+  ).toHaveCount(1);
   await page.keyboard.press("d");
   await expect(band).toHaveCount(1);
+});
+
+test("a size change with an expired current image has no mask switch", async ({ page }) => {
+  // The image route answers 404 for an image with no bytes.
+  await page.route("**/expired.svg", (route) => route.fulfill({ status: 404 }));
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[0]?.variants[0];
+    if (!variant?.candidate) throw new Error("Expected a current image.");
+    variant.candidate.url = "/expired.svg";
+    variant.candidate.height = 420;
+    variant.candidate.expired = true;
+    variant.diff = null;
+    variant.maskExpected = false;
+    window.reviewFixture.update(model);
+  });
+  await expect(
+    stage(page).getByRole("status").filter({ hasText: "Image history expired" }),
+  ).toBeVisible();
+  // The band lies on the current image, so the switch has nothing to hide.
+  await expect(page.locator("[data-stage-pane] [data-size-band]")).toHaveCount(0);
+  await expect(maskSwitch(page)).toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("d");
+  await expect(
+    stage(page)
+      .getByRole("status")
+      .filter({ hasText: /^Current$/ }),
+  ).toHaveCount(1);
 });
 
 test("the pixel line has the singular for one pixel, a ratio below 0.01%, and no count for a removal", async ({

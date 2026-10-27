@@ -12,7 +12,7 @@ import { formatCount, formatRatio } from "../components/kit/format.ts";
 import { getChipState, StateChip, useLateLoad } from "../components/kit/stage/chip.tsx";
 import { ReviewStage } from "../components/kit/stage/stage.tsx";
 import { formatSize } from "../components/kit/stage/geometry.ts";
-import { getStageSubject } from "../components/kit/stage/model.ts";
+import { getStageSubject, hasMaskLayer } from "../components/kit/stage/model.ts";
 import { useStageView } from "../components/kit/stage/view.ts";
 import type { StageEngine } from "../components/kit/stage/view.ts";
 import { useStoredView } from "../components/kit/view-store.ts";
@@ -94,9 +94,10 @@ export function useStageHost({
       s: () => setMode("side"),
       w: () => setMode("swipe"),
       o: () => setMode("overlay"),
-      // A variant with no mask keeps the switch, as its disabled button does.
+      // A variant with no mask and no size band keeps the switch, as its
+      // disabled button does.
       d: () => {
-        if (!view.subject.mask) return;
+        if (!hasMaskLayer(view.subject)) return;
         stored.setMask(!stored.mask);
       },
     },
