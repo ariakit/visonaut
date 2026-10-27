@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
+import { openPopover } from "./popover.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
 const hour = 60 * 60_000;
@@ -183,7 +184,7 @@ test("the result filter counts a closed run by its last result, and the filter f
     }),
   ]);
   const filter = page.getByRole("combobox", { name: "Result" });
-  await filter.click();
+  await openPopover(filter);
   await expect(page.getByRole("option")).toHaveText(["All results3", "Passed2", "Replaced1"]);
   await page.getByRole("option", { name: /^Replaced/ }).click();
   await expect.poll(() => location(page)).toBe("/history?state=superseded");
@@ -200,7 +201,7 @@ test("the sort is a search parameter, and the oldest day comes first with it", a
     pull(7001, { createdAt: now - 30 * hour }),
   ]);
   await expect(rows(page)).toHaveText([/pull request 7002/, /pull request 7001/]);
-  await page.getByRole("combobox", { name: "Sort" }).click();
+  await openPopover(page.getByRole("combobox", { name: "Sort" }));
   await page.getByRole("option", { name: "Oldest" }).click();
   await expect.poll(() => location(page)).toBe("/history?sort=oldest");
   await expect(rows(page)).toHaveText([/pull request 7001/, /pull request 7002/]);

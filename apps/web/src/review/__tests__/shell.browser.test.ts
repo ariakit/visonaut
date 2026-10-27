@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { compactReviewModel } from "../compact-model.ts";
 import { fixtureModel } from "./fixture-model.ts";
+import { openPopover } from "./popover.ts";
 import { readAgain } from "./visibility.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
@@ -365,7 +366,7 @@ test("a sign-out from the Queue loads the same URL again and shows the sign-in p
     });
     await page.goto(entry("/"));
     await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
-    await page.getByRole("button", { name: "Account menu" }).click();
+    await openPopover(page.getByRole("button", { name: "Account menu" }));
     const load = page.waitForEvent("load");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
     await load;
@@ -430,7 +431,7 @@ test("a failed sign-out does not open the account menu of the next page", async 
   });
   await page.goto(entry("/"));
   const account = page.getByRole("button", { name: "Account menu" });
-  await account.click();
+  await openPopover(account);
   const menu = page.getByRole("dialog");
   await menu.getByRole("button", { name: "Sign out", exact: true }).click();
   // A new error keeps the menu open and shows in it.

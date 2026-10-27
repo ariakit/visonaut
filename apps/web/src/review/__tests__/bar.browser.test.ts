@@ -4,6 +4,7 @@ import { compactReviewModel } from "../compact-model.ts";
 import { colorOf } from "./colors.ts";
 import type {} from "./fixture-api.ts";
 import { fixtureModel } from "./fixture-model.ts";
+import { openPopover } from "./popover.ts";
 
 // The decision bar with one status line (#275, step 1).
 
@@ -104,10 +105,11 @@ for (const path of ["Shift+A", "menu item"] as const) {
     if (path === "Shift+A") {
       await page.keyboard.press("Shift+A");
     } else {
-      await page
-        .getByRole("region", { name: "Review actions", exact: true })
-        .getByRole("button", { name: "More", exact: true })
-        .click();
+      await openPopover(
+        page
+          .getByRole("region", { name: "Review actions", exact: true })
+          .getByRole("button", { name: "More", exact: true }),
+      );
       await page.getByRole("menuitem", { name: "Approve all 7" }).click();
     }
     await expect(statusLine(page)).toHaveText("Saved. 7 variants approved.");

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { openPopover } from "./popover.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
 
@@ -31,7 +32,7 @@ const runs = [
 
 /** Selects one option of the result select of History. */
 async function selectResult(page: Page, label: string) {
-  await page.getByRole("combobox", { name: "Result" }).click();
+  await openPopover(page.getByRole("combobox", { name: "Result" }));
   await page.getByRole("option", { name: new RegExp(`^${label}`) }).click();
 }
 

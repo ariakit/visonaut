@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type {} from "./fixture-api.ts";
+import { openPopover } from "./popover.ts";
 
 // The run approval (#275, step 4): one menu item with no key, and a
 // confirmation that names the counts. The fixture has 9 changes with no
@@ -38,7 +39,7 @@ function runItem(page: Page) {
 }
 
 async function confirmRunApproval(page: Page, heading = "Approve 9 changes?") {
-  await moreButton(page).click();
+  await openPopover(moreButton(page));
   await runItem(page).click();
   const dialog = page.getByRole("dialog", { name: heading, exact: true });
   await expect(dialog).toBeVisible();
@@ -62,7 +63,7 @@ test("the confirmation names the changes and the ones not opened, and one Undo r
     window.reviewFixture.update(model);
   });
   await expect(page.getByRole("link", { name: /^Wide\. Rejected/ })).toBeVisible();
-  await moreButton(page).click();
+  await openPopover(moreButton(page));
   const item = runItem(page);
   // The item has no key.
   await expect(item.locator("kbd")).toHaveCount(0);
@@ -128,7 +129,7 @@ test("a waiting run approval blocks the other decisions", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await page.keyboard.press("a");
   await expect(line).toHaveText("Nothing changed. Wait for the current command to finish.");
-  await moreButton(page).click();
+  await openPopover(moreButton(page));
   await expect(runItem(page)).toBeDisabled();
   await page.keyboard.press("Escape");
   await page.evaluate(() => window.reviewFixture.resolve());
@@ -142,7 +143,7 @@ test("the run approval waits while a decision saves", async ({ page }) => {
   await page.keyboard.press("a");
   await expect(statusLine(page)).toHaveText("Saving…");
   // Each queued decision changes the run revision that the approval names.
-  await moreButton(page).click();
+  await openPopover(moreButton(page));
   await expect(runItem(page)).toBeDisabled();
   await runItem(page).click({ force: true });
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -153,7 +154,7 @@ test("the run approval waits while a decision saves", async ({ page }) => {
     { targets: [{ id: "row-React" }] },
   ]);
   // After the save, the approval covers the 8 changes that are left.
-  await moreButton(page).click();
+  await openPopover(moreButton(page));
   await expect(runItem(page)).toBeEnabled();
   await runItem(page).click();
   await expect(page.getByRole("dialog", { name: "Approve 8 changes?", exact: true })).toBeVisible();
