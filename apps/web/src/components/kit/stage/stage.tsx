@@ -18,7 +18,7 @@ import { ImageLabel, MaskPicture, Picture, PixelGrid, RegionBoxes, SizeBand } fr
 import type { Edges, PictureStatus } from "./canvas.tsx";
 import { clamp } from "./geometry.ts";
 import { usePanGesture, useStageWheel } from "./gestures.ts";
-import { modeNames } from "./model.ts";
+import { hasMaskLayer, modeNames } from "./model.ts";
 import type { StageEngine } from "./view.ts";
 
 // The layout of a pane, in em of the stage. The pane has `p-3 pt-10`: the
@@ -277,10 +277,9 @@ function StagePane({
   const currentStatus = getStatus(images.candidate);
   // The marks lie on the current image where it shows, after it is there.
   // The hidden current image of the first pane of two panes has none. The
-  // mask switch turns the boxes off with the mask. The band of a size change
-  // has no mask, so it stays.
-  const shownCurrent = showsCurrent && currentStatus === "ready";
-  const marked = mask && shownCurrent;
+  // mask switch turns the boxes and the band of a size change off with the
+  // mask, so that it can show all the pixels.
+  const marked = mask && showsCurrent && currentStatus === "ready";
   const wide = !!pane && bounds.width * scale >= twoSizesWidth * pane.em;
   const cursor = dragging ? "cursor-grabbing" : "cursor-grab";
   return (
@@ -349,7 +348,7 @@ function StagePane({
                 onReport={(result) => onReport("diff", result)}
               />
             )}
-            {shownCurrent && resize && <SizeBand resize={resize} bounds={bounds} />}
+            {marked && resize && <SizeBand resize={resize} bounds={bounds} />}
             {marked && subject.mask && (
               <RegionBoxes
                 regions={view.regions}
@@ -423,7 +422,8 @@ export interface ReviewStageProps extends Omit<FrameProps, "children"> {
  *   `F` and `G` change only the pixels. A click on a box zooms to its
  *   region.
  * - A size change has no mask: a band marks the rows and the columns that
- *   only one image has. The mask switch turns the mask and the boxes off.
+ *   only one image has. The mask switch turns the mask, the boxes, and the
+ *   band off.
  * - Two panes (`side`) put the baseline and the current image side by side.
  *   Both panes show the same place: a pan or a zoom in one moves both.
  * - A swipe shows the baseline before a line and the current image after
@@ -514,7 +514,7 @@ export function ReviewStage({
         </div>
       </div>
       <span role="status" className="sr-only">
-        {`${modeNames[mode]}${subject.mask ? `, mask ${mask ? "on" : "off"}` : ""}`}
+        {`${modeNames[mode]}${hasMaskLayer(subject) ? `, mask ${mask ? "on" : "off"}` : ""}`}
       </span>
     </Well>
   );

@@ -6,6 +6,7 @@ import { cx } from "clava";
 import { useLayoutEffect, useRef } from "react";
 import { ButtonSeparator } from "../../ariakit/components/button.ariakit.react.tsx";
 import { Frame } from "../../ariakit/components/frame.ariakit.react.tsx";
+import { hasMaskLayer } from "../stage/model.ts";
 import type { StageEngine } from "../stage/view.ts";
 import type { StoredView } from "../view-types.ts";
 import { DecisionButton, UndoButton } from "./decisions.tsx";
@@ -141,7 +142,7 @@ export function ReviewBar({
         >
           <ModeButtons stored={view.stored} subject={view.engine.subject} mode={view.engine.mode} />
           <Divider />
-          <MaskToggle stored={view.stored} available={!!view.engine.subject.mask} />
+          <MaskToggle stored={view.stored} available={hasMaskLayer(view.engine.subject)} />
           {/* The divider goes where the row has no room for it, and the
                 zoom then takes a row of its own. */}
           <Divider className="@max-[24.75rem]:hidden" />

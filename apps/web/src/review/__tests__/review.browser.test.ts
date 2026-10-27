@@ -1582,10 +1582,18 @@ test("a variant whose size changed says Size changed with the two sizes", async 
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
   // A band marks the rows that only the current image has. There is no
-  // mask, so the switch is off, and D does not hide the band.
+  // mask, but the switch hides the band, so that all the pixels show.
   const band = page.locator("[data-stage-pane] [data-size-band]");
   await expect(band).toHaveCount(1);
-  await expect(maskSwitch(page)).toHaveAttribute("aria-disabled", "true");
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("d");
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "false");
+  await expect(band).toHaveCount(0);
+  await expect(
+    stage(page)
+      .getByRole("status")
+      .filter({ hasText: /^Current, mask off$/ }),
+  ).toHaveCount(1);
   await page.keyboard.press("d");
   await expect(band).toHaveCount(1);
 });

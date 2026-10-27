@@ -101,12 +101,13 @@ export function ModeButtons({ stored, subject, mode: shown }: ModeButtonsProps) 
 
 export interface MaskToggleProps {
   stored: StoredView;
-  /** False when the variant on screen has no mask: a size change, a new screenshot. */
+  /** False when the variant on screen has no mask and no size band: a new screenshot. */
   available: boolean;
 }
 
 /**
- * Turns the red mask and the boxes of the changed regions off and on (`D`).
+ * Turns the red mask, the boxes of the changed regions, and the band of a
+ * size change off and on (`D`).
  * The mask is a switch, not a mode, so it is a switch here too.
  */
 export function MaskToggle({ stored, available }: MaskToggleProps) {
