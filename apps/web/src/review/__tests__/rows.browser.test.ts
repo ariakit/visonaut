@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import { colorOf } from "./colors.ts";
 import type {} from "./fixture-api.ts";
+import { openPopover } from "./popover.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
 
@@ -66,7 +67,7 @@ for (const scheme of ["light", "dark"] as const) {
         return route.fulfill({ status: 404, json: { error: { code: "not_found" } } });
       });
       await page.goto(`${fixture}?entry=%2F`);
-      await page.getByRole("button", { name: "Account menu", exact: true }).click();
+      await openPopover(page.getByRole("button", { name: "Account menu", exact: true }));
       const menu = page.getByRole("dialog", { name: "Account", exact: true });
       await menu.getByRole("button", { name: "Sign out", exact: true }).click();
       const error = menu.getByRole("alert");

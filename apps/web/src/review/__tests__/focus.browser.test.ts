@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type {} from "./fixture-api.ts";
+import { openPopover } from "./popover.ts";
 
 async function ready(page: Page) {
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
@@ -238,7 +239,7 @@ test("the shortcut switch and the sidebar stay as the reviewer left them after a
   // The keyboard switch is a checkbox of the account menu.
   const account = page.getByRole("button", { name: "Account menu", exact: true });
   const shortcuts = page.getByRole("checkbox", { name: "Shortcuts", exact: true });
-  await account.click();
+  await openPopover(account);
   await expect(shortcuts).toBeChecked();
   await shortcuts.click();
   await page.keyboard.press("Escape");

@@ -3,14 +3,16 @@ import type { Locator, Page, Route } from "@playwright/test";
 import { compactReviewItems, compactReviewModel } from "../compact-model.ts";
 import { previewReviewModel, previewRunId } from "../preview-fixtures.ts";
 import { fixtureModel } from "./fixture-model.ts";
+import { openPopover } from "./popover.ts";
 import { readAgain } from "./visibility.ts";
 
 /** Saves a decision for the whole screenshot from the More menu of the bar. */
 async function decideWholeItem(page: Page, name: string) {
-  await page
-    .getByRole("region", { name: "Review actions", exact: true })
-    .getByRole("button", { name: "More", exact: true })
-    .click();
+  await openPopover(
+    page
+      .getByRole("region", { name: "Review actions", exact: true })
+      .getByRole("button", { name: "More", exact: true }),
+  );
   await page.getByRole("menuitem", { name }).click();
 }
 
@@ -495,7 +497,7 @@ for (const [screen, routeEntry] of [
     );
     const account = page.getByRole("button", { name: "Account menu", exact: true });
     const menu = page.getByRole("dialog", { name: "Account", exact: true });
-    await account.click();
+    await openPopover(account);
     await menu.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect(menu.getByRole("alert")).toHaveText("Sign-out failed. Please try again.");
     await expect(menu.getByRole("button", { name: "Sign out", exact: true })).toBeEnabled();
@@ -504,7 +506,7 @@ for (const [screen, routeEntry] of [
     await page.keyboard.press("Escape");
     await expect(menu).toBeHidden();
     await expect(account).toBeFocused();
-    await account.click();
+    await openPopover(account);
     await expect(menu.getByRole("alert")).toHaveText("Sign-out failed. Please try again.");
     await menu.getByRole("button", { name: "Sign out", exact: true }).click();
     await expect.poll(() => signOutRequests).toBe(2);
@@ -1314,7 +1316,7 @@ function row(scope: Page | Locator, key: string) {
 
 /** Selects an entry of the status select of the list, by the start of its name. */
 async function chooseStatus(page: Page, entry: string) {
-  await page.getByRole("combobox", { name: /^Status: / }).click();
+  await openPopover(page.getByRole("combobox", { name: /^Status: / }));
   await page.getByRole("option", { name: new RegExp(`^${entry}`) }).click();
 }
 

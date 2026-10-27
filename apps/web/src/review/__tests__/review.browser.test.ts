@@ -1,15 +1,17 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import type {} from "./fixture-api.ts";
+import { openPopover } from "./popover.ts";
 
 type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 
 /** Saves a decision for the whole screenshot from the More menu of the bar. */
 async function decideWholeItem(page: Page, name: string) {
-  await page
-    .getByRole("region", { name: "Review actions", exact: true })
-    .getByRole("button", { name: "More", exact: true })
-    .click();
+  await openPopover(
+    page
+      .getByRole("region", { name: "Review actions", exact: true })
+      .getByRole("button", { name: "More", exact: true }),
+  );
   await page.getByRole("menuitem", { name }).click();
 }
 
@@ -33,7 +35,7 @@ async function ready(page: Page) {
 // The keyboard switch is a checkbox of the account menu. The menu closes
 // after the change.
 async function switchShortcuts(page: Page) {
-  await page.getByRole("button", { name: "Account menu", exact: true }).click();
+  await openPopover(page.getByRole("button", { name: "Account menu", exact: true }));
   await page.getByRole("checkbox", { name: "Shortcuts", exact: true }).click();
   await page.keyboard.press("Escape");
 }
@@ -124,7 +126,7 @@ test("a locally matched capture does not show the reference as a new image", asy
 
 test("review surfaces remain dark when the system uses dark mode", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
-  await page.getByRole("button", { name: "Account menu", exact: true }).click();
+  await openPopover(page.getByRole("button", { name: "Account menu", exact: true }));
   await page.getByRole("button", { name: "Keys", exact: true }).click();
   const surfaces = await page.evaluate(() => {
     const sample = (selector: string) => {
@@ -1787,10 +1789,9 @@ test("S shows two panes, W the swipe, and O the overlay, with the mask on the cu
   const shown = current.locator("xpath=ancestor::div[contains(@style, 'clip-path')][1]");
   await expect(shown).toHaveCSS("clip-path", "inset(0px 0px 0px 50%)");
   // A zoom makes the image pannable, so a drag on the line could pan it.
-  await page
-    .getByRole("group", { name: "Zoom" })
-    .getByRole("button", { name: /^Zoom, / })
-    .click();
+  await openPopover(
+    page.getByRole("group", { name: "Zoom" }).getByRole("button", { name: /^Zoom, / }),
+  );
   await page.getByRole("menuitemradio", { name: "200%" }).click();
   await expect(current).toHaveCSS("width", "1200px");
   const handle = page.locator("[data-stage-pane] [data-stage-control]");
@@ -1920,7 +1921,7 @@ test("Undo conflict preserves the selection and later reviewer state", async ({ 
 });
 
 test("help closes with Escape and keeps native focus without rejecting", async ({ page }) => {
-  await page.getByRole("button", { name: "Account menu", exact: true }).click();
+  await openPopover(page.getByRole("button", { name: "Account menu", exact: true }));
   await page.getByRole("button", { name: "Keys", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Review with the keyboard" })).toBeVisible();
   // The help names the keys and the gestures of the stage.
@@ -1952,12 +1953,12 @@ test("the zoom control sets each level, and a narrow window keeps the page width
   await zoom.getByRole("button", { name: "Zoom in" }).click();
   await expect(zoom.getByRole("button", { name: "Zoom, 200%" })).toBeVisible();
   await expect(current).toHaveCSS("width", "1200px");
-  await zoom.getByRole("button", { name: /^Zoom, / }).click();
+  await openPopover(zoom.getByRole("button", { name: /^Zoom, / }));
   await page.getByRole("menuitemradio", { name: "800%" }).click();
   await expect(current).toHaveCSS("width", "4800px");
   await zoom.getByRole("button", { name: "Zoom out" }).click();
   await expect(current).toHaveCSS("width", "2400px");
-  await zoom.getByRole("button", { name: /^Zoom, / }).click();
+  await openPopover(zoom.getByRole("button", { name: /^Zoom, / }));
   await page.getByRole("menuitemradio", { name: "Fit", exact: true }).click();
   await expect(current).toHaveCSS("width", "600px");
   // The zoom stays for the next variant.
@@ -2109,7 +2110,7 @@ test("the two panes share one pan, and a change of zoom or mode keeps the image 
   const zoom = page.getByRole("group", { name: "Zoom" });
   await page.keyboard.press("s");
   await expect(panes).toHaveCount(2);
-  await zoom.getByRole("button", { name: /^Zoom, / }).click();
+  await openPopover(zoom.getByRole("button", { name: /^Zoom, / }));
   await page.getByRole("menuitemradio", { name: "200%" }).click();
   await expect(current).toHaveCSS("width", "1200px");
   const start = await current.boundingBox();
