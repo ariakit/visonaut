@@ -1,5 +1,17 @@
 # @visonaut/web
 
+## 0.3.13
+
+### Submit reuses stored comparison results
+
+Submit no longer downloads and decodes the reference of a capture when the last accepted run compared the same bytes and found no changed pixel. In a model over the stored rows of 24 `ariakit/ariakit` main runs, the reference downloads of a run go from a mean of 3,239 to 141.
+
+The first Submit after a CLI update compares each capture again, because another version can have another comparator.
+
+### Other updates
+
+- Fixed the band of a size change covering the pixels of the current image with no way to hide it. The band now follows the **Mask** switch (`D`), which is on for a variant whose size changed.
+
 ## 0.3.12
 
 - Fixed the GitHub check of a run staying on an old result for up to 12 minutes when a review decision changed the result while Visonaut started to send the check.
