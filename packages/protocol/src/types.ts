@@ -250,6 +250,25 @@ export interface CapturePage {
   rows: CaptureRow[];
 }
 
+/**
+ * The stored results of a reference page that a client can reuse. Equal bytes,
+ * the same kept image, and the same settings give the same comparison.
+ */
+export interface ReusableResults {
+  /** The version of the CLI that compared the rows of the page. */
+  cliVersion: string;
+  /**
+   * One entry for each row: the digest of the capture that the CLI compared
+   * with the kept image of the row and found no changed pixel, or `null`.
+   */
+  digests: (string | null)[];
+}
+
+/** A page of a reference. A client of an earlier version ignores `reusableResults`. */
+export interface ReferencePage extends CapturePage {
+  reusableResults?: ReusableResults;
+}
+
 /** A row as an object with names. `captureRowView` builds it. */
 export interface CaptureRowView extends CaptureIdentity {
   /** The display name. It is the item key when the row has no name. */
@@ -297,9 +316,10 @@ export interface CapturePageIndex {
   /** The signed Submit job that made the pages. */
   job: { id: string; attempt: number };
   /**
-   * The version of the CLI that sent the index. It is provenance only: the
-   * service does not check it, and a decision does not depend on it. The
-   * stored index of an earlier run can have no version.
+   * The version of the CLI that sent the index. The service does not check it,
+   * and a review decision does not depend on it. A client reuses a stored
+   * result only for its own version. The stored index of an earlier run can
+   * have no version.
    */
   cliVersion?: string;
   reference: CaptureReferenceIdentity;

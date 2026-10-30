@@ -4,12 +4,18 @@ import { join } from "node:path";
 import { imageLimits } from "@visonaut/compare";
 import {
   CAPTURE_PAGE_MAX_BYTES,
+  canonicalJson,
   captureRowView,
   compareCaptureIdentity,
-  parseCapturePage,
+  parseReferencePage,
   TRANSPORT,
 } from "@visonaut/protocol";
-import type { CapturePage, CaptureRowResult, CaptureRowView } from "@visonaut/protocol";
+import type {
+  CaptureRowComparison,
+  CaptureRowResult,
+  CaptureRowView,
+  ReferencePage,
+} from "@visonaut/protocol";
 import { captureLabel, CliError, protocolVersion } from "./errors.js";
 import { readImageFile } from "./files.js";
 import { request } from "./http.js";
@@ -59,15 +65,29 @@ export function comparisonTimings(): ComparisonTimings {
   };
 }
 
+/** A reference row, with the capture digest of a stored result that this CLI can reuse. */
+interface ReferenceRow extends CaptureRowView {
+  reusableDigest: string | null;
+}
+
 function identityOf(view: CaptureRowView): Identity {
   return [view.itemKey, view.variantKey];
 }
 
-async function referencePage(
-  session: Session,
-  number: number,
-  timings: ComparisonTimings,
-): Promise<CaptureRowView[]> {
+interface ReferencePageParams {
+  session: Session;
+  /** The page number. It starts at 1. */
+  number: number;
+  cliVersion: string;
+  timings: ComparisonTimings;
+}
+
+async function referencePage({
+  session,
+  number,
+  cliVersion,
+  timings,
+}: ReferencePageParams): Promise<ReferenceRow[]> {
   const { digest } = session.reference;
   if (digest === null) {
     throw new CliError("The run has no reference page.");
@@ -84,14 +104,22 @@ async function referencePage(
     },
   });
   protocolVersion(response);
-  let page: CapturePage;
+  let page: ReferencePage;
   try {
-    page = parseCapturePage(response);
+    page = parseReferencePage(response);
   } catch {
     throw new CliError("The service returned an invalid reference page.");
   }
-  // A reference row is read only by its keys, its profile, and its image.
-  return Promise.all(page.rows.map((row) => captureRowView(page, row)));
+  // Another version can have another comparator, so its results do not hold here.
+  const reusable = page.reusableResults;
+  const digests = reusable?.cliVersion === cliVersion ? reusable.digests : [];
+  // A reference row is read only by its keys, its profile, its image, and its settings.
+  return Promise.all(
+    page.rows.map(async (row, rowAt) => ({
+      ...(await captureRowView(page, row)),
+      reusableDigest: digests[rowAt] ?? null,
+    })),
+  );
 }
 
 /**
@@ -100,16 +128,20 @@ async function referencePage(
  * that order. A reference capture that no capture of the run asks for is a
  * removal, which the service finds itself.
  */
-export function referenceCursor(session: Session, timings = comparisonTimings()) {
-  let rows: CaptureRowView[] = [];
+export function referenceCursor(
+  session: Session,
+  cliVersion: string,
+  timings = comparisonTimings(),
+) {
+  let rows: ReferenceRow[] = [];
   let position = 0;
   let nextPage = 1;
   let last: Identity | undefined;
-  const current = async (): Promise<CaptureRowView | undefined> => {
+  const current = async (): Promise<ReferenceRow | undefined> => {
     while (position >= rows.length) {
       if (nextPage > session.reference.pages) return;
       const started = performance.now();
-      rows = await referencePage(session, nextPage++, timings);
+      rows = await referencePage({ session, number: nextPage++, cliVersion, timings });
       timings.referencePagesMs += performance.now() - started;
       position = 0;
       for (const row of rows) {
@@ -125,7 +157,7 @@ export function referenceCursor(session: Session, timings = comparisonTimings())
   };
   return {
     /** The reference capture with this identity, or nothing when the capture is new. */
-    async take(identity: Identity): Promise<CaptureRowView | undefined> {
+    async take(identity: Identity): Promise<ReferenceRow | undefined> {
       while (true) {
         const row = await current();
         if (!row) return;
@@ -143,7 +175,7 @@ interface CompareCaptureParams {
   directory: string;
   pool: ImagePool;
   capture: CaptureRecord;
-  accepted: CaptureRowView | undefined;
+  accepted: ReferenceRow | undefined;
   referenceBytes: Buffer | undefined;
 }
 
@@ -151,18 +183,40 @@ interface CompareCapturesParams {
   session: Session;
   directory: string;
   captures: AsyncIterable<CaptureRecord>;
+  /** The version of this CLI, which selects the stored results that it can reuse. */
+  cliVersion: string;
   timings?: ComparisonTimings;
 }
 
 interface ComparisonInput {
   capture: CaptureRecord;
-  accepted: CaptureRowView | undefined;
+  accepted: ReferenceRow | undefined;
+}
+
+/**
+ * The stored result of this capture, when an earlier run of this CLI version
+ * compared the same bytes with the same kept image and settings. The comparison
+ * would give it again.
+ */
+function reusableResult({ capture, accepted }: ComparisonInput): CaptureRowComparison | undefined {
+  if (!accepted) return;
+  if (accepted.reusableDigest !== capture.image.digest) return;
+  if (canonicalJson(accepted.comparison) !== canonicalJson(capture.comparison)) return;
+  return {
+    reference: accepted.image.digest,
+    outcome: "unchanged",
+    changedPixels: 0,
+    ratio: 0,
+    sizeChanged: false,
+  };
 }
 
 /** The encoded bytes that the reference of this capture reserves, or 0 with no download. */
-function downloadBytes({ capture, accepted }: ComparisonInput) {
+function downloadBytes(input: ComparisonInput) {
+  const { capture, accepted } = input;
   if (!accepted) return 0;
   if (accepted.image.digest === capture.image.digest) return 0;
+  if (reusableResult(input)) return 0;
   return Math.min(accepted.image.bytes, imageLimits.maxEncodedBytes);
 }
 
@@ -221,11 +275,12 @@ export async function* compareCaptures({
   session,
   directory,
   captures,
+  cliVersion,
   timings = comparisonTimings(),
 }: CompareCapturesParams) {
   await using pool = new ImagePool();
   timings.workers = pool.size;
-  const reference = referenceCursor(session, timings);
+  const reference = referenceCursor(session, cliVersion, timings);
   const iterator = captures[Symbol.asyncIterator]();
   const window: PendingComparison[] = [];
   const running: RunningComparison[] = [];
@@ -325,8 +380,8 @@ export async function* compareCaptures({
 
 /**
  * Compare one capture with its reference on an image worker. `combineBundles`
- * already decoded the capture, so a new capture and a capture with the bytes
- * of its reference are not decoded here.
+ * already decoded the capture, so a new capture, a capture with the bytes of
+ * its reference, and a capture with a reusable result are not decoded here.
  */
 export async function compareCapture({
   directory,
@@ -347,6 +402,10 @@ export async function compareCapture({
       throw new CliError("The service returned invalid reference image metadata.");
     }
     return 0;
+  }
+  const reused = reusableResult({ capture, accepted });
+  if (reused) {
+    return reused;
   }
   const candidateBytes = await readImageFile(
     directory,

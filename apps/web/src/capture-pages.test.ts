@@ -6,6 +6,7 @@ import {
   digestJson,
   digestRenderingProfile,
   parseCapturePage,
+  parseReferencePage,
   sha256,
   type CapturePage,
   type CapturePageIndex,
@@ -30,6 +31,7 @@ import {
   maximumStoredPageBytes,
   readCapturePage,
   readCapturePagesIndex,
+  readReferencePage,
   type CapturePagesInput,
 } from "./capture-pages.ts";
 import type { PrivateContext } from "./api/context.ts";
@@ -639,6 +641,51 @@ describe("capture list of a run as pages of rows", () => {
     expect(await readCapturePage({ store, index, pageAt: 0, check: "bytes" })).toMatchObject(
       expected,
     );
+  });
+
+  describe("the stored results of a reference page", () => {
+    const kept = image("seed", "kept", "1".repeat(64));
+    const observed = { digest: "2".repeat(64), bytes: 100, width: 10, height: 10 };
+    const unchanged = {
+      reference: kept.digest,
+      outcome: "unchanged" as const,
+      ratio: 0,
+      sizeChanged: false,
+    };
+    const captures: PageCapture[] = [
+      { itemKey: "a", image: kept, observed, result: { ...unchanged, changedPixels: 0 } },
+      { itemKey: "b", image: kept, observed, result: { ...unchanged, changedPixels: 1 } },
+      { itemKey: "c", image: kept, result: 0 },
+      { itemKey: "d", image: image("run", "new", "3".repeat(64)), result: 1 },
+      {
+        itemKey: "e",
+        image: image("run", "equal-pixels", "4".repeat(64)),
+        result: { ...unchanged, outcome: "changed", changedPixels: 0 },
+      },
+    ];
+
+    async function page(cliFields: Record<string, unknown>) {
+      const input = runInput("run", captures);
+      const receipt = await submitIndex(input, [["e", "light"]], cliFields);
+      const store = new MemoryStore();
+      const pointer = await writeCapturePages(store, { ...input, receipt });
+      const index = await readCapturePagesIndex(store, pointer);
+      return parseReferencePage(await readReferencePage({ store, index, pageAt: 0 }));
+    }
+
+    it("names the capture of each result with no changed pixel", async () => {
+      const { rows, reusableResults } = await page({ cliVersion: "0.8.1" });
+      expect(reusableResults).toEqual({
+        cliVersion: "0.8.1",
+        digests: [observed.digest, null, null, null, null],
+      });
+      // The row names the kept image, which the stored result compared with.
+      expect(rows[0]?.[7]).toBe(kept.digest);
+    });
+
+    it("names no result for an index with no version", async () => {
+      expect(await page({})).not.toHaveProperty("reusableResults");
+    });
   });
 
   it("gives no CLI version to the captures of an index with no version", async () => {
