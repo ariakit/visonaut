@@ -1,5 +1,13 @@
 # visonaut
 
+## 0.6.10
+
+### Submit reuses stored comparison results
+
+Submit no longer downloads and decodes the reference of a capture when the last accepted run compared the same bytes and found no changed pixel. In a model over the stored rows of 24 `ariakit/ariakit` main runs, the reference downloads of a run go from a mean of 3,239 to 141.
+
+The first Submit after a CLI update compares each capture again, because another version can have another comparator.
+
 ## 0.6.9
 
 - Fixed Submit failing after one dropped connection, HTTP 502, or HTTP 504 while it reserved the run, uploaded the captures, or submitted the run. Submit now retries these requests, and it also retries an image upload that hangs for 10 seconds.
