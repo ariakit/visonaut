@@ -21,6 +21,7 @@ import type {
   Manifest,
   LocalComparisonReceipt,
   LocalReferenceBinding,
+  ReferencePage,
 } from "./types.js";
 import { CAPTURE_PAGE_MAX_BYTES, CAPTURE_PAGE_ROWS, LOCAL_COMPARISON_MODE } from "./types.js";
 
@@ -621,6 +622,28 @@ function sharedList<T>({ page, key, rowCount, parse, identity }: SharedListParam
 export function parseCapturePage(value: unknown): CapturePage {
   assertCapturePage(value);
   return value;
+}
+
+function validateReusableResults(value: unknown, rows: CaptureRow[]) {
+  object(value, "reusable results");
+  string(field(value, "cliVersion"), "cliVersion", 256);
+  const digests = field(value, "digests");
+  if (!Array.isArray(digests) || digests.length !== rows.length) {
+    fail("Reusable results must have one entry for each row");
+  }
+  for (const digest of digests) {
+    if (digest === null) continue;
+    validateDigest(digest, "reusable result digest");
+  }
+}
+
+/** Validate one page of a reference, as `parseCapturePage` does for each page. */
+export function parseReferencePage(value: unknown): ReferencePage {
+  const page: ReferencePage = parseCapturePage(value);
+  if (page.reusableResults !== undefined) {
+    validateReusableResults(page.reusableResults, page.rows);
+  }
+  return page;
 }
 
 function assertCapturePage(value: unknown): asserts value is CapturePage {

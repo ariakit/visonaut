@@ -3,9 +3,9 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { capturePagesDigest, captureRowView } from "@visonaut/protocol";
-import type { Capture, CapturePage, CaptureRowView } from "@visonaut/protocol";
+import type { Capture, CaptureComparison, CapturePage, CaptureRowView } from "@visonaut/protocol";
 import { PNG } from "pngjs";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { ImagePool } from "../src/image-pool.js";
 import { comparePixels, decodePng } from "../src/png-comparison.js";
 import { fixture } from "./fixture.js";
@@ -640,6 +640,114 @@ it.each([
   expect(result.code).toBe(0);
   expect(service.downloads()).toHaveLength(downloads);
   expect(check.mock.calls.length + 2 * compare.mock.calls.length).toBe(decodes);
+});
+
+describe("a stored result of the reference page", () => {
+  const settings = { threshold: 0.2, maxDiffPixels: 0 };
+
+  async function cliVersion(): Promise<string> {
+    const file = await readFile(new URL("../package.json", import.meta.url), "utf8");
+    return JSON.parse(file).version;
+  }
+
+  /** A service whose page of the `tolerated` capture names a stored result. */
+  async function service(
+    local: Local,
+    reusable: { cliVersion?: string; digest?: string; comparison?: CaptureComparison } = {},
+    reference = local.reference.filter((entry) => entry.itemKey === "tolerated"),
+  ) {
+    const [capture] = local.manifest.captures;
+    if (!capture) {
+      throw new Error("No tolerated fixture capture");
+    }
+    const version = reusable.cliVersion ?? (await cliVersion());
+    return mockService(local, {
+      reference,
+      change: (url, response) => {
+        if (!isPageRead(url)) {
+          return response;
+        }
+        return {
+          ...response,
+          comparisons: [reusable.comparison ?? settings],
+          reusableResults: {
+            cliVersion: version,
+            digests: [reusable.digest ?? capture.image.digest],
+          },
+        };
+      },
+    });
+  }
+
+  it("reuses the result of the same bytes with no download and no comparison", async () => {
+    const local = await localFixture();
+    await only(local, "tolerated");
+    const mock = await service(local);
+    const compare = vi.spyOn(ImagePool.prototype, "compare");
+    expect((await execute(local)).code).toBe(0);
+    expect(mock.downloads()).toEqual([]);
+    expect(compare).not.toHaveBeenCalled();
+    expect((await mock.rows()).get("tolerated")?.result).toEqual({
+      reference: local.digests.same,
+      outcome: "unchanged",
+      changedPixels: 0,
+      ratio: 0,
+      sizeChanged: false,
+    });
+  });
+
+  it("reuses the result when the profile changed, because no pixel changed", async () => {
+    const local = await localFixture();
+    await only(local, "tolerated");
+    const mock = await service(
+      local,
+      {},
+      local.reference
+        .filter((entry) => entry.itemKey === "tolerated")
+        .map((entry) => ({ ...entry, profile: { ...entry.profile, locale: "pt-BR" } })),
+    );
+    expect((await execute(local)).code).toBe(0);
+    expect(mock.downloads()).toEqual([]);
+  });
+
+  it.each([
+    { name: "another CLI version", reusable: { cliVersion: "0.0.1" } },
+    { name: "other bytes", reusable: { digest: "a".repeat(64) } },
+    { name: "other settings", reusable: { comparison: { threshold: 0.1, maxDiffPixels: 0 } } },
+  ])("compares the capture again for $name", async ({ reusable }) => {
+    const local = await localFixture();
+    await only(local, "tolerated");
+    const mock = await service(local, reusable);
+    const compare = vi.spyOn(ImagePool.prototype, "compare");
+    expect((await execute(local)).code).toBe(0);
+    expect(mock.downloads()).toEqual([local.digests.same]);
+    expect(compare).toHaveBeenCalledTimes(1);
+  });
+
+  it("compares each capture when the page has no stored result", async () => {
+    const local = await localFixture();
+    await only(local, "tolerated");
+    const mock = mockService(local, {
+      reference: local.reference.filter((entry) => entry.itemKey === "tolerated"),
+    });
+    expect((await execute(local)).code).toBe(0);
+    expect(mock.downloads()).toEqual([local.digests.same]);
+  });
+
+  it("refuses a page with another count of stored results", async () => {
+    const local = await localFixture();
+    await only(local, "tolerated");
+    mockService(local, {
+      reference: local.reference.filter((entry) => entry.itemKey === "tolerated"),
+      change: (url, response) =>
+        isPageRead(url)
+          ? { ...response, reusableResults: { cliVersion: "1.0.0", digests: [] } }
+          : response,
+    });
+    const result = await execute(local);
+    expect(result.code).not.toBe(0);
+    expect(result.error).toContain("invalid reference page");
+  });
 });
 
 it("names the screenshot when its file changes before the upload", async () => {

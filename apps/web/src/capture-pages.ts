@@ -19,6 +19,7 @@ import {
   type CaptureRow,
   type CaptureRowView,
   type ProfileRecord,
+  type ReferencePage,
 } from "@visonaut/protocol";
 import {
   IncompleteError,
@@ -855,13 +856,15 @@ export async function readCapturePage({
  * of a capture with no pixel difference is the image of an earlier run, so a
  * stored page as it is would name the wrong image. The function validates the
  * stored page with the complete check. The client does not use the result and
- * the test of a reference row.
+ * the test of a reference row. A page of a known CLI version also names the
+ * digest of each capture with no changed pixel, so the client can reuse that
+ * result when its capture has the same bytes.
  */
 export async function readReferencePage({
   store,
   index,
   pageAt,
-}: Omit<ReadCapturePageParams, "check">): Promise<CapturePage> {
+}: Omit<ReadCapturePageParams, "check">): Promise<ReferencePage> {
   const check = "complete";
   const { stored: facts, ...page } = await readStoredPage({ store, index, pageAt, check });
   const { captures } = await pageCaptures({
@@ -872,6 +875,7 @@ export async function readReferencePage({
     profiles: new Map(),
     firstOrdinal: pageAt * CAPTURE_PAGE_ROWS,
   });
+  const digests: (string | null)[] = [];
   const rows = page.rows.map((row, rowAt): CaptureRow => {
     const kept = captures[rowAt]?.image;
     if (!kept) {
@@ -882,7 +886,12 @@ export async function readReferencePage({
     if (kept.contentType !== "image/png") {
       throw new IncompleteError("The accepted reference keeps an image that is not a PNG image.");
     }
-    const [itemKey, name, variant, test, profile, clip, comparison] = row;
+    const [itemKey, name, variant, test, profile, clip, comparison, observed, , , , result] = row;
+    // Another allowance can change a result with changed pixels, and a result
+    // with no changed pixel holds for each allowance and profile.
+    const reusable =
+      typeof result === "object" && result.outcome === "unchanged" && result.changedPixels === 0;
+    digests.push(reusable ? observed : null);
     const { digest, bytes, width, height } = kept;
     return [
       itemKey,
@@ -899,7 +908,11 @@ export async function readReferencePage({
       0,
     ];
   });
-  return { ...page, rows };
+  const cliVersion = index.receipt?.cliVersion;
+  if (cliVersion === undefined) {
+    return { ...page, rows };
+  }
+  return { ...page, rows, reusableResults: { cliVersion, digests } };
 }
 
 /**

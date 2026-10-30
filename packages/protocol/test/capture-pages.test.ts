@@ -15,6 +15,7 @@ import {
   digestJson,
   parseCapturePage,
   parseCapturePageIndex,
+  parseReferencePage,
   sha256,
   validateCaptureReference,
 } from "../src/index.js";
@@ -125,6 +126,37 @@ function index(overrides: Partial<CapturePageIndex> = {}): CapturePageIndex {
 }
 
 const limits = { maximumPages: 10, maximumSources: 16 };
+
+describe("a reference page", () => {
+  const reusable = (digests: unknown[], cliVersion: unknown = "0.7.0") => ({
+    ...page([row("dialog/open"), row("menu/open")]),
+    reusableResults: { cliVersion, digests },
+  });
+
+  it("accepts a page with no stored result and one stored result for each row", () => {
+    const plain = page([row("dialog/open")]);
+    expect(parseReferencePage(plain)).toBe(plain);
+    const value = reusable([digest("c"), null]);
+    expect(parseReferencePage(value)).toBe(value);
+  });
+
+  it("keeps the field for a client that reads it as a capture page", () => {
+    const value = reusable([digest("c"), null]);
+    expect(parseCapturePage(value)).toBe(value);
+  });
+
+  it.each([
+    { name: "too few entries", value: () => reusable([null]), message: "one entry for each row" },
+    {
+      name: "not a digest",
+      value: () => reusable(["other", null]),
+      message: "must be a lowercase SHA-256 digest",
+    },
+    { name: "no version", value: () => reusable([null, null], ""), message: "cliVersion" },
+  ])("refuses stored results with $name", ({ value, message }) => {
+    expect(() => parseReferencePage(value())).toThrow(message);
+  });
+});
 
 describe("a capture page", () => {
   it("accepts a page and returns the same object", () => {
@@ -558,7 +590,7 @@ describe("the page index", () => {
   });
 
   it("accepts each CLI version", () => {
-    // The CLI version is provenance only, so the service checks no list of versions.
+    // The service checks no list of versions.
     for (const cliVersion of ["0.7.0", "1.0.0-next.1", "local build"]) {
       const value = index({ cliVersion });
       expect(parseCapturePageIndex(value, limits)).toBe(value);

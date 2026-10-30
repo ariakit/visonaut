@@ -636,6 +636,7 @@ async function submitPages({
     session,
     directory,
     captures: mergeCaptureRecords(directory, submission.files),
+    cliVersion: await cliVersion(),
     timings,
   });
   for await (const { capture, result } of comparisons) {
