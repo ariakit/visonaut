@@ -41,7 +41,7 @@
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@vitejs/plugin-react": "6.1.2",
+    "@vitejs/plugin-react": "6.2.1",
     "jose": "6.2.13",
     "miniflare": "5.20261023.0-beta",
     "tailwindcss": "4.3.3",
