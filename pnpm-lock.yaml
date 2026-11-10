@@ -254,8 +254,8 @@ importers:
         specifier: 1.7.18
         version: 1.7.18(@tanstack/react-start@1.169.4(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.2.16)(rollup@4.65.0)(supports-color@10.2.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0(@types/node@24.19.2)(vite@8.3.6(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))
       clava:
-        specifier: 0.7.1
-        version: 0.7.1
+        specifier: 0.7.2
+        version: 0.7.2
       lucide-react:
         specifier: 1.70.0
         version: 1.70.0(@types/react@19.3.0)(react@19.3.1)
@@ -2232,8 +2232,8 @@ packages:
     resolution: {integrity: sha512-TQMmc3w+5AxjpL8iIiwebF73dRDF4fBIieAqGn9RGCWaEVwQ6Fb2cGe31Yns0RRIzii5goJ1Y7xbMwo1TxMplw==}
     engines: {node: '>= 20.19.0'}
 
-  clava@0.7.1:
-    resolution: {integrity: sha512-2gBMT9H79UmulJk3q6I+sDE/gjhqo7NqWQXI/wSdSLiEKjujSKSQZNl5nskZACmyDBI4WWJ52f8QM0Ek8OdSVA==}
+  clava@0.7.2:
+    resolution: {integrity: sha512-ohm72e1jWFfUo/T7pCHMxYkRnCo1ajvqqOyP1Hw4c3CSDaqrtYBGRS3YE+cdEmuiBZcA7KkplO4yvv6CS4Yzyg==}
 
   clsx@2.1.1:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
@@ -4768,7 +4768,7 @@ snapshots:
     dependencies:
       readdirp: 5.1.1
 
-  clava@0.7.1:
+  clava@0.7.2:
     dependencies:
       clsx: 2.1.1
       csstype: 3.2.3
