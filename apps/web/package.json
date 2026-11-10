@@ -42,7 +42,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.2.1",
-    "jose": "6.2.13",
+    "jose": "6.2.15",
     "miniflare": "5.20261104.0-beta",
     "tailwindcss": "4.3.5",
     "typescript": "npm:@typescript/typescript6@6.0.2",
