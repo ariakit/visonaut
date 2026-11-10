@@ -50,10 +50,13 @@ afterEach(async () => {
 
 /**
  * Serve the reserve call. The service sends `Retry-After: 1` with each 503. A call that `refuse`
- * answers with a code is refused. The first call that it leaves alone is accepted, and the next
- * request (the capture page) ends the run with a service failure.
+ * answers with a code is refused, and the error is marked retryable when `refuse` says so. The
+ * first call that it leaves alone is accepted, and the next request (the capture page) ends the
+ * run with a service failure.
  */
-async function serve(refuse: (call: number) => string | undefined) {
+async function serve(
+  refuse: (call: number) => string | { code: string; retryable: true } | undefined,
+) {
   const local = await fixture();
   directories.push(local.directory);
   prepared.bundles = [local];
@@ -92,10 +95,11 @@ async function serve(refuse: (call: number) => string | undefined) {
         return Response.json({ error: { code: "stop_here" } }, { status: 500 });
       }
       reserves.push(new Headers(init?.headers).get("authorization") ?? "");
-      const code = refuse(reserves.length);
-      if (code) {
+      const refusal = refuse(reserves.length);
+      if (refusal) {
+        const error = typeof refusal === "string" ? { code: refusal } : refusal;
         return Response.json(
-          { schemaVersion: "1.0", error: { code, message: "server-secret" } },
+          { schemaVersion: "1.0", error: { ...error, message: "server-secret" } },
           { status: 503, headers: { "Retry-After": "1" } },
         );
       }
@@ -205,18 +209,55 @@ describe("a reserve call that the service refuses at its capacity limit", () => 
 describe("a reserve call that the service refuses with another code", () => {
   // The first two codes need a person. The third is temporary, but only the code
   // capacity_exceeded makes the first reserve call wait.
-  it.each(["database_size_exceeded", "capture_limit_exceeded", "service_unavailable"])(
-    "makes no second call after %s",
-    async (code) => {
-      const service = await serve(() => code);
-      const result = await submit().finish();
-      expect(service.reserves).toHaveLength(1);
-      expect(service.tokenRequests).toHaveLength(1);
-      expect(result.code).toBe(1);
-      expect(result.stderr).toBe(
-        `visonaut: The service refused the request (HTTP 503, ${code}). No visual approval was granted.\n`,
-      );
-      expect(vi.getTimerCount()).toBe(0);
-    },
-  );
+  // A github_unavailable without the retryable mark is a GitHub answer that repeats, such as a 404.
+  it.each([
+    "database_size_exceeded",
+    "capture_limit_exceeded",
+    "service_unavailable",
+    "github_unavailable",
+  ])("makes no second call after %s", async (code) => {
+    const service = await serve(() => code);
+    const result = await submit().finish();
+    expect(service.reserves).toHaveLength(1);
+    expect(service.tokenRequests).toHaveLength(1);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe(
+      `visonaut: The service refused the request (HTTP 503, ${code}). No visual approval was granted.\n`,
+    );
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("a reserve call that the service refuses because GitHub is down", () => {
+  const outage = { code: "github_unavailable", retryable: true } as const;
+  const retryWaits = () =>
+    timeouts.mock.calls.map(([, delay]) => delay).filter((delay) => delay !== WAIT_MS);
+
+  it("retries with growing waits and goes on when GitHub is back", async () => {
+    const service = await serve((call) => (call <= 2 ? outage : undefined));
+    const result = await submit().finish();
+    expect(service.paths).toEqual(["/v1/runs", "/v1/runs", "/v1/runs", "/v1/runs/run-1/pages"]);
+    // The answer asks for 1 second, but the second wait follows the backoff.
+    const [first, second, ...rest] = retryWaits();
+    expect(first).toBeGreaterThanOrEqual(1_000);
+    expect(first).toBeLessThan(2_000);
+    expect(second).toBeGreaterThanOrEqual(2_000);
+    expect(second).toBeLessThan(3_000);
+    expect(rest).toEqual([]);
+    expect(result.stderr).toBe(
+      "visonaut: The service refused the request (HTTP 500, stop_here). No visual approval was granted.\n",
+    );
+  });
+
+  it("stops after 5 attempts and reports the refusal", async () => {
+    const service = await serve(() => outage);
+    const result = await submit().finish();
+    expect(service.reserves).toHaveLength(5);
+    expect(retryWaits()).toHaveLength(4);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe(
+      "visonaut: The service refused the request (HTTP 503, github_unavailable). No visual approval was granted.\n",
+    );
+    expect(result.stderr).not.toContain("server-secret");
+  });
 });

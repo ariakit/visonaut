@@ -38,9 +38,14 @@ afterEach(async () => {
   }
 });
 
-function busy(code = "service_unavailable", retryAfter: string | null = "0", status = 503) {
+function busy(
+  code = "service_unavailable",
+  retryAfter: string | null = "0",
+  status = 503,
+  extra: Record<string, unknown> = {},
+) {
   return Response.json(
-    { schemaVersion: "1.0", error: { code, message: "private-response-secret" } },
+    { schemaVersion: "1.0", error: { code, message: "private-response-secret", ...extra } },
     { status, headers: retryAfter === null ? {} : { "Retry-After": retryAfter } },
   );
 }
@@ -197,6 +202,73 @@ describe("public commands under temporary service backpressure", () => {
     vi.stubGlobal("fetch", fetch);
     expect((await execute()).code).toBe(1);
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Run `submit --shard` whose first reserve call gets `first`. Each attempt
+   * takes 15 s, as long as the GitHub timeout of the service, so the 30 s
+   * deadline leaves room for one retry, which gets `second`.
+   */
+  const reserveTwice = async (first: () => Response, second: () => Response) => {
+    const local = await fixture();
+    directories.push(local.directory);
+    let now = 0;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    const reserves: number[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: string | URL | Request) => {
+        const url = new URL(input instanceof Request ? input.url : input);
+        if (url.hostname.endsWith(".actions.githubusercontent.com")) {
+          return Response.json({ value: "oidc-secret" });
+        }
+        reserves.push(now);
+        now += 15_000;
+        return reserves.length === 1 ? first() : second();
+      }),
+    );
+    const result = await submitShard(prepared, [local], environment);
+    expect(result.code).toBe(1);
+    expect(reserves).toEqual([0, 15_000]);
+    return result;
+  };
+  const outage = () => busy("github_unavailable", "1", 503, { retryable: true });
+  const hang = () => {
+    throw new DOMException("The operation timed out", "TimeoutError");
+  };
+
+  it("reports the GitHub outage when the deadline ends a retry that hangs", async () => {
+    const result = await reserveTwice(outage, hang);
+    expect(result.stderr).toContain(
+      "The service refused the request (HTTP 503, github_unavailable). No visual approval was granted.",
+    );
+    expect(result.stderr).not.toContain("timed out");
+  });
+
+  it("reports the answer of a retry that gets one after a GitHub outage", async () => {
+    const result = await reserveTwice(outage, () => new Response("<html>", { status: 200 }));
+    expect(result.stderr).toContain("The service did not return JSON.");
+    expect(result.stderr).not.toContain("github_unavailable");
+  });
+
+  it("reports a timeout when the body of a success fails after a GitHub outage", async () => {
+    const body = new ReadableStream({
+      pull(controller) {
+        controller.error(new DOMException("The operation timed out", "TimeoutError"));
+      },
+    });
+    const result = await reserveTwice(
+      outage,
+      () => new Response(body, { status: 200, headers: { "Content-Type": "application/json" } }),
+    );
+    expect(result.stderr).toContain("The request failed, timed out, or redirected.");
+    expect(result.stderr).not.toContain("github_unavailable");
+  });
+
+  it("reports a timeout when the deadline ends a retry after an edge error", async () => {
+    const result = await reserveTwice(() => new Response(null, { status: 502 }), hang);
+    expect(result.stderr).toContain("The request failed, timed out, or redirected.");
+    expect(result.stderr).not.toContain("HTTP 502");
   });
 
   it("keeps the 30 s deadline and does not retry a timeout of a request that is not a reference read", async () => {

@@ -24,6 +24,18 @@ export class GitHubUnavailableError extends SecurityError {
   constructor(public readonly upstreamStatus?: number) {
     super("github_unavailable", 503, "GitHub verification is temporarily unavailable.");
   }
+
+  /**
+   * True when the same request can work later: a GitHub server error, or a
+   * failure with no status, such as a timeout or a network error. A few rare
+   * checks of malformed answers also have no status, and their retries fail
+   * again. Other statuses, such as 404, 401, or a rate limit, repeat.
+   */
+  get transient() {
+    const status = this.upstreamStatus;
+    if (status === undefined) return true;
+    return status >= 500;
+  }
 }
 
 export async function createAppJwt(
