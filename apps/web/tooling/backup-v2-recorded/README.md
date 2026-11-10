@@ -24,11 +24,11 @@ The Worker denies access until the diagnostic credential is set. Do not add a Gi
 Generate the synthetic fixture from an available WebP screenshot corpus. The generator selects files under `__screenshots__` directories and repeats them across distinct per-run object keys. It refuses to overwrite its SQLite database.
 
 ```sh
-node --experimental-transform-types generate-fixture.mjs --corpus /path/to/corpus --output /path/to/new-fixture --captures 35820
+node generate-fixture.mjs --corpus /path/to/corpus --output /path/to/new-fixture --captures 35820
 export ARIVISO_DRILL_FIXTURE=/path/to/new-fixture
 export ARIVISO_DRILL_ORIGIN=https://YOUR-DISPOSABLE-WORKER.YOUR-SUBDOMAIN.workers.dev
 export ARIVISO_EXPORT_TOKEN_FILE=/path/to/local-export-token
-node --experimental-transform-types run-drill.mjs seed
+node run-drill.mjs seed
 pnpm exec wrangler d1 execute YOUR-SOURCE-DATABASE --remote --file frozen-schema/apps/web/migrations/0007_backup_inventory.sql --config wrangler.drill.json
 ```
 
@@ -39,11 +39,11 @@ pnpm exec wrangler d1 execute YOUR-SOURCE-DATABASE --remote --file frozen-schema
 Finish source writes before backup. Run these phases in order:
 
 ```sh
-node --experimental-transform-types run-drill.mjs inventory
-node --experimental-transform-types run-drill.mjs timing
-node --experimental-transform-types run-drill.mjs backup
-node --experimental-transform-types run-drill.mjs restore
-node --experimental-transform-types run-drill.mjs rotate
+node run-drill.mjs inventory
+node run-drill.mjs timing
+node run-drill.mjs backup
+node run-drill.mjs restore
+node run-drill.mjs rotate
 ```
 
 Backup establishes recovery pins before a local consistent D1 export. It then stages that exact verified SQL and copies required objects. Do not mutate source application data during this sequence. Restore requires separate empty target D1 and R2 resources. It checks the SQL digest, imports SQL, copies and verifies all objects, fences restored credentials and work, rechecks retained references, and rotates only the three fixture credentials. It does not activate the target.
