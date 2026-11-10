@@ -8,4 +8,5 @@ export * from "./github.js";
 export * from "./http.js";
 export * from "./oidc.js";
 export * from "./session-credential.js";
+export * from "./statuses.js";
 export * from "./webhooks.js";
