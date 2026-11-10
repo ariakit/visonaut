@@ -3,6 +3,7 @@ import {
   bearerToken,
   createAuth,
   createGitHubClient,
+  GitHubUnavailableError,
   requireMaintainer,
   requireSameOrigin,
   requireSessionCredential,
@@ -46,7 +47,14 @@ function errorResponse(error: unknown, failure: OperationFailureContext) {
     return Response.json(
       {
         schemaVersion: SCHEMA_VERSION,
-        error: { code: error.code, message: error.message },
+        error: {
+          code: error.code,
+          message: error.message,
+          // The same code also covers GitHub answers that repeat, such as a 404.
+          ...(error instanceof GitHubUnavailableError && error.transient
+            ? { retryable: true }
+            : {}),
+        },
         ...(error instanceof PullNotFoundError ? { repository: error.repository } : {}),
       },
       {

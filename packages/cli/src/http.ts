@@ -54,9 +54,9 @@ interface RequestParams {
   empty?: boolean;
   retryUnavailable?: boolean;
   /**
-   * Retry a GET after an HTTP 502, 504, 503 with no error code, a network error, or an attempt
-   * that reaches its own time limit. The service has no such answer, so it comes from the edge or
-   * the connection, and a read is safe to repeat.
+   * Retry a GET after an HTTP 502, 504, 503 with no error code, a 503 that the service marks
+   * retryable, a network error, or an attempt that reaches its own time limit. A read is safe to
+   * repeat.
    */
   retryTransient?: boolean;
   maximumResponseBytes?: number;
@@ -165,6 +165,14 @@ function refusalDetail(status: number, error: Record<string, unknown> | undefine
   };
 }
 
+function serviceRefusal(status: number, error: Record<string, unknown> | undefined) {
+  const detail = refusalDetail(status, error);
+  return new ServiceRefusal(
+    `The service refused the request (${detail.status}).${detail.reference} No visual approval was granted.`,
+    detail.code,
+  );
+}
+
 function retryDelay(value: string | null): number | undefined {
   if (value === null) return;
   let milliseconds: number;
@@ -185,10 +193,14 @@ function backoffDelay(attempt: number) {
   return 1000 * 2 ** (attempt - 1) + Math.floor(Math.random() * 250);
 }
 
-/** A 502 and a 504 come from the edge. A 503 with a Visonaut error code comes from the service. */
+/**
+ * A 502 and a 504 come from the edge. A 503 with a Visonaut error code comes from the service,
+ * and it is transient only when the service marks it retryable, as for a GitHub outage.
+ */
 function isTransientStatus(status: number, error: Record<string, unknown> | undefined) {
   if (status === 502 || status === 504) return true;
-  return status === 503 && error?.code === undefined;
+  if (status !== 503) return false;
+  return error?.code === undefined || error.retryable === true;
 }
 
 /** The token endpoint of GitHub is not the service, so a 500 counts with the edge statuses. */
@@ -260,6 +272,10 @@ export async function request({
     }
     return await responseJson(response, maximumResponseBytes);
   };
+  // A retryable refusal, until the headers of another answer replace it. A
+  // GitHub outage can make the next attempt hang until the deadline, so the CLI
+  // reports it when the last attempt gets no headers.
+  let lastRefusal: ServiceRefusal | undefined;
   try {
     for (let attempt = 1; attempt <= MAX_REQUEST_ATTEMPTS; attempt++) {
       const remaining = Math.ceil(deadline - performance.now());
@@ -279,13 +295,17 @@ export async function request({
           redirect: "error",
           signal,
         });
+        lastRefusal = undefined;
         if (response.ok) {
           return await successBody(response);
         }
       } catch (error) {
         const delay = backoffDelay(attempt);
-        if (!retriesTransient || !transientNetworkError(error) || !canWait(attempt, delay)) {
+        if (!retriesTransient || !transientNetworkError(error)) {
           throw error;
+        }
+        if (!canWait(attempt, delay)) {
+          throw lastRefusal ?? error;
         }
         await wait(delay);
         continue;
@@ -338,8 +358,16 @@ export async function request({
         }
       }
       if (retriesTransient && isTransientStatus(response.status, error)) {
-        const transientDelay = delay ?? backoffDelay(attempt);
+        // The service sends Retry-After: 1 with each 503, which is too short for
+        // a GitHub outage, so a retryable 503 waits at least the backoff.
+        const transientDelay =
+          error?.retryable === true
+            ? Math.max(delay ?? 0, backoffDelay(attempt))
+            : (delay ?? backoffDelay(attempt));
         if (canWait(attempt, transientDelay)) {
+          if (error?.retryable === true) {
+            lastRefusal = serviceRefusal(response.status, error);
+          }
           await wait(transientDelay);
           continue;
         }
@@ -357,11 +385,7 @@ export async function request({
         await wait(delay);
         continue;
       }
-      const detail = refusalDetail(response.status, error);
-      throw new ServiceRefusal(
-        `The service refused the request (${detail.status}).${detail.reference} No visual approval was granted.`,
-        detail.code,
-      );
+      throw serviceRefusal(response.status, error);
     }
   } catch (error) {
     if (error instanceof CliError) {

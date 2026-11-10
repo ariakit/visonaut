@@ -217,3 +217,23 @@ describe("a refused GitHub OIDC token request", () => {
     expect(result.tokenRequests).toBe(1);
   });
 });
+
+describe("a begin call after a GitHub outage", () => {
+  it("does not report the outage after the service says that the check is pending", async () => {
+    const answers = [
+      () => refusal(503, { code: "github_unavailable", retryable: true }),
+      () => refusal(503, { code: "check_pending" }),
+    ];
+    answerBegin(() => {
+      const answer = answers.shift();
+      if (answer) return answer();
+      throw new DOMException("The operation timed out", "TimeoutError");
+    });
+    const result = await begin();
+    expect(result.code).toBe(1);
+    // The outage ended, so only the requests that hang after it are left.
+    expect(result.stderr).toBe(
+      "visonaut: The request failed, timed out, or redirected. Check the service and retry.\n",
+    );
+  });
+});

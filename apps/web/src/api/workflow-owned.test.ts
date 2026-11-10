@@ -905,6 +905,37 @@ describe("workflow-owned upload staging", () => {
       expect(await stored()).toEqual(before);
     });
 
+    // The CLI retries a 503 only when the body marks it retryable.
+    it.each([
+      ["a 502", async () => new Response(null, { status: 502 }), { retryable: true }],
+      [
+        "a network error",
+        async () => {
+          throw new TypeError("fetch failed");
+        },
+        { retryable: true },
+      ],
+      ["a 429", async () => new Response(null, { status: 429 }), {}],
+      ["a 404", async () => new Response(null, { status: 404 }), {}],
+    ])(
+      "marks %s from GitHub during reserve as retryable only when a later attempt can work",
+      async (_name, answer, retry) => {
+        const test = await fixture();
+        vi.spyOn(test.context.configuration.github, "fetch").mockImplementation(answer);
+        const { response, stagedRuns } = await reserveSigned(test, open);
+        expect(response.status).toBe(503);
+        expect(await response.json()).toEqual({
+          schemaVersion: "1.0",
+          error: {
+            code: "github_unavailable",
+            message: "GitHub verification is temporarily unavailable.",
+            ...retry,
+          },
+        });
+        expect(stagedRuns).toBe(0);
+      },
+    );
+
     it("refuses a new attempt at the database size limit with its own code, and writes no row", async () => {
       const before = await stored();
       const { response, costs, stagedRuns } = await reserveSigned(await fixture(), {
