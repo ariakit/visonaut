@@ -579,15 +579,16 @@ export interface ReleaseStatusLockParams extends ReadStatusLockParams {
   deliveredRevision: number | null;
   /**
    * "delivered" when GitHub shows the locked update, and "not-sent" when it
-   * still shows the last confirmed one, or the text of its creation.
+   * still shows the last confirmed one, or the text of its creation. For a
+   * commit status, "not-sent" also when no read can prove the delivery.
    */
   outcome: "delivered" | "not-sent";
   now: number;
 }
 
 /**
- * Release a lock that `readStatusLock` returned, after GitHub showed which
- * update it has. Returns true when the lock is released.
+ * Release a lock that `readStatusLock` returned, after the caller read which
+ * update GitHub shows. Returns true when the lock is released.
  */
 export async function releaseStatusLock(database: Database, params: ReleaseStatusLockParams) {
   const lease = [params.id, params.token, params.revision] as const;

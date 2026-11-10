@@ -3,6 +3,7 @@ import {
   GitHubUnavailableError,
   readCommitStatus,
   sendCommitStatus,
+  showsStatusUpdate,
   startingCommitStatus,
   statusTargetUrl,
   updateCommitStatus,
@@ -297,4 +298,29 @@ it("throws for a short SHA before any request", async () => {
     "A commit status needs a full commit SHA.",
   );
   expect(github.request).not.toHaveBeenCalled();
+});
+
+it("posts each update when the creator of the App is unknown", async () => {
+  // The same status that no known creator proves delivered.
+  const github = statusClient([shownStatus(needsReview)]);
+  const isCurrent = vi.fn(async () => true);
+
+  await sendCommitStatus({ github, sha, intent, origin, creatorId: null, isCurrent });
+
+  expect(isCurrent).toHaveBeenCalledWith();
+  // No read can prove a delivery, so the client reads nothing.
+  expect(github.request).toHaveBeenCalledTimes(1);
+  expect(posts(github)).toHaveLength(1);
+});
+
+it("tells whether the newest status is the status of an update from the App", async () => {
+  const shows = (github: GitHubClient) =>
+    showsStatusUpdate({ github, sha, update: intent, origin, creatorId: botId });
+
+  await expect(shows(statusClient([shownStatus(needsReview)]))).resolves.toBe(true);
+  await expect(shows(statusClient([shownStatus(needsReview, "42")]))).resolves.toBe(false);
+  await expect(
+    shows(statusClient([shownStatus({ ...needsReview, state: "pending" })])),
+  ).resolves.toBe(false);
+  await expect(shows(statusClient([]))).resolves.toBe(false);
 });

@@ -12,6 +12,8 @@ export interface GitHubStubParams {
   checks?: GitHubCheckRuns;
   /** Runs after the stub adds or changes a check run. */
   onCheckChange?: (checks: GitHubCheckRuns) => void;
+  /** The user ID of the App bot, which creates each commit status. */
+  statusCreatorId?: number;
 }
 
 async function jsonObject(request: Request): Promise<Record<string, unknown>> {
@@ -25,8 +27,8 @@ async function jsonObject(request: Request): Promise<Record<string, unknown>> {
 /**
  * Answer the GitHub requests of the local backend. The stub knows the
  * installation token, the maintainer, the permission of the maintainer, the
- * check runs that the service makes, and its pull request comments. Each other
- * request gets status 404.
+ * check runs and the commit statuses that the service makes, and its pull
+ * request comments. Each other request gets status 404.
  */
 export function createGitHubStub({
   appId,
@@ -35,12 +37,16 @@ export function createGitHubStub({
   maintainer,
   checks = new Map(),
   onCheckChange,
+  statusCreatorId = 1,
 }: GitHubStubParams) {
   const repositoryPath = `/repos/${repository}`;
   // The comments live only in memory. After a restart, the service reads a
   // stored comment as deleted, and it sends no comment to that pull request.
   const comments = new Map<number, Record<string, unknown>>();
   const issues = `${repositoryPath}/issues/`;
+  // The statuses live only in memory, newest first. A status that the service
+  // sends again after a restart shows as the newest one.
+  const statuses: Record<string, unknown>[] = [];
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const path = url.pathname;
@@ -72,7 +78,27 @@ export function createGitHubStub({
       onCheckChange?.(checks);
       return Response.json(check, { status: 201 });
     }
+    const statusSha = path.startsWith(`${repositoryPath}/statuses/`)
+      ? /^[a-f0-9]{40}$/.exec(path.slice(`${repositoryPath}/statuses/`.length))
+      : null;
+    if (request.method === "POST" && statusSha) {
+      const status = {
+        ...(await jsonObject(request)),
+        id: statuses.length + 1,
+        sha: statusSha[0],
+        creator: { id: statusCreatorId },
+      };
+      statuses.unshift(status);
+      return Response.json(status, { status: 201 });
+    }
     const commits = `${repositoryPath}/commits/`;
+    if (request.method === "GET" && path.startsWith(commits) && path.endsWith("/statuses")) {
+      const sha = path.slice(commits.length, -"/statuses".length);
+      const page = Number(url.searchParams.get("page") ?? "1");
+      const perPage = Number(url.searchParams.get("per_page") ?? "30");
+      const found = statuses.filter((status) => status.sha === sha);
+      return Response.json(found.slice((page - 1) * perPage, page * perPage));
+    }
     if (request.method === "GET" && path.startsWith(commits) && path.endsWith("/check-runs")) {
       const sha = path.slice(commits.length, -"/check-runs".length);
       const name = url.searchParams.get("check_name");
