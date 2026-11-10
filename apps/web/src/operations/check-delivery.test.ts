@@ -2,7 +2,7 @@ import { genericCheckOutput, GitHubUnavailableError } from "@visonaut/security";
 import { reviewCountsOrZero, Service } from "@visonaut/service";
 import { expect, it, vi } from "vitest";
 import { dashboard } from "../api/dashboard.ts";
-import { deliverGitHubStatuses } from "./checks.ts";
+import { deliverGitHubStatuses, deliverRunStatus } from "./checks.ts";
 import { addUndecidedChange, captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
 
 type Fixture = ReturnType<typeof context>;
@@ -895,4 +895,99 @@ it("sends no PATCH when a pre-run fence closes the check directly before the req
   expect(fenceSawSend).toBe(false);
   expect(fixture.state.patches).toBe(0);
   expect(readDelivery(database)).toMatchObject({ ambiguous: 0, lease_token: null });
+});
+
+it("sends the check of the reviewed run only, without the other runs of the project", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  for (const id of ["first", "second"]) {
+    await captured(fixture.context, id);
+  }
+  await deliverGitHubStatuses(fixture.context);
+  const patches = shownPatches(fixture);
+  const otherRevision = () =>
+    database.connection.prepare("SELECT desired_revision FROM work_checks WHERE id = '2'").get();
+  const other = otherRevision();
+  // The decision changes the revision of the project of the two runs.
+  await reject(fixture, "first");
+
+  const report = await deliverRunStatus(fixture.context, "first");
+
+  expect(report).toMatchObject({ completed: ["1"], deferred: [], attention: [] });
+  expect(patches.map((patch) => patch.output.title)).toEqual(["1 change rejected"]);
+  expect(currentChecks(database)).toEqual(["1"]);
+  // The other run gets no new update before the next pass.
+  expect(otherRevision()).toEqual(other);
+});
+
+it("sends the newest update of the run when a decision commits during its send", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await captured(fixture.context);
+  await deliverGitHubStatuses(fixture.context);
+  const patches = shownPatches(fixture);
+  await addUndecidedChange(database, "comparison-run");
+  await reject(fixture, "run", 0);
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  let decided = false;
+  // The sender reads the check after the claim. A second decision commits at
+  // that read, so the claimed update is obsolete.
+  fixture.context.github.request = async (path, init) => {
+    if (path === checkPath && !init?.method && !decided) {
+      decided = true;
+      await reject(fixture, "run", 1);
+    }
+    return request(path, init);
+  };
+
+  const report = await deliverRunStatus(fixture.context, "run");
+
+  expect(report).toMatchObject({ completed: ["1"], attention: [] });
+  expect(patches.map((patch) => patch.output.title)).toEqual(["2 changes rejected"]);
+  expect(currentChecks(database)).toEqual(["1"]);
+});
+
+it("sends the newest update of the run when a decision commits during its PATCH", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await captured(fixture.context);
+  await deliverGitHubStatuses(fixture.context);
+  await addUndecidedChange(database, "comparison-run");
+  await reject(fixture, "run", 0);
+  const patches = shownPatches(fixture);
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  let decided = false;
+  let concurrent: Awaited<ReturnType<typeof deliverRunStatus>> | undefined;
+  // A second decision commits after the request mark. The request of that
+  // decision finds the check leased.
+  fixture.context.github.request = async (path, init) => {
+    if (path === checkPath && init?.method === "PATCH" && !decided) {
+      decided = true;
+      await reject(fixture, "run", 1);
+      concurrent = await deliverRunStatus(fixture.context, "run");
+    }
+    return request(path, init);
+  };
+
+  const report = await deliverRunStatus(fixture.context, "run");
+
+  expect(concurrent).toMatchObject({ completed: [] });
+  expect(report).toMatchObject({ completed: ["1", "1"], attention: [] });
+  expect(patches.map((patch) => patch.output.title)).toEqual([
+    "1 change rejected",
+    "2 changes rejected",
+  ]);
+  expect(currentChecks(database)).toEqual(["1"]);
+});
+
+it("creates no check for a run whose check the pass has not created", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await captured(fixture.context);
+  const request = vi.spyOn(fixture.context.github, "request");
+
+  const report = await deliverRunStatus(fixture.context, "run");
+
+  expect(report).toMatchObject({ completed: [], deferred: [], attention: [] });
+  expect(request).not.toHaveBeenCalled();
 });

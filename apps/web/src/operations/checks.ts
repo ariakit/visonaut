@@ -296,20 +296,34 @@ async function releaseLock(context: OperationsContext, checkId: string, report: 
   }
 }
 
-export async function deliverGitHubStatuses(context: OperationsContext): Promise<OperationReport> {
+/** A row of `reconcileStatus`: a check whose newest update can be due. */
+interface CheckDelivery {
+  id: string;
+  ambiguous: number;
+  state: string;
+}
+
+/**
+ * Prepares an update for each check that does not show the current state of
+ * its run, and returns the runs that it read. A run ID limits it to one run.
+ */
+async function prepareStatusUpdates(
+  context: OperationsContext,
+  report: OperationReport,
+  runId: string | null = null,
+) {
   const { database, budget } = context;
   const service = new Service(database);
-  const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
-  await createChecks(context, report);
   const updates = await database
     .prepare(`SELECT DISTINCT run.id,creation.check_id FROM visonaut_runs run
     JOIN visonaut_projects project ON project.id=run.project_id
     JOIN operations_check_creations creation ON creation.run_id=run.id AND creation.state='complete'
     LEFT JOIN visonaut_status_outbox pending ON pending.run_id=run.id AND pending.delivered_at IS NULL
     WHERE ${statusRunEligibleSql} AND ${currentPreRunCheckSql("creation.check_id")}
+      ${runId === null ? "" : "AND run.id=?2"}
       AND (pending.id IS NOT NULL OR EXISTS(SELECT 1 FROM work_status_outbox stale JOIN work_checks checks ON checks.id=stale.check_id AND checks.desired_revision=stale.revision WHERE stale.check_id=creation.check_id AND stale.source_revision!=project.revision) OR NOT EXISTS(SELECT 1 FROM work_status_outbox current JOIN work_checks checks ON checks.id=current.check_id AND checks.desired_revision=current.revision WHERE current.check_id=creation.check_id))
-    ORDER BY run.created_at,run.id LIMIT ?`)
-    .bind(budget.tasksPerStep)
+    ORDER BY run.created_at,run.id LIMIT ?1`)
+    .bind(budget.tasksPerStep, ...(runId === null ? [] : [runId]))
     .all<{ id: string; check_id: string }>();
   for (const update of updates.results ?? []) {
     const conflict = await prepareStatusUpdate(() =>
@@ -327,6 +341,100 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
       report.deferred.push(update.id);
     }
   }
+  return updates.results ?? [];
+}
+
+/** Sends the due update of one check, or settles its lock. */
+async function sendCheck(
+  context: OperationsContext,
+  report: OperationReport,
+  delivery: CheckDelivery,
+) {
+  const { database, budget } = context;
+  const service = new Service(database);
+  const released = delivery.ambiguous && (await releaseLock(context, delivery.id, report));
+  if (released) {
+    await resolveEvents(database, "check-delivery", delivery.id, context.now());
+  }
+  if (!delivery.ambiguous || released) {
+    const obsolete = await database
+      .prepare(`SELECT 1 AS found WHERE ${obsoleteCheckDeliverySql("?")}`)
+      .bind(delivery.id)
+      .first();
+    if (obsolete) {
+      return "skipped" as const;
+    }
+  }
+  if ((delivery.ambiguous && !released) || delivery.state === "dead") {
+    await recordEvent(database, {
+      kind: "check-delivery",
+      subject: delivery.id,
+      code: delivery.ambiguous ? "ambiguous" : "exhausted",
+      now: context.now(),
+    });
+    return "attention" as const;
+  }
+  if (!(await isCurrentPreRunCheck(database, delivery.id))) return "skipped" as const;
+  const token = crypto.randomUUID();
+  const intent = await claimStatus(database, {
+    id: delivery.id,
+    token,
+    now: context.now(),
+    leaseMs: Math.min(budget.leaseMilliseconds, statusLeaseMilliseconds),
+  });
+  if (!intent) return "skipped" as const;
+  const target = await checkTarget(context, intent);
+  const result = await deliverStatus(database, {
+    id: delivery.id,
+    token,
+    revision: intent.revision,
+    now: context.now,
+    // Each pre-run fence writes the pre-run state and then reads the request
+    // mark, so the statement of the mark tests that state too.
+    eligibleCheckSql: currentPreRunCheckSql("work_checks.id"),
+    // The service stores the result of a failed send and gives no error
+    // to this step, so the cause goes on the report here.
+    send: (latest, isCurrent) =>
+      withCause(report, async () => {
+        const outcome = await sendGitHubCheck({
+          github: context.github,
+          intent: latest,
+          ...target,
+          origin: context.origin,
+          // The outbox sets the request mark, so its call is the last one.
+          isCurrent: async (options) =>
+            (await service.isStatusIntentCurrent(latest)) && (await isCurrent(options)),
+        });
+        // A failed read is a result, and not an error of the sender.
+        if (typeof outcome === "object") {
+          noteCause(report, outcome.error);
+        }
+        return outcome;
+      }),
+  });
+  if (result === "delivered") {
+    await resolveEvents(database, "check-delivery", delivery.id, context.now());
+    return "completed" as const;
+  } else if (result === "ambiguous") {
+    await recordEvent(database, {
+      kind: "check-delivery",
+      subject: delivery.id,
+      code: "ambiguous",
+      now: context.now(),
+    });
+    return "attention" as const;
+  } else if (result === "read-failed") {
+    return "waiting" as const;
+  } else {
+    return "deferred" as const;
+  }
+}
+
+export async function deliverGitHubStatuses(context: OperationsContext): Promise<OperationReport> {
+  const { database, budget } = context;
+  const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
+  await createChecks(context, report);
+  const updates = await prepareStatusUpdates(context, report);
   const cursor = await database
     .prepare("SELECT value FROM operations_cursors WHERE id='check-attention'")
     .first<{ value: string | null }>();
@@ -358,87 +466,8 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     )
     .bind(attention.length === budget.tasksPerStep ? (attention.at(-1)?.id ?? null) : null)
     .run();
-  const outcomes = await mapConcurrent(
-    deliveries,
-    maximumConcurrentStatusDeliveries,
-    async (delivery) => {
-      const released = delivery.ambiguous && (await releaseLock(context, delivery.id, report));
-      if (released) {
-        await resolveEvents(database, "check-delivery", delivery.id, context.now());
-      }
-      if (!delivery.ambiguous || released) {
-        const obsolete = await database
-          .prepare(`SELECT 1 AS found WHERE ${obsoleteCheckDeliverySql("?")}`)
-          .bind(delivery.id)
-          .first();
-        if (obsolete) {
-          return "skipped" as const;
-        }
-      }
-      if ((delivery.ambiguous && !released) || delivery.state === "dead") {
-        await recordEvent(database, {
-          kind: "check-delivery",
-          subject: delivery.id,
-          code: delivery.ambiguous ? "ambiguous" : "exhausted",
-          now: context.now(),
-        });
-        return "attention" as const;
-      }
-      if (!(await isCurrentPreRunCheck(database, delivery.id))) return "skipped" as const;
-      const token = crypto.randomUUID();
-      const intent = await claimStatus(database, {
-        id: delivery.id,
-        token,
-        now: context.now(),
-        leaseMs: Math.min(budget.leaseMilliseconds, statusLeaseMilliseconds),
-      });
-      if (!intent) return "skipped" as const;
-      const target = await checkTarget(context, intent);
-      const result = await deliverStatus(database, {
-        id: delivery.id,
-        token,
-        revision: intent.revision,
-        now: context.now,
-        // Each pre-run fence writes the pre-run state and then reads the request
-        // mark, so the statement of the mark tests that state too.
-        eligibleCheckSql: currentPreRunCheckSql("work_checks.id"),
-        // The service stores the result of a failed send and gives no error
-        // to this step, so the cause goes on the report here.
-        send: (latest, isCurrent) =>
-          withCause(report, async () => {
-            const outcome = await sendGitHubCheck({
-              github: context.github,
-              intent: latest,
-              ...target,
-              origin: context.origin,
-              // The outbox sets the request mark, so its call is the last one.
-              isCurrent: async (options) =>
-                (await service.isStatusIntentCurrent(latest)) && (await isCurrent(options)),
-            });
-            // A failed read is a result, and not an error of the sender.
-            if (typeof outcome === "object") {
-              noteCause(report, outcome.error);
-            }
-            return outcome;
-          }),
-      });
-      if (result === "delivered") {
-        await resolveEvents(database, "check-delivery", delivery.id, context.now());
-        return "completed" as const;
-      } else if (result === "ambiguous") {
-        await recordEvent(database, {
-          kind: "check-delivery",
-          subject: delivery.id,
-          code: "ambiguous",
-          now: context.now(),
-        });
-        return "attention" as const;
-      } else if (result === "read-failed") {
-        return "waiting" as const;
-      } else {
-        return "deferred" as const;
-      }
-    },
+  const outcomes = await mapConcurrent(deliveries, maximumConcurrentStatusDeliveries, (delivery) =>
+    sendCheck(context, report, delivery),
   );
   for (const [index, outcome] of outcomes.entries()) {
     const delivery = deliveries[index];
@@ -454,7 +483,50 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
   // Only progress asks for one more pass. A locked check stays locked in the
   // next pass, and an update that waits after a failed read is not due in it.
   report.hasMore =
-    (updates.results?.length ?? 0) === budget.tasksPerStep ||
+    updates.length === budget.tasksPerStep ||
     outcomes.some((outcome) => outcome === "completed" || outcome === "deferred");
+  return report;
+}
+
+// A decision during a send makes the sent update old. A newer request finds
+// the check leased and stops, so the request that sent it reads it again.
+// The count bounds a burst of decisions.
+const maximumRunStatusAttempts = 3;
+// The platform ends the work of a request about 30 seconds after the answer.
+// A new send starts only before this time, so that its request has time left.
+const runStatusMilliseconds = 10 * 1000;
+
+/**
+ * Sends the update of the check of one run outside a pass, so that a review
+ * does not wait for the queue. It creates no check and leaves a locked or
+ * dead check to the pass. The queued status pass sends what remains.
+ */
+export async function deliverRunStatus(
+  context: OperationsContext,
+  runId: string,
+): Promise<OperationReport> {
+  const { database } = context;
+  const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
+  const deadline = context.now() + runStatusMilliseconds;
+  for (let attempt = 0; attempt < maximumRunStatusAttempts; attempt++) {
+    if (context.now() >= deadline) break;
+    await prepareStatusUpdates(context, report, runId);
+    const delivery = await database
+      .prepare(`SELECT checks.id,checks.ambiguous,outbox.state
+      FROM operations_check_creations creation
+      JOIN work_checks checks ON checks.id=creation.check_id
+      JOIN work_status_outbox outbox ON outbox.check_id=checks.id AND outbox.revision=checks.desired_revision
+      WHERE creation.run_id=? AND creation.state='complete' AND checks.lease_token IS NULL
+        AND checks.ambiguous=0 AND outbox.state='pending' AND outbox.available_at<=?`)
+      .bind(runId, context.now())
+      .first<CheckDelivery>();
+    if (!delivery) break;
+    const outcome = await sendCheck(context, report, delivery);
+    if (outcome === "completed") {
+      report.completed.push(delivery.id);
+      continue;
+    }
+    if (outcome !== "deferred") break;
+  }
   return report;
 }

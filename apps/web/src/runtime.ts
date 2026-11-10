@@ -12,6 +12,7 @@ import {
   type RuntimeApiLimits,
 } from "./runtime-defaults.ts";
 import { recoverGitHubDeliveries } from "./operations/github-deliveries.ts";
+import { deliverRunStatus } from "./operations/checks.ts";
 import type { OperationsMessage } from "@visonaut/service";
 import {
   createGitHubClient,
@@ -256,7 +257,26 @@ export function apiBindings(env: BackendEnv): ApiBindings {
     },
     configuration,
     admission: (identity) => checkRunAdmission(env.DB, databaseCapacityPolicy(env), identity),
+    statusDelivery: (runId) => deliverReviewStatus(env, runId),
   };
+}
+
+/** The check update of one run, outside the queue. */
+async function deliverReviewStatus(env: BackendEnv, runId: string) {
+  // A preview runs no operations pass, so it sends no check either.
+  if (env.VISONAUT_ENVIRONMENT === "preview") return;
+  const startedAt = Date.now();
+  await assertOperationsProject(env);
+  const report = await deliverRunStatus(operationsContext(env), runId);
+  if (!report.causes) return;
+  logOperationFailure({
+    operation: "review-status",
+    code: "items-failed",
+    correlationId: crypto.randomUUID(),
+    startedAt,
+    runId,
+    causes: report.causes,
+  });
 }
 
 export type { OperationsMessage } from "@visonaut/service";

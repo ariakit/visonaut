@@ -41,6 +41,7 @@ import {
   getWork,
 } from "@visonaut/service";
 import { readClosedSummary } from "../operations/closed-summary.ts";
+import { errorCause } from "../operations/failure.ts";
 import type { HistoryRow } from "../operations/history-format.ts";
 import { type PrivateContext } from "./context.js";
 import { integer, jsonBody, object, string, uuid } from "./input.js";
@@ -922,7 +923,7 @@ function receiptResponse(
   });
 }
 
-async function wakeReviewStatus(context: PrivateContext, commandId?: string) {
+async function wakeReviewStatus(context: PrivateContext, runId: string, commandId?: string) {
   // Start the saved command while the shared consumer may be occupied with ingest.
   context.lifetime.waitUntil(
     (async () => {
@@ -945,6 +946,15 @@ async function wakeReviewStatus(context: PrivateContext, commandId?: string) {
         await context.operations.send({ kind: "status" });
       } catch {
         console.error(JSON.stringify({ event: "review-status-wakeup-failed" }));
+      }
+      // After the queued fallback, so that a failed send still has a pass. The
+      // check lease keeps the two from sending the same update twice.
+      try {
+        await context.statusDelivery?.(runId);
+      } catch (error) {
+        console.error(
+          JSON.stringify({ event: "review-status-delivery-failed", cause: errorCause(error) }),
+        );
       }
     })(),
   );
@@ -1182,11 +1192,11 @@ export async function handleReview(
             { status: 409 },
           );
         }
-        await wakeReviewStatus(context, input.commandId);
+        await wakeReviewStatus(context, run.id, input.commandId);
         return Response.json({ queued: true, commandId: input.commandId }, { status: 202 });
       }
       const result = await context.service.review({ ...input, now: Date.now() });
-      if (!result.noop) await wakeReviewStatus(context);
+      if (!result.noop) await wakeReviewStatus(context, run.id);
       // The receipt, with no model. The run is read after the review state: a
       // write that the state already counts then shows in the run revision.
       const status = await context.service.status(run.id);
@@ -1228,7 +1238,7 @@ export async function handleReview(
         expectedBaselineRevision: integer(body.expectedBaselineRevision),
         now: Date.now(),
       });
-      await wakeReviewStatus(context);
+      await wakeReviewStatus(context, run.id);
       return commandResult(context, result, run.id);
     } catch (error) {
       if (error instanceof ArchivedCommandResultError) {
