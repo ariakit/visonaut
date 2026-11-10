@@ -5,9 +5,10 @@ import { completeWorkflowJobs, jobExecutedInAttempt, verifyCarriedExecution } fr
 import { completedHistoricalAttempt } from "./pre-run-candidates.js";
 import {
   attemptCheck,
+  completePreRunResult,
+  preRunResult,
   storedCheck,
   storedExternalId,
-  verifiedCheck,
   type PreRunCheck,
 } from "./pre-run-checks.js";
 import { afterRestoreSql } from "../operations/recovery.ts";
@@ -166,21 +167,19 @@ export async function completeNoVisualPlan(
   const current = await storedExternalId(context, row.external_id);
   if (!current || current.plan_visual_required !== 0 || !current.check_id) return;
   if (current.state === "docs_complete") return;
-  await verifiedCheck(github, row, current.check_id);
+  await preRunResult(context, github, current);
   const latest = await storedCheck(context, row.tested_sha);
   if (latest?.external_id !== row.external_id)
     throw new SecurityError("stale_plan", 409, "A newer attempt supersedes this Plan.");
-  await github.request(`/repos/${github.repository}/check-runs/${current.check_id}`, {
-    method: "PATCH",
-    body: JSON.stringify({
-      status: "completed",
-      conclusion: "success",
-      completed_at: new Date().toISOString(),
-      output: {
-        title: "Visual capture is not required",
-        summary: "The successful trusted Plan selected app=false for this attempt.",
-      },
-    }),
+  await completePreRunResult({
+    context,
+    github,
+    row: current,
+    conclusion: "success",
+    output: {
+      title: "Visual capture is not required",
+      summary: "The successful trusted Plan selected app=false for this attempt.",
+    },
   });
   await context.database
     .prepare(

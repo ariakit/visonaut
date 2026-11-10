@@ -27,6 +27,7 @@
     "VISONAUT_PROJECT_ID": "ariakit",
     "VISONAUT_API_LIMITS": "{}",
     "VISONAUT_OPERATIONS_BUDGET": "{}",
+    "VISONAUT_STATUS_CREATOR_ID": "",
   },
   "d1_databases": [],
   "r2_buckets": [],
@@ -68,6 +69,7 @@
         "VISONAUT_ALLOW_MAIN_DISPATCH": "false",
         "VISONAUT_API_LIMITS": "{}",
         "VISONAUT_OPERATIONS_BUDGET": "{}",
+        "VISONAUT_STATUS_CREATOR_ID": "",
       },
       "d1_databases": [
         {
@@ -156,6 +158,7 @@
         "VISONAUT_ALLOW_MAIN_DISPATCH": "false",
         "VISONAUT_API_LIMITS": "{}",
         "VISONAUT_OPERATIONS_BUDGET": "{}",
+        "VISONAUT_STATUS_CREATOR_ID": "",
       },
       "d1_databases": [
         {

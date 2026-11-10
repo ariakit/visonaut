@@ -12,6 +12,7 @@ import { dashboard } from "./dashboard.ts";
 import { handleApi, apiContext, type ApiBindings } from "./index.ts";
 import { measureD1 } from "./test-d1-costs.ts";
 import { ensurePreRunCheck } from "./test-pre-run.ts";
+import { completePreRunResult, preRunResult, storedCheck } from "./pre-run-checks.ts";
 import { processWebhook, reconcileWebhooks } from "./webhooks.ts";
 import { sanitizeRestoredDatabase } from "../operations/recovery.ts";
 import { reconcileStagedWorkflows } from "./workflow-materialize.ts";
@@ -196,6 +197,7 @@ function preRunFixture() {
       },
     ],
     attemptJobs: null as Record<string, unknown>[] | null,
+    statuses: [] as { sha: string; status: Record<string, unknown> }[],
     posts: 0,
     losePost: false,
     priorConclusion: "failure" as string | null,
@@ -292,6 +294,11 @@ function preRunFixture() {
           run_attempt: 2,
           run_started_at: "2026-09-25T03:57:01Z",
         };
+      }
+      const statusSha = /\/statuses\/([a-f0-9]{40})$/.exec(path)?.[1];
+      if (statusSha && init?.method === "POST") {
+        state.statuses.push({ sha: statusSha, status: JSON.parse(String(init.body)) });
+        return { id: state.statuses.length };
       }
       if (path.includes("/commits/") && path.includes("/check-runs?")) {
         return { check_runs: [...state.checks.values()] };
@@ -5768,4 +5775,269 @@ describe("restored workflow and delivery fencing", () => {
       });
     },
   );
+});
+
+describe("pre-run commit status surface", () => {
+  const statusBindings: ApiBindings = {
+    ...preRunBindings,
+    configuration: { ...preRunBindings.configuration, statusCreatorId: "332309535" },
+  };
+  const pullPage = (testedSha: string) =>
+    `https://preview.example/pulls/7?check=${encodeURIComponent(`visonaut:pre:${testedSha}`)}`;
+
+  function rows() {
+    return database
+      .prepare(
+        "SELECT tested_sha,surface,state,check_id,status_state FROM pre_run_checks ORDER BY created_at,rowid",
+      )
+      .all()
+      .then((result) => result.results);
+  }
+
+  /** A second candidate of the same pull request head after main moved. */
+  async function movedMergeCandidate(fixture: ReturnType<typeof preRunFixture>) {
+    const currentSha = "d".repeat(40);
+    fixture.state.currentSha = currentSha;
+    fixture.state.refSha = currentSha;
+    fixture.webhook.payload.pull_request = {
+      head: { sha: sourceSha },
+      base: { sha: baseSha },
+      merge_commit_sha: currentSha,
+    };
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing moved candidate");
+    return candidate;
+  }
+
+  it("posts one pending commit status on the PR head, and no check run, for a new commit", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+
+    await ensurePreRunCheck(apiContext(statusBindings), fixture.github, candidate, fixture.webhook);
+    await ensurePreRunCheck(apiContext(statusBindings), fixture.github, candidate, fixture.webhook);
+
+    expect(fixture.state.posts).toBe(0);
+    expect(fixture.state.statuses).toEqual([
+      {
+        sha: sourceSha,
+        status: {
+          state: "pending",
+          description: "Checking visual coverage",
+          target_url: pullPage(mergeSha),
+          context: "Visonaut",
+        },
+      },
+    ]);
+    // The outbox keys a status row by its external identity.
+    expect(await rows()).toEqual([
+      {
+        tested_sha: mergeSha,
+        surface: "status",
+        state: "active",
+        check_id: `visonaut:pre:${mergeSha}`,
+        status_state: null,
+      },
+    ]);
+    await expect(
+      findPreRunCheck(apiContext(statusBindings), fixture.github, {
+        testedSha: mergeSha,
+        workflowRunId: "77",
+        workflowAttempt: 1,
+      }),
+    ).resolves.toMatchObject({ checkId: `visonaut:pre:${mergeSha}` });
+  });
+
+  it("keeps a check run for a PR head whose earlier row has one", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const old = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!old) throw new Error("Missing old candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, old, fixture.webhook);
+    const current = await movedMergeCandidate(fixture);
+
+    await ensurePreRunCheck(apiContext(statusBindings), fixture.github, current, fixture.webhook);
+
+    // One commit never shows both a check run and a commit status.
+    expect(fixture.state.posts).toBe(2);
+    expect(fixture.state.statuses).toEqual([]);
+    expect((await rows()).map((row) => row.surface)).toEqual(["check", "check"]);
+  });
+
+  it("posts the result of the newest row of a commit, and records the result of an older row", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const old = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!old) throw new Error("Missing old candidate");
+    await ensurePreRunCheck(apiContext(statusBindings), fixture.github, old, fixture.webhook);
+    await ensurePreRunCheck(
+      apiContext(statusBindings),
+      fixture.github,
+      await movedMergeCandidate(fixture),
+      fixture.webhook,
+    );
+    const context = apiContext(statusBindings);
+    const [older, newer] = await Promise.all(
+      [mergeSha, "d".repeat(40)].map((testedSha) => storedCheck(context, testedSha)),
+    );
+    if (!older || !newer) throw new Error("Missing rows");
+    const output = { title: "Visual capture was superseded", summary: "The head changed." };
+
+    await completePreRunResult({
+      context,
+      github: fixture.github,
+      row: older,
+      conclusion: "failure",
+      output,
+    });
+    expect(fixture.state.statuses).toHaveLength(2);
+    await completePreRunResult({
+      context,
+      github: fixture.github,
+      row: newer,
+      conclusion: "failure",
+      output,
+    });
+
+    expect(fixture.state.statuses.at(-1)).toEqual({
+      sha: sourceSha,
+      status: {
+        state: "failure",
+        description: "Visual capture was superseded",
+        target_url: pullPage("d".repeat(40)),
+        context: "Visonaut",
+      },
+    });
+    expect(fixture.state.statuses).toHaveLength(3);
+    expect((await rows()).map((row) => row.status_state)).toEqual(["failure", "failure"]);
+  });
+
+  it("reads the result of a status row from its delivered update and its closed state", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    const context = apiContext(statusBindings);
+    await ensurePreRunCheck(context, fixture.github, candidate, fixture.webhook);
+    const request = vi.spyOn(fixture.github, "request");
+    const read = async () => {
+      const row = await storedCheck(context, mergeSha);
+      if (!row) throw new Error("Missing row");
+      const result = await preRunResult(context, fixture.github, row);
+      return [result.status, result.conclusion];
+    };
+    const id = `visonaut:pre:${mergeSha}`;
+
+    expect(await read()).toEqual(["in_progress", null]);
+    await database
+      .prepare("INSERT INTO work_checks(id,desired_revision,delivered_revision) VALUES(?,1,1)")
+      .bind(id)
+      .run();
+    await database
+      .prepare(
+        "INSERT INTO work_status_outbox(check_id,revision,run_id,attempt,comparison_revision,source_revision,conclusion,details_url,state,max_attempts,available_at) VALUES(?,1,'run',1,1,1,'success','https://preview.example/runs/run','complete',5,0)",
+      )
+      .bind(id)
+      .run();
+    expect(await read()).toEqual(["completed", "success"]);
+    // A row that the service closed with no direct write keeps its delivered result.
+    await database.prepare("UPDATE pre_run_checks SET state='failed'").run();
+    expect(await read()).toEqual(["completed", "success"]);
+    // A direct write of a closed row is newer than each delivered update.
+    await database.prepare("UPDATE pre_run_checks SET status_state='failure'").run();
+    expect(await read()).toEqual(["completed", "failure"]);
+    // GitHub is not read for a status row.
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it("posts the result of an active row when a newer row of its commit only has a record", async () => {
+    // An edited PR after main moved records a second merge of the same head.
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    const context = apiContext(statusBindings);
+    await ensurePreRunCheck(context, fixture.github, candidate, fixture.webhook);
+    await recordPreRunCandidate(context, fixture.github, await movedMergeCandidate(fixture));
+    const active = await storedCheck(context, mergeSha);
+    if (!active) throw new Error("Missing active row");
+
+    await completePreRunResult({
+      context,
+      github: fixture.github,
+      row: active,
+      conclusion: "success",
+      output: { title: "Visual capture is not required", summary: "No visual work." },
+    });
+
+    expect((await rows()).map((row) => row.state)).toEqual(["active", "pending"]);
+    expect(fixture.state.statuses.map(({ status }) => status.description)).toEqual([
+      "Checking visual coverage",
+      "Visual capture is not required",
+    ]);
+  });
+
+  it("posts no status and keeps the row pending when the candidate changed before creation", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+
+    await expect(
+      ensurePreRunCheck(
+        apiContext(statusBindings),
+        fixture.github,
+        candidate,
+        fixture.webhook,
+        () => Promise.resolve(null),
+      ),
+    ).rejects.toMatchObject({ code: "stale_candidate" });
+
+    expect(fixture.state.statuses).toEqual([]);
+    expect((await rows()).map((row) => [row.surface, row.state])).toEqual([["status", "pending"]]);
+  });
+
+  it("gives a verified rerun a status row, and closes the earlier row on the same status first", async () => {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    const context = apiContext(statusBindings);
+    await ensurePreRunCheck(context, fixture.github, candidate, fixture.webhook);
+    await findPreRunCheck(context, fixture.github, {
+      testedSha: mergeSha,
+      workflowRunId: "77",
+      workflowAttempt: 1,
+    });
+    await database.prepare("UPDATE pre_run_checks SET plan_visual_required=1").run();
+    fixture.state.run.run_attempt = 2;
+    fixture.state.run.status = "queued";
+    fixture.state.run.conclusion = null;
+    const requested = fixture.workflowWebhook();
+    requested.payload.action = "requested";
+    await settlePreRunWorkflow(context, fixture.github, requested);
+
+    await ensureSignedAttemptCheck(context, fixture.github, {
+      workflowRunId: "77",
+      workflowAttempt: 2,
+      testedSha: mergeSha,
+      sourceHead: sourceSha,
+      targetHead: baseSha,
+      event: "pull_request",
+      ref: "refs/pull/7/merge",
+      pullRequestNumber: 7,
+    });
+
+    expect((await rows()).map((row) => [row.surface, row.state, row.status_state])).toEqual([
+      ["status", "failed", "failure"],
+      ["status", "active", null],
+    ]);
+    expect(fixture.state.posts).toBe(0);
+    expect(fixture.state.statuses.map(({ status }) => [status.state, status.description])).toEqual([
+      ["pending", "Checking visual coverage"],
+      ["failure", "Visual capture was superseded"],
+      ["pending", "Checking visual coverage"],
+    ]);
+  });
 });

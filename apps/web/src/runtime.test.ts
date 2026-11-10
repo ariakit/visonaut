@@ -17,6 +17,7 @@ import {
   type BackendEnv,
   reportSchedulerFailure,
   runScheduledOperations,
+  statusCreatorConfiguration,
 } from "./runtime.ts";
 import server from "./server.ts";
 import { SecurityError } from "@visonaut/security";
@@ -145,6 +146,7 @@ it("keeps live workflow and authentication configuration only in production", ()
     "VISONAUT_ORIGIN",
     "VISONAUT_PROJECT_ID",
     "VISONAUT_REPOSITORY",
+    "VISONAUT_STATUS_CREATOR_ID",
     "VISONAUT_WORKFLOW_OWNED",
   ]);
   expect(Object.keys(apiBindings(env).configuration).sort()).toEqual([
@@ -159,6 +161,14 @@ it("keeps live workflow and authentication configuration only in production", ()
     "webhookSecret",
     "workflowOwned",
   ]);
+});
+
+it("selects the status surface only with the numeric user ID of the App bot", () => {
+  expect(statusCreatorConfiguration("")).toEqual({});
+  expect(statusCreatorConfiguration("332309535")).toEqual({ statusCreatorId: "332309535" });
+  for (const value of ["visonaut-ci[bot]", "0", "12a", " 1"]) {
+    expect(() => statusCreatorConfiguration(value), value).toThrow("VISONAUT_STATUS_CREATOR_ID");
+  }
 });
 
 beforeEach(async () => {

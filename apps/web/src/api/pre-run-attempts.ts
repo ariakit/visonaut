@@ -17,15 +17,16 @@ import {
 } from "./pre-run-candidates.js";
 import {
   attemptCheck,
+  completePreRunResult,
   ensureStoredCheck,
   externalId,
+  preRunResult,
   recordPreRunCandidate,
   sameCandidate,
   sha,
   storeCandidateCheck,
   storedCheck,
   storedExternalId,
-  verifiedCheck,
   type Candidate,
   type PreRunCheck,
 } from "./pre-run-checks.js";
@@ -73,7 +74,7 @@ async function retireBoundHistoricalCheck(
   if (!row.check_id) {
     throw new SecurityError("check_pending", 503, "The historical check is unavailable.");
   }
-  const check = await verifiedCheck(github, row, row.check_id);
+  const check = await preRunResult(context, github, row);
   if (check.status === "completed") {
     if (check.conclusion === "success" || check.conclusion === "neutral") return true;
     if (check.conclusion !== "failure") {
@@ -101,22 +102,14 @@ async function retireBoundHistoricalCheck(
       throw new SecurityError("check_pending", 503, "The prior check delivery is still pending.");
     }
   }
-  const closed = await verifiedCheck(github, row, row.check_id);
+  const closed = await preRunResult(context, github, row);
   if (closed.status === "completed") {
     if (["success", "neutral", "failure"].includes(String(closed.conclusion))) return true;
     throw new SecurityError("pre_run_check", 503, "The historical check is incomplete.");
   }
   if (closed.status === "in_progress" || closed.status === "queued") {
-    await github.request(`/repos/${github.repository}/check-runs/${row.check_id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: "completed",
-        conclusion: "failure",
-        completed_at: new Date().toISOString(),
-        output,
-      }),
-    });
-    const completed = await verifiedCheck(github, row, row.check_id);
+    await completePreRunResult({ context, github, row, conclusion: "failure", output });
+    const completed = await preRunResult(context, github, row);
     if (completed.status !== "completed" || completed.conclusion !== "failure") {
       throw new SecurityError("check_pending", 503, "The historical check did not close.");
     }
@@ -202,7 +195,7 @@ async function retireSupersededMainAttempt({
   const ref = object(await github.request(`/repos/${github.repository}/git/ref/heads/main`));
   const currentSha = sha(object(ref.object).sha);
   if (!currentSha || currentSha === testedSha) return false;
-  const check = await verifiedCheck(github, row, row.check_id);
+  const check = await preRunResult(context, github, row);
   // A delayed progress delivery may arrive after the live run completes.
   if (action !== "completed") return true;
   if (check.status !== "completed" && row.state === "active") {
@@ -304,7 +297,7 @@ async function retireSupersededPullRequestAttempt({
       run.status === "completed" &&
       (base.ref !== "main" || head.ref !== run.head_branch || head.sha !== row.source_sha);
     if (!closed && !moved) return false;
-    const check = await verifiedCheck(github, row, row.check_id);
+    const check = await preRunResult(context, github, row);
     // Only a completed delivery may close the check, even when the live run
     // has finished since this progress delivery was sent.
     if (closed) return true;
@@ -447,7 +440,7 @@ async function retireUnboundTerminalPullRequestAttempt(
   ) {
     return false;
   }
-  await verifiedCheck(github, bound, checkId);
+  await preRunResult(context, github, bound);
   const pull = object(await github.request(`/repos/${github.repository}/pulls/${number}`));
   const head = object(pull.head);
   const base = object(pull.base);
@@ -678,7 +671,7 @@ async function retireStaleUnboundPullRequestCheck({
   // Signed work can acquire ownership while the pull request is read.
   if (await ownsWorkflowAttempt(context, github, runId, attempt)) return false;
   for (const row of stale.candidates) {
-    const check = await verifiedCheck(github, row, row.check_id);
+    const check = await preRunResult(context, github, row);
     if (action !== "completed") {
       // Only the completed delivery may close the check.
       if (check.status !== "completed") return false;
@@ -803,7 +796,7 @@ async function bindWorkflowCheck(
     if (!candidate.check_id) {
       throw new SecurityError("check_pending", 503, "The candidate check is unavailable.");
     }
-    const check = await verifiedCheck(github, candidate, candidate.check_id);
+    const check = await preRunResult(context, github, candidate);
     if (check.status !== "completed") {
       await context.database
         .prepare(
@@ -825,7 +818,7 @@ async function bindWorkflowCheck(
   if (!candidate.check_id) {
     throw new SecurityError("pre_run_check", 503, "The previous candidate check is unavailable.");
   }
-  const previous = await verifiedCheck(github, candidate, candidate.check_id);
+  const previous = await preRunResult(context, github, candidate);
   if (previous.status !== "completed") {
     if (
       candidate.workflow_run_id !== runId ||
@@ -855,21 +848,19 @@ async function bindWorkflowCheck(
   if (sending) {
     throw new SecurityError("check_pending", 503, "The prior check delivery is still pending.");
   }
-  const settled = await verifiedCheck(github, candidate, candidate.check_id);
+  const settled = await preRunResult(context, github, candidate);
   if (settled.status !== "completed") {
-    await github.request(`/repos/${github.repository}/check-runs/${candidate.check_id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: "completed",
-        conclusion: "failure",
-        completed_at: new Date().toISOString(),
-        output: {
-          title: "Visual capture was superseded",
-          summary: `A verified rerun started as workflow attempt ${attempt}.`,
-        },
-      }),
+    await completePreRunResult({
+      context,
+      github,
+      row: candidate,
+      conclusion: "failure",
+      output: {
+        title: "Visual capture was superseded",
+        summary: `A verified rerun started as workflow attempt ${attempt}.`,
+      },
     });
-    const closed = await verifiedCheck(github, candidate, candidate.check_id);
+    const closed = await preRunResult(context, github, candidate);
     if (closed.status !== "completed" || closed.conclusion !== "failure") {
       throw new SecurityError("check_pending", 503, "The previous workflow check did not close.");
     }
@@ -878,7 +869,7 @@ async function bindWorkflowCheck(
   const now = Date.now();
   await context.database
     .prepare(
-      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,workflow_run_id,workflow_attempt,created_at,updated_at) SELECT tested_sha,generation+1,repository_id,source_sha,base_sha,kind,ref,pull_request_number,0,?,check_head_sha,?,?,?,? FROM pre_run_checks WHERE external_id=? ON CONFLICT DO NOTHING",
+      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,surface,workflow_run_id,workflow_attempt,created_at,updated_at) SELECT tested_sha,generation+1,repository_id,source_sha,base_sha,kind,ref,pull_request_number,0,?,check_head_sha,surface,?,?,?,? FROM pre_run_checks WHERE external_id=? ON CONFLICT DO NOTHING",
     )
     .bind(
       externalId(candidate.tested_sha, nextGeneration),
@@ -1185,7 +1176,7 @@ export async function settlePreRunWorkflow(
     // A carried Gate job does not start a new visual attempt. Only an actual
     // signed Plan report or Submit can supersede the earlier visual check.
     if (candidate.workflow_run_id !== null) return;
-    const unbound = await verifiedCheck(github, candidate, candidate.check_id);
+    const unbound = await preRunResult(context, github, candidate);
     if (unbound.status === "completed") return;
   }
   let row = await bindWorkflowCheck(context, github, run, candidate);
@@ -1203,7 +1194,7 @@ export async function settlePreRunWorkflow(
   if (row.state !== "active" || !row.check_id) {
     throw new SecurityError("pre_run_check", 503, "The candidate App check is not ready.");
   }
-  const check = await verifiedCheck(github, row, row.check_id);
+  const check = await preRunResult(context, github, row);
   if (check.status === "completed" && check.conclusion === "failure") {
     await context.database
       .prepare(
@@ -1228,14 +1219,12 @@ export async function settlePreRunWorkflow(
         : run.conclusion === "success"
           ? "The capture workflow finished without a signed Visonaut submit job."
           : `The capture workflow ended with ${String(run.conclusion)}.`;
-  await github.request(`/repos/${github.repository}/check-runs/${row.check_id}`, {
-    method: "PATCH",
-    body: JSON.stringify({
-      status: "completed",
-      conclusion: "failure",
-      completed_at: new Date().toISOString(),
-      output: { title: "Visual capture did not complete", summary: reason },
-    }),
+  await completePreRunResult({
+    context,
+    github,
+    row,
+    conclusion: "failure",
+    output: { title: "Visual capture did not complete", summary: reason },
   });
   await context.database
     .prepare(

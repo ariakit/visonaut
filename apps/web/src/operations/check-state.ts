@@ -29,3 +29,22 @@ export function obsoleteCheckDeliverySql(checkId: string) {
           SELECT MAX(history.revision) FROM work_status_outbox history WHERE history.check_id=sender.id)
           AND NOT ${statusRunEligibleSql})))`;
 }
+
+/** The commit whose status a pre-run row writes: the head of a pull request, or the tested commit. */
+export function statusCommitSql(row: string) {
+  return `COALESCE(${row}.check_head_sha,${row}.tested_sha)`;
+}
+
+/**
+ * True when no newer pre-run row of the same status commit has started its
+ * status. Only the newest started row writes the commit status, because all
+ * rows of a commit share it. A recorded row that never starts, such as the
+ * second merge of an edited pull request, takes nothing from the active row.
+ */
+export function ownsCommitStatusSql(row: string) {
+  return `NOT EXISTS(SELECT 1 FROM pre_run_checks newer
+    WHERE ${statusCommitSql("newer")}=${statusCommitSql(row)}
+      AND (newer.check_id IS NOT NULL OR newer.state='creating')
+      AND (newer.created_at>${row}.created_at
+        OR (newer.created_at=${row}.created_at AND newer.rowid>${row}.rowid)))`;
+}

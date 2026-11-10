@@ -202,6 +202,20 @@ export async function assertOperationsProject(env: BackendEnv) {
   }
 }
 
+/**
+ * The configuration of `VISONAUT_STATUS_CREATOR_ID`. An empty value keeps
+ * check runs for new commits.
+ */
+export function statusCreatorConfiguration(
+  value: string,
+): Pick<ApiConfiguration, "statusCreatorId"> {
+  if (!value) return {};
+  if (!/^[1-9]\d*$/.test(value)) {
+    throw new Error("VISONAUT_STATUS_CREATOR_ID must be the numeric user ID of the App bot.");
+  }
+  return { statusCreatorId: value };
+}
+
 export function apiBindings(env: BackendEnv): ApiBindings {
   const limits = runtimeApiLimits(env);
   const auth = authConfiguration(env);
@@ -235,6 +249,7 @@ export function apiBindings(env: BackendEnv): ApiBindings {
     allowMainDispatch:
       enabled(env.VISONAUT_ALLOW_MAIN_DISPATCH) && auth.environment !== "production",
     repositoryOwnerId: required(env.GITHUB_OWNER_ID, "GITHUB_OWNER_ID"),
+    ...statusCreatorConfiguration(env.VISONAUT_STATUS_CREATOR_ID),
     workflowOwned: workflowOwnedConfiguration,
     limits: {
       maximumImageBytes: limits.maximumImageBytes,
