@@ -70,6 +70,11 @@ export interface ApiBindings {
     externalRunId: string;
     attempt: number;
   }) => Promise<{ maximumActiveRuns: number }>;
+  /**
+   * Sends the due GitHub check of a run in this request. The OPERATIONS
+   * consumer runs one message at a time, so a review does not wait for it.
+   */
+  statusDelivery?: (runId: string) => Promise<void>;
 }
 
 export interface ApiContext extends ApiBindings {

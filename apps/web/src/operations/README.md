@@ -2,7 +2,7 @@
 
 The [current guide](../../../../docs/current-contract.md) owns current requirements and the issue #204 targets. Apply all numbered web D1 migrations in order. Preserve applied migrations as history, including both `0030_*` files and the narrow zero-pixel correction. The live service uses one D1 database, IMAGES, QUARANTINE, and the existing queues. The web Worker owns comparison recovery.
 
-Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs review decisions, checks, pull request comments, and promotion without scanning closed history or retention.
+Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs review decisions, checks, pull request comments, and promotion without scanning closed history or retention. The consumer runs one message at a time, so a review also sends the check of its run in its own request, after it queues `status`. This send creates no check and leaves a locked check to the pass. The lease of the check keeps the two from sending the same update twice.
 
 ```ts
 await operationsQueue.send({ kind: "status", comparisonId });

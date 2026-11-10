@@ -2028,6 +2028,62 @@ it("stores ordered review decisions and completes them without further browser r
   ).toBe(409);
 });
 
+it("sends the check of a queued decision after it queues the status fallback", async () => {
+  const test = await fixture();
+  await test.complete();
+  const headers = {
+    authorization: `Bearer ${test.token}`,
+    origin: "https://preview.example",
+    "content-type": "application/json",
+  };
+  const session = await objectResponse(
+    await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+  );
+  const model = await runModel(test, headers);
+  const item = objects(model.items)[0];
+  const variant = objects(item?.variants)[0];
+  const comparisonId = string(model.comparisonId);
+  const events: unknown[] = [];
+  test.bindings.operations.send = vi.fn(async (message) => {
+    events.push(message);
+  });
+  // A delivery that fails leaves the queued status pass as the fallback.
+  test.bindings.statusDelivery = vi.fn(async (runId) => {
+    const [row] = await test.service.comparisonRows(comparisonId);
+    events.push({ runId, delivery: row?.decision_revision });
+    throw new Error("GitHub unavailable");
+  });
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const response = await test.send(`/api/comparisons/${comparisonId}/commands`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        queued: true,
+        reviewSessionId: session.reviewSessionId,
+        commandId: crypto.randomUUID(),
+        verdict: "approved",
+        targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
+        selection: { itemKey: item?.key, variantKey: variant?.key },
+        expectedBaselineRevision: model.baselineRevision,
+        expectedRunRevision: model.comparisonRevision,
+      }),
+    });
+    expect(response.status).toBe(202);
+    await test.flushBackground();
+    expect(errors).toHaveBeenCalledWith(
+      expect.stringContaining('"event":"review-status-delivery-failed"'),
+    );
+  } finally {
+    errors.mockRestore();
+  }
+  // The delivery reads the saved decision, after the queued fallback.
+  expect(events).toEqual([
+    { kind: "status" },
+    { runId: test.runId, delivery: Number(variant?.revision) + 1 },
+  ]);
+});
+
 it("stops queued decisions after a conflict and preserves later reviewer state", async () => {
   const test = await fixture();
   await test.complete();
