@@ -134,8 +134,8 @@ export async function readCommitStatus({
 interface ShowsCommitStatusParams {
   shown: ShownCommitStatus | null;
   wanted: CommitStatus;
-  /** The user ID of the bot account of the App. */
-  creatorId: string;
+  /** The user ID of the bot account of the App. Null when it is unknown. */
+  creatorId: string | null;
 }
 
 /**
@@ -144,6 +144,8 @@ interface ShowsCommitStatusParams {
  * ruleset accepts only the status of the App.
  */
 export function showsCommitStatus({ shown, wanted, creatorId }: ShowsCommitStatusParams) {
+  // With no known creator, no status proves a delivery, and the client posts.
+  if (creatorId === null) return false;
   return (
     shown?.creatorId === creatorId &&
     shown.state === wanted.state &&
@@ -168,8 +170,11 @@ export async function postCommitStatus({ github, sha, status }: PostCommitStatus
 interface SendCommitStatusParams extends CommitStatusParams {
   intent: StatusDelivery;
   origin: string;
-  /** The user ID of the bot account of the App. */
-  creatorId: string;
+  /**
+   * The user ID of the bot account of the App. Null when it is unknown: the
+   * client then posts each update, which GitHub shows as the newest status.
+   */
+  creatorId: string | null;
   /**
    * The callback of the outbox. A call with no options sets the request mark
    * directly before the POST.
@@ -192,6 +197,12 @@ export async function sendCommitStatus({
 }: SendCommitStatusParams): Promise<void | "not-sent" | StatusReadFailure> {
   const wanted = updateCommitStatus(intent, origin);
   if (!wanted) return "not-sent";
+  // With no known creator, no read can prove a delivery.
+  if (creatorId === null) {
+    if (!(await isCurrent())) return "not-sent";
+    await postCommitStatus({ github, sha, status: wanted });
+    return;
+  }
   let shown: ShownCommitStatus | null;
   try {
     shown = await readCommitStatus({ github, sha });
@@ -205,4 +216,28 @@ export async function sendCommitStatus({
   }
   if (!(await isCurrent())) return "not-sent";
   await postCommitStatus({ github, sha, status: wanted });
+}
+
+interface ShowsStatusUpdateParams extends CommitStatusParams {
+  update: StatusDelivery;
+  origin: string;
+  /** The user ID of the bot account of the App. */
+  creatorId: string;
+}
+
+/**
+ * True when the newest status of the commit is the status of the update from
+ * the App. It only reads, so each error throws.
+ */
+export async function showsStatusUpdate({
+  github,
+  sha,
+  update,
+  origin,
+  creatorId,
+}: ShowsStatusUpdateParams) {
+  const wanted = updateCommitStatus(update, origin);
+  if (!wanted) return false;
+  const shown = await readCommitStatus({ github, sha });
+  return showsCommitStatus({ shown, wanted, creatorId });
 }

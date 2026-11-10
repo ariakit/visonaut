@@ -68,6 +68,12 @@ export interface OperationsContext {
   origin: string;
   budget: OperationsBudget;
   now: () => number;
+  /**
+   * The user ID of the bot account of the App, from
+   * `VISONAUT_STATUS_CREATOR_ID`. A status row still gets its updates without
+   * it: the sender then posts each update.
+   */
+  statusCreatorId?: string;
 }
 
 export interface OperationReport {

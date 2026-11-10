@@ -991,3 +991,235 @@ it("creates no check for a run whose check the pass has not created", async () =
   expect(report).toMatchObject({ completed: [], deferred: [], attention: [] });
   expect(request).not.toHaveBeenCalled();
 });
+
+const statusCommit = "b".repeat(40);
+const statusCheck = `visonaut:pre:${"a".repeat(40)}`;
+
+/**
+ * A run whose check is the pre-run status row of its pull request head, as
+ * workflow materialization adopts it. Returns the commit statuses that the
+ * fake GitHub stores, newest first.
+ */
+interface StatusRunParams {
+  /**
+   * The failures of the first POSTs, in order: "drop" does not reach GitHub,
+   * and "answer" reaches GitHub and loses its answer.
+   */
+  failures?: ("drop" | "answer")[];
+}
+
+async function statusRun(fixture: Fixture, { failures = [] }: StatusRunParams = {}) {
+  await captured(fixture.context);
+  const { database } = fixture.context;
+  const now = fixture.context.now();
+  await database
+    .prepare(
+      `INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,
+        pull_request_number,docs_only,external_id,check_id,check_head_sha,surface,state,
+        plan_visual_required,workflow_run_id,workflow_attempt,created_at,updated_at)
+      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,?,?,?,'status','active',1,'run',1,?,?)`,
+    )
+    .bind(
+      "a".repeat(40),
+      statusCommit,
+      "c".repeat(40),
+      statusCheck,
+      statusCheck,
+      statusCommit,
+      now,
+      now,
+    )
+    .run();
+  await database
+    .prepare(
+      "INSERT INTO operations_check_creations(run_id,external_id,check_id,state,request_started,attempts,created_at,updated_at) VALUES('run',?,?,'complete',1,1,?,?)",
+    )
+    .bind(statusCheck, statusCheck, now, now)
+    .run();
+  fixture.context.statusCreatorId = "332309535";
+  const statuses: Record<string, unknown>[] = [];
+  const pending = [...failures];
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  fixture.context.github.request = async (path, init) => {
+    const posted = /\/statuses\/([a-f0-9]{40})$/.exec(path);
+    if (posted && init?.method === "POST") {
+      const failure = pending.shift();
+      if (failure === "drop") throw new Error("Lost POST request.");
+      statuses.unshift({
+        ...JSON.parse(String(init.body)),
+        sha: posted[1],
+        creator: { id: 332309535 },
+      });
+      if (failure === "answer") throw new Error("Lost POST response.");
+      return { id: statuses.length };
+    }
+    if (path.includes("/statuses?")) {
+      return statuses.filter((status) => path.includes(`/commits/${status.sha}/`));
+    }
+    return request(path, init);
+  };
+  return statuses;
+}
+
+it("sends the update of a status row as the commit status of its pull request head", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const statuses = await statusRun(fixture);
+
+  const report = await deliverGitHubStatuses(fixture.context);
+
+  expect(report).toMatchObject({ completed: [statusCheck], attention: [] });
+  expect(fixture.state.posts).toBe(0);
+  expect(statuses).toEqual([
+    expect.objectContaining({
+      sha: statusCommit,
+      context: "Visonaut",
+      target_url: "https://visonaut.example/runs/run",
+    }),
+  ]);
+
+  // GitHub shows the same status of the App, so a repeated pass posts nothing.
+  await database.prepare("UPDATE work_checks SET delivered_revision=NULL").run();
+  await database.prepare("UPDATE work_status_outbox SET state='pending'").run();
+  await deliverGitHubStatuses(fixture.context);
+  expect(statuses).toHaveLength(1);
+});
+
+it("sends no update of a status row whose commit status a newer row started", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const statuses = await statusRun(fixture);
+  // A newer merge of the same pull request head started the commit status.
+  await database
+    .prepare(
+      `INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,
+        pull_request_number,docs_only,external_id,check_id,check_head_sha,surface,state,created_at,updated_at)
+      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'newer','newer',?,'status','active',?,?)`,
+    )
+    .bind(
+      "d".repeat(40),
+      statusCommit,
+      "c".repeat(40),
+      statusCommit,
+      fixture.context.now() + 1,
+      fixture.context.now() + 1,
+    )
+    .run();
+
+  await deliverGitHubStatuses(fixture.context);
+
+  expect(statuses).toEqual([]);
+});
+
+it("sends the update of a status row again after a POST with no answer", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const statuses = await statusRun(fixture, { failures: ["drop"] });
+
+  const first = await deliverGitHubStatuses(fixture.context);
+  expect(first).toMatchObject({ completed: [], attention: [statusCheck] });
+  expect(statuses).toEqual([]);
+
+  // After the lease and the delay of the lock, GitHub does not show the
+  // update, so the pass releases the lock and posts the update again.
+  fixture.state.time += 5 * 60 * 1000;
+  const next = await deliverGitHubStatuses(fixture.context);
+  const last = await deliverGitHubStatuses(fixture.context);
+
+  expect([...next.completed, ...last.completed]).toEqual([statusCheck]);
+  expect(statuses).toHaveLength(1);
+  expect(readStatus(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+});
+
+it("settles the update of a status row that GitHub shows after a POST with no answer", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const statuses = await statusRun(fixture, { failures: ["answer"] });
+
+  const first = await deliverGitHubStatuses(fixture.context);
+  expect(first).toMatchObject({ completed: [], attention: [statusCheck] });
+  expect(statuses).toHaveLength(1);
+
+  // GitHub shows the locked update, so the pass settles it and posts nothing.
+  fixture.state.time += 5 * 60 * 1000;
+  await deliverGitHubStatuses(fixture.context);
+  await deliverGitHubStatuses(fixture.context);
+
+  expect(statuses).toHaveLength(1);
+  expect(readStatus(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+});
+
+it("settles the update of a status row that GitHub shows after its last attempt lost its answer", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  // The fixture budget has 2 attempts.
+  const statuses = await statusRun(fixture, { failures: ["drop", "answer"] });
+  const lockAndRelease = async () => {
+    await deliverGitHubStatuses(fixture.context);
+    fixture.state.time += 5 * 60 * 1000;
+    await deliverGitHubStatuses(fixture.context);
+  };
+
+  await lockAndRelease();
+  await lockAndRelease();
+
+  expect(statuses).toHaveLength(1);
+  expect(readStatus(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+  expect(
+    database.connection
+      .prepare("SELECT code FROM operations_events WHERE resolved_at IS NULL")
+      .all(),
+  ).toEqual([]);
+});
+
+it("closes the alert of a dead update of a status row whose commit status a newer row started", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await statusRun(fixture);
+  await deliverGitHubStatuses(fixture.context);
+  // A decision gives a new update, and the update ends dead.
+  await reject(fixture, "run");
+  await deliverGitHubStatuses(fixture.context);
+  await database
+    .prepare(
+      "UPDATE work_status_outbox SET state='dead' WHERE revision=(SELECT desired_revision FROM work_checks)",
+    )
+    .run();
+  const dead = await deliverGitHubStatuses(fixture.context);
+  expect(dead.attention).toEqual([statusCheck]);
+  await database
+    .prepare(
+      `INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,
+        pull_request_number,docs_only,external_id,check_id,check_head_sha,surface,state,created_at,updated_at)
+      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'newer','newer',?,'status','active',?,?)`,
+    )
+    .bind(
+      "d".repeat(40),
+      statusCommit,
+      "c".repeat(40),
+      statusCommit,
+      fixture.context.now() + 1,
+      fixture.context.now() + 1,
+    )
+    .run();
+
+  const closed = await deliverGitHubStatuses(fixture.context);
+
+  expect(closed.attention).toEqual([]);
+  expect(
+    database.connection
+      .prepare(
+        "SELECT code, resolved_at IS NOT NULL AS resolved FROM operations_events WHERE kind='check-delivery'",
+      )
+      .all(),
+  ).toEqual([{ code: "exhausted", resolved: 1 }]);
+});
+
+function readStatus(database: TestDatabase) {
+  return database.connection
+    .prepare(`SELECT checks.ambiguous, outbox.state FROM work_checks checks
+      JOIN work_status_outbox outbox
+        ON outbox.check_id = checks.id AND outbox.revision = checks.desired_revision
+      WHERE checks.id = ?`)
+    .get(statusCheck);
+}

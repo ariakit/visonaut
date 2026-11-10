@@ -184,6 +184,7 @@ export function operationsContext(env: BackendEnv): OperationsContext {
     origin: required(env.VISONAUT_ORIGIN, "VISONAUT_ORIGIN"),
     budget: operationsBudget(env),
     now: Date.now,
+    ...statusCreatorConfiguration(env.VISONAUT_STATUS_CREATOR_ID),
   };
 }
 

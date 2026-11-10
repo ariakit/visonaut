@@ -12,8 +12,10 @@ import {
 import {
   ensureGitHubCheck,
   findGitHubCheck,
+  sendCommitStatus,
   sendGitHubCheck,
   shownCheckUpdate,
+  showsStatusUpdate,
 } from "@visonaut/security";
 import { mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
@@ -233,11 +235,14 @@ async function prepareStatusUpdate(prepare: () => Promise<unknown>) {
   return conflict;
 }
 
-/** The tested commit of the run of an update, and the identity of its pre-run check. */
+/**
+ * The tested commit of the run of an update, and the identity of its pre-run
+ * check. A status row also gives the commit of its status.
+ */
 async function checkTarget(context: OperationsContext, intent: StatusDelivery) {
   const run = await new Service(context.database).run(intent.run_id);
   const precreated = await context.database
-    .prepare(`SELECT check_head_sha,external_id FROM pre_run_checks
+    .prepare(`SELECT check_head_sha,external_id,surface FROM pre_run_checks
       WHERE check_id=? AND repository_id=? AND tested_sha=?
         AND workflow_run_id=? AND workflow_attempt=? AND external_id=(
           SELECT external_id FROM operations_check_creations WHERE run_id=?)`)
@@ -249,12 +254,12 @@ async function checkTarget(context: OperationsContext, intent: StatusDelivery) {
       run.attempt,
       run.id,
     )
-    .first<{ check_head_sha: string | null; external_id: string }>();
+    .first<{ check_head_sha: string | null; external_id: string; surface: "check" | "status" }>();
+  const headSha = precreated?.check_head_sha ?? run.tested_sha;
   return {
     testedSha: run.tested_sha,
-    checkIdentity: precreated
-      ? { headSha: precreated.check_head_sha ?? run.tested_sha, externalId: precreated.external_id }
-      : undefined,
+    checkIdentity: precreated ? { headSha, externalId: precreated.external_id } : undefined,
+    statusSha: precreated?.surface === "status" ? headSha : undefined,
   };
 }
 
@@ -262,7 +267,8 @@ async function checkTarget(context: OperationsContext, intent: StatusDelivery) {
  * Release the lock of a write request with no answer when GitHub shows which
  * update the check has: the locked one, or the last confirmed one (the text of
  * its creation when it has none). Any other text, or a failed read, keeps the
- * lock for a person.
+ * lock for a person. A status has no text that needs a person: its update is
+ * delivered when the App shows it, and is due again otherwise.
  */
 async function releaseLock(context: OperationsContext, checkId: string, report: OperationReport) {
   const endedBefore = context.now() - lockReleaseDelayMilliseconds;
@@ -270,11 +276,36 @@ async function releaseLock(context: OperationsContext, checkId: string, report: 
     const lock = await readStatusLock(context.database, { id: checkId, endedBefore });
     if (!lock) return false;
     const { locked, delivered } = lock;
+    const { statusSha, ...target } = await checkTarget(context, locked);
+    if (statusSha) {
+      // A release as "not-sent" counts the attempt, so a delivered update must
+      // settle here: after its last attempt, it is not sent again. With no
+      // known creator, no read can prove a delivery.
+      const { statusCreatorId } = context;
+      const shown =
+        statusCreatorId !== undefined &&
+        (await showsStatusUpdate({
+          github: context.github,
+          sha: statusSha,
+          update: locked,
+          origin: context.origin,
+          creatorId: statusCreatorId,
+        }));
+      return await releaseStatusLock(context.database, {
+        id: checkId,
+        token: lock.token,
+        revision: locked.revision,
+        deliveredRevision: delivered?.revision ?? null,
+        outcome: shown ? "delivered" : "not-sent",
+        endedBefore,
+        now: context.now(),
+      });
+    }
     const shown = await shownCheckUpdate({
       github: context.github,
       // The locked update comes first: when both have the same text, GitHub shows it.
       updates: delivered ? [locked, delivered] : [locked],
-      ...(await checkTarget(context, locked)),
+      ...target,
       origin: context.origin,
     });
     if (!shown) return false;
@@ -383,7 +414,7 @@ async function sendCheck(
     leaseMs: Math.min(budget.leaseMilliseconds, statusLeaseMilliseconds),
   });
   if (!intent) return "skipped" as const;
-  const target = await checkTarget(context, intent);
+  const { statusSha, ...target } = await checkTarget(context, intent);
   const result = await deliverStatus(database, {
     id: delivery.id,
     token,
@@ -396,15 +427,25 @@ async function sendCheck(
     // to this step, so the cause goes on the report here.
     send: (latest, isCurrent) =>
       withCause(report, async () => {
-        const outcome = await sendGitHubCheck({
-          github: context.github,
-          intent: latest,
-          ...target,
-          origin: context.origin,
-          // The outbox sets the request mark, so its call is the last one.
-          isCurrent: async (options) =>
-            (await service.isStatusIntentCurrent(latest)) && (await isCurrent(options)),
-        });
+        // The outbox sets the request mark, so its call is the last one.
+        const current = async (options?: { request?: boolean }) =>
+          (await service.isStatusIntentCurrent(latest)) && (await isCurrent(options));
+        const outcome = statusSha
+          ? await sendCommitStatus({
+              github: context.github,
+              sha: statusSha,
+              intent: latest,
+              origin: context.origin,
+              creatorId: context.statusCreatorId ?? null,
+              isCurrent: current,
+            })
+          : await sendGitHubCheck({
+              github: context.github,
+              intent: latest,
+              ...target,
+              origin: context.origin,
+              isCurrent: current,
+            });
         // A failed read is a result, and not an error of the sender.
         if (typeof outcome === "object") {
           noteCause(report, outcome.error);

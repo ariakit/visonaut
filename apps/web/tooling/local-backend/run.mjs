@@ -163,6 +163,8 @@ const runtime = new Miniflare(
       installationId: environment.vars.GITHUB_INSTALLATION_ID,
       repository: environment.vars.VISONAUT_REPOSITORY,
       maintainer,
+      // The bot of a commit status is the creator that the service expects.
+      statusCreatorId: Number(environment.vars.VISONAUT_STATUS_CREATOR_ID) || undefined,
       checks,
       onCheckChange() {
         mkdirSync(state, { recursive: true });
