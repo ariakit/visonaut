@@ -80,6 +80,7 @@ export const errorCodes = [
   "invalid_receipt",
   "invalid_review_link",
   "invalid_sha",
+  "invalid_statuses",
   "invalid_targets",
   "invalid_ticket",
   "invalid_verdict",
