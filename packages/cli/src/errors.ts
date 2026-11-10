@@ -1,11 +1,13 @@
 export type ExitCode = 0 | 1 | 2 | 3 | 4;
 
+// The classes declare their fields without parameter properties, because the
+// source worker of the tests runs this file with type stripping only.
 export class CliError extends Error {
-  constructor(
-    message: string,
-    readonly exitCode: ExitCode = 1,
-  ) {
+  readonly exitCode: ExitCode;
+
+  constructor(message: string, exitCode: ExitCode = 1) {
     super(message);
+    this.exitCode = exitCode;
   }
 }
 
@@ -14,11 +16,11 @@ export class CliError extends Error {
  * has the safe form that http.ts prints.
  */
 export class ServiceRefusal extends CliError {
-  constructor(
-    message: string,
-    readonly code: string | undefined,
-  ) {
+  readonly code: string | undefined;
+
+  constructor(message: string, code: string | undefined) {
     super(message);
+    this.code = code;
   }
 }
 

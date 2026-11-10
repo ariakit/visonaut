@@ -19,10 +19,12 @@ registerHooks({
   load(url, context, nextLoad) {
     if (!url.endsWith(".ts")) return nextLoad(url, context);
     const source = readFileSync(fileURLToPath(url), "utf8");
-    // The transform mode also removes the parameter properties of errors.ts.
+    // Node.js removed the transform mode, so the source that the worker imports
+    // must use erasable syntax only.
+    // https://github.com/nodejs/node/pull/61803
     return {
       format: "module",
-      source: stripTypeScriptTypes(source, { mode: "transform" }),
+      source: stripTypeScriptTypes(source),
       shortCircuit: true,
     };
   },
