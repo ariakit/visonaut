@@ -30,7 +30,7 @@ jobs:
           package-manager-cache: false
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.17.0
+          version: 12.18.0
       - run: pnpm install --frozen-lockfile
       - name: Select versioning, publication, or no work
         id: select-mode
@@ -51,7 +51,7 @@ jobs:
           package-manager-cache: false
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.17.0
+          version: 12.18.0
       - run: pnpm install --frozen-lockfile
       - name: Create the existing release App token
         id: app-token
@@ -86,7 +86,7 @@ jobs:
           package-manager-cache: false
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.17.0
+          version: 12.18.0
       - run: pnpm install --frozen-lockfile
       - name: Build public packages
         run: pnpm --filter visonaut --filter @visonaut/playwright build
@@ -117,7 +117,7 @@ jobs:
           package-manager-cache: false
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
         with:
-          version: 12.17.0
+          version: 12.18.0
       - run: pnpm install --frozen-lockfile
       - name: Install npm with trusted publishing support
         run: npm install --global npm@11.20.0 --ignore-scripts --no-audit --no-fund
