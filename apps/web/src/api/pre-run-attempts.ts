@@ -580,6 +580,139 @@ async function uncreatedGonePullRequestAttemptIsHistorical(
   return historical !== null;
 }
 
+async function ownsWorkflowAttempt(
+  context: ApiContext,
+  github: GitHubClient,
+  runId: string,
+  attempt: number,
+) {
+  const owned = await context.database
+    .prepare(`SELECT 1 AS found WHERE
+      EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=?)
+      OR EXISTS(SELECT 1 FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+      OR EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)`)
+    .bind(
+      github.repositoryId,
+      runId,
+      github.repositoryId,
+      runId,
+      attempt,
+      context.configuration.projectId,
+      runId,
+      attempt,
+    )
+    .first();
+  return owned !== null;
+}
+
+/**
+ * The candidates of a pull request head when each one has a created check that
+ * no workflow attempt owns. GitHub lists the current pull request of a branch
+ * in `pull_requests`, so the rows, not the run, name the pull request.
+ */
+async function unboundCheckedCandidates(
+  context: ApiContext,
+  github: GitHubClient,
+  sourceSha: string,
+) {
+  const rows = await context.database
+    .prepare(
+      `SELECT * FROM pre_run_checks WHERE repository_id=? AND kind='pull_request'
+        AND source_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")}`,
+    )
+    .bind(github.repositoryId, sourceSha)
+    .all<PreRunCheck>();
+  const number = rows.results[0]?.pull_request_number;
+  if (!number) return null;
+  const candidates: Array<PreRunCheck & { check_id: string }> = [];
+  for (const row of rows.results) {
+    const checkId = row.check_id;
+    if (!checkId) return null;
+    if (row.pull_request_number !== number) return null;
+    if (row.ref !== `refs/pull/${number}/merge`) return null;
+    if (row.workflow_run_id !== null || row.workflow_attempt !== null) return null;
+    if (row.lease_until !== null) return null;
+    if (!["active", "ambiguous", "failed"].includes(row.state)) return null;
+    candidates.push({ ...row, check_id: checkId });
+  }
+  return { number, candidates };
+}
+
+/**
+ * A push to a pull request during check creation leaves the created check
+ * unbound: `stale_candidate` makes its row `ambiguous`, and the check stays in
+ * progress. When the pull request is closed, or has another head or target,
+ * the completed delivery fails the check, and each delivery of the run ends.
+ */
+async function retireStaleUnboundPullRequestCheck({
+  context,
+  github,
+  run,
+  action,
+}: HistoricalWorkflowParams) {
+  if (run.event !== "pull_request") return false;
+  if (run.status !== "completed") return false;
+  const sourceSha = sha(run.head_sha);
+  const attempt = run.run_attempt;
+  if (!sourceSha) return false;
+  if (typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
+    return false;
+  }
+  const runId = numericId(run.id);
+  if (await ownsWorkflowAttempt(context, github, runId, attempt)) return false;
+  const stale = await unboundCheckedCandidates(context, github, sourceSha);
+  if (!stale) return false;
+  const pull = object(await github.request(`/repos/${github.repository}/pulls/${stale.number}`));
+  const head = object(pull.head);
+  const base = object(pull.base);
+  if (
+    numericId(object(head.repo).id) !== github.repositoryId ||
+    numericId(object(base.repo).id) !== github.repositoryId
+  ) {
+    return false;
+  }
+  if (pull.state !== "closed") {
+    if (pull.state !== "open") return false;
+    if (head.sha === sourceSha && base.ref === "main") return false;
+  }
+  // Signed work can acquire ownership while the pull request is read.
+  if (await ownsWorkflowAttempt(context, github, runId, attempt)) return false;
+  for (const row of stale.candidates) {
+    const check = await verifiedCheck(github, row, row.check_id);
+    if (action !== "completed") {
+      // Only the completed delivery may close the check.
+      if (check.status !== "completed") return false;
+      continue;
+    }
+    if (check.status === "completed") {
+      // A passed check keeps its row, like in `retireBoundHistoricalCheck`.
+      // Another conclusion that it cannot close stays retryable, unchanged.
+      if (check.conclusion === "success" || check.conclusion === "neutral") continue;
+      if (check.conclusion !== "failure") return false;
+    }
+    // The fence of `retireBoundHistoricalCheck` takes only an `active` row, and
+    // it does not require the row to stay unbound.
+    const fenced = await context.database
+      .prepare(`UPDATE pre_run_checks SET state='failed',updated_at=?
+        WHERE external_id=? AND state IN ('active','ambiguous') AND check_id=?
+          AND lease_until IS NULL AND workflow_run_id IS NULL
+          AND NOT EXISTS (SELECT 1 FROM work_checks sender
+            WHERE sender.id=pre_run_checks.check_id
+              AND (sender.request_started=1 OR sender.ambiguous=1))
+        RETURNING external_id`)
+      .bind(Date.now(), row.external_id, row.check_id)
+      .first();
+    if (!fenced && (await storedExternalId(context, row.external_id))?.state !== "failed") {
+      return false;
+    }
+    await retireBoundHistoricalCheck(context, github, row, {
+      title: "Visual capture was superseded",
+      summary: "The pull request head or target changed before capture started.",
+    });
+  }
+  return true;
+}
+
 /**
  * A new push to main cancels the older run before its Plan reports, so no App
  * check is bound to it. When main moved, no delivery of that run has work.
@@ -1033,6 +1166,7 @@ export async function settlePreRunWorkflow(
         !(await retireSupersededPullRequestAttempt(historical)) &&
         !(await retireUnboundTerminalPullRequestAttempt(context, github, run)) &&
         !(await uncreatedGonePullRequestAttemptIsHistorical(context, github, run)) &&
+        !(await retireStaleUnboundPullRequestCheck(historical)) &&
         !(await uncreatedSupersededMainAttemptIsHistorical(context, github, run)))
     ) {
       throw error;

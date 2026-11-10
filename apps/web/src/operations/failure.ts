@@ -1,4 +1,5 @@
 import { GitHubUnavailableError, SecurityError } from "@visonaut/security";
+import { IncompleteError } from "@visonaut/service";
 
 /**
  * The names that a log line can have as `errorName`: each error class of the
@@ -193,16 +194,20 @@ export function errorCause(error: unknown): ErrorCause {
 export interface FailedItem {
   /** The ID and the kind of the item, from values that the code checked. */
   subject: Record<string, string | number>;
-  /** The message of a `SecurityError`. The server source writes each one. */
+  /**
+   * The message of a `SecurityError` or an `IncompleteError`. The server
+   * source writes each one, and some add a configured job name or a limit.
+   */
   message?: string;
 }
 
 /**
- * The message of an error that is safe in a log. Only a `SecurityError` gives
- * its message, because the message of another error can hold SQL or a payload.
+ * The message of an error that is safe in a log. Only a `SecurityError` and an
+ * `IncompleteError` give their message, because the message of another error
+ * can hold SQL or a payload.
  */
 export function failedItemMessage(error: unknown) {
-  if (!(error instanceof SecurityError)) return;
+  if (!(error instanceof SecurityError) && !(error instanceof IncompleteError)) return;
   return error.message.slice(0, 200);
 }
 

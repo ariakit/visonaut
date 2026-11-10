@@ -223,10 +223,15 @@ it("lists each code that the server source gives to a SecurityError", () => {
   expect([...errorCodes]).toEqual([...codes].sort());
 });
 
-it("gives the message of a SecurityError only, at most 200 characters long", () => {
+it("gives the message of a SecurityError or an IncompleteError only, at most 200 characters long", () => {
   expect(
     failedItemMessage(new SecurityError("workflow_candidate", 503, "The main branch changed.")),
   ).toBe("The main branch changed.");
+  expect(failedItemMessage(new IncompleteError("The staged image set differs."))).toBe(
+    "The staged image set differs.",
+  );
+  expect(failedItemMessage(new IncompleteError("b".repeat(300)))).toBe("b".repeat(200));
+  expect(failedItemMessage(new ConflictError("D1_ERROR: SELECT private"))).toBeUndefined();
   expect(failedItemMessage(new SecurityError("workflow_candidate", 503, "a".repeat(300)))).toBe(
     "a".repeat(200),
   );

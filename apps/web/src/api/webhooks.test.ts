@@ -1600,8 +1600,9 @@ describe("pre-run App checks", () => {
       const result = await request(path, init);
       if (path.endsWith("/pulls/7")) {
         await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+        // The check ID is not known yet, so GitHub can still create the check.
         await database
-          .prepare("UPDATE pre_run_checks SET state='ambiguous',check_id='1',request_started=1")
+          .prepare("UPDATE pre_run_checks SET state='ambiguous',request_started=1")
           .run();
         owner = (await database.prepare("SELECT * FROM pre_run_checks").all()).results;
       }
@@ -1820,6 +1821,201 @@ describe("pre-run App checks", () => {
     },
   );
 
+  // A push during check creation makes `finishCreation` throw `stale_candidate`
+  // after the POST, so the row is `ambiguous` with a check that is in progress.
+  async function staleUnboundCheckFixture(state: "ambiguous" | "active" = "ambiguous") {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    await database.prepare("UPDATE pre_run_checks SET state=?").bind(state).run();
+    expect(
+      await database
+        .prepare(
+          "SELECT state, check_id, request_started, lease_until, workflow_run_id FROM pre_run_checks",
+        )
+        .all(),
+    ).toMatchObject({
+      results: [
+        {
+          state,
+          check_id: "1",
+          request_started: 1,
+          lease_until: null,
+          workflow_run_id: null,
+        },
+      ],
+    });
+    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+    return fixture;
+  }
+
+  it.each(
+    ["closed", "head-changed", "closed-branch-reused"].flatMap((change) =>
+      (["ambiguous", "active"] as const).map((state) => [change, state] as const),
+    ),
+  )(
+    "fails a stale unbound check and ends each delivery of its run after %s: %s",
+    async (change, state) => {
+      const fixture = await staleUnboundCheckFixture(state);
+      const association = { head: { repo: { id: 100 } }, base: { repo: { id: 100 } } };
+      if (change === "head-changed") {
+        fixture.state.run.pull_requests = [{ number: 7, ...association }];
+        fixture.state.pullHeadSha = "d".repeat(40);
+      } else {
+        fixture.state.pullState = "closed";
+        // GitHub lists the newer PR of a reused branch, such as the release PR.
+        fixture.state.run.pull_requests =
+          change === "closed-branch-reused" ? [{ number: 8, ...association }] : [];
+      }
+      fixture.state.run.conclusion = "cancelled";
+      const progress = fixture.workflowWebhook();
+      progress.payload.action = "in_progress";
+      // Only the completed delivery may close the check.
+      await expect(
+        settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, progress),
+      ).rejects.toMatchObject({ code: "workflow_candidate" });
+      expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+
+      const passes = await reconcileTwice(fixture, fixture.workflowWebhook());
+      expect(passes.first).toEqual({ checked: 1, pending: [] });
+      expect(passes.patches).toBe(1);
+      expect(fixture.state.checks.get("1")).toMatchObject({
+        status: "completed",
+        conclusion: "failure",
+        output: { title: "Visual capture was superseded" },
+      });
+      expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
+        state: "failed",
+      });
+      expect(passes.second).toEqual({ checked: 0, pending: [] });
+      expect(fixture.state.posts).toBe(1);
+
+      expect(await settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, progress)).toBe(
+        "historical",
+      );
+    },
+  );
+
+  it("keeps a stale unbound check retryable while a status update of it is in progress", async () => {
+    const fixture = await staleUnboundCheckFixture();
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    await database
+      .prepare("INSERT INTO work_checks(id,desired_revision,request_started) VALUES('1',1,1)")
+      .run();
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+    expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
+      state: "ambiguous",
+    });
+  });
+
+  it("keeps a stale unbound check retryable when another PR has a candidate of its head", async () => {
+    const fixture = await staleUnboundCheckFixture();
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    await database
+      .prepare(`INSERT INTO pre_run_checks(tested_sha,generation,repository_id,
+        source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_id,state,request_started,created_at,updated_at)
+        VALUES(?,0,'100',?,?,'pull_request','refs/pull/8/merge',8,0,'other-pr','2','ambiguous',1,?,?)`)
+      .bind("e".repeat(40), sourceSha, baseSha, Date.now(), Date.now())
+      .run();
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+  });
+
+  it("ends the deliveries of a stale unbound check that passed, and keeps its row", async () => {
+    const fixture = await staleUnboundCheckFixture("active");
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    const check = fixture.state.checks.get("1");
+    if (!check) throw new Error("Missing check");
+    Object.assign(check, { status: "completed", conclusion: "success" });
+    expect(
+      await settlePreRunWorkflow(
+        apiContext(preRunBindings),
+        fixture.github,
+        fixture.workflowWebhook(),
+      ),
+    ).toBe("historical");
+    expect(fixture.state.checks.get("1")?.conclusion).toBe("success");
+    expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
+      state: "active",
+    });
+  });
+
+  it("keeps a stale unbound check retryable and unchanged when it completed with another conclusion", async () => {
+    const fixture = await staleUnboundCheckFixture();
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    const check = fixture.state.checks.get("1");
+    if (!check) throw new Error("Missing check");
+    Object.assign(check, { status: "completed", conclusion: "cancelled" });
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
+      state: "ambiguous",
+    });
+  });
+
+  it("keeps a stale unbound check retryable while its PR head is current", async () => {
+    const fixture = await staleUnboundCheckFixture();
+    fixture.state.run.pull_requests = [];
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+    expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
+      state: "ambiguous",
+    });
+  });
+
+  it("keeps a stale unbound check when signed work binds it during the PR read", async () => {
+    const fixture = await staleUnboundCheckFixture();
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    const request = fixture.github.request;
+    fixture.github.request = async (path, init) => {
+      const result = await request(path, init);
+      if (path.endsWith("/pulls/7")) {
+        await database
+          .prepare("UPDATE pre_run_checks SET workflow_run_id='77',workflow_attempt=1")
+          .run();
+      }
+      return result;
+    };
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+    expect(await database.prepare("SELECT state FROM pre_run_checks").first()).toEqual({
+      state: "ambiguous",
+    });
+  });
+
+  it("keeps a stale unbound check retryable while signed work owns its run", async () => {
+    const fixture = await staleUnboundCheckFixture();
+    fixture.state.pullState = "closed";
+    fixture.state.run.pull_requests = [];
+    await database
+      .prepare(
+        "INSERT INTO ingest_staged_runs (id, repository_id, workflow_run_id, workflow_attempt, tested_sha, workflow_source_digest, caller_workflow_path, reusable_workflow_ref, capture_job_prefix, submit_job_name, verified_json, created_at) VALUES ('staged-77', '100', '77', 1, ?, ?, ?, 'ref', 'capture', 'submit', '{}', ?)",
+      )
+      .bind(mergeSha, "0".repeat(64), preRunConfiguration.callerWorkflowPath, Date.now())
+      .run();
+    await expect(
+      settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+    ).rejects.toMatchObject({ code: "workflow_candidate" });
+    expect(fixture.state.checks.get("1")?.status).toBe("in_progress");
+  });
+
   it("reuses the uncreated candidate when an acknowledged closed PR reopens", async () => {
     const fixture = preRunFixture();
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
@@ -1951,10 +2147,12 @@ describe("pre-run App checks", () => {
           : [{ number: 7, head: { repo: { id: 100 } }, base: { repo: { id: 100 } } }];
       fixture.state.pullHeadSha = "d".repeat(40);
       if (owner === "unbound-check") {
+        // A known check ID would make this a stale unbound check, which the
+        // completed delivery retires. An unknown one can still become a check.
         await database
           .prepare(`INSERT INTO pre_run_checks(tested_sha,generation,repository_id,
-          source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_id,state,created_at,updated_at)
-          VALUES(?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,'legacy','1','ambiguous',1,1)`)
+          source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_id,state,request_started,created_at,updated_at)
+          VALUES(?,0,'100',?,?,'pull_request','refs/pull/7/merge',7,0,'legacy',NULL,'ambiguous',1,1,1)`)
           .bind(mergeSha, sourceSha, baseSha)
           .run();
       } else if (owner === "stage") {
