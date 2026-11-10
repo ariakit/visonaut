@@ -46,7 +46,7 @@
     "miniflare": "5.20261023.0-beta",
     "tailwindcss": "4.3.3",
     "typescript": "npm:@typescript/typescript6@6.0.2",
-    "vite": "8.3.5",
+    "vite": "8.3.6",
     "vitest": "5.1.0",
     "wrangler": "4.153.0"
   }
