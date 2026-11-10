@@ -6,6 +6,8 @@ Open Visonaut in Chrome Desktop. Sign in with a GitHub account that has current 
 
 Each run has one check with the name **Visonaut** on its commit. The title of the check names the state of the run, and its summary says who acts next. You do not need access to Visonaut to read it. The check shows totals only: it has no screenshot name and no reviewer name.
 
+From the change of 2026-11-10, the result of a new commit is a commit status with the name **Visonaut**, not a check run. The pull request shows the same title, and a click on the status opens the run in Visonaut. A status has no summary: the comment of Visonaut on a pull request with changes has the next step, and the run in Visonaut has the totals. A commit that already had a Visonaut check run keeps it. The titles, states, and colors below apply to both. The paragraphs about the summary apply to a check run only.
+
 | Title of the check                 | State of the run | Meaning                                                        | Who acts next                                                                           |
 | ---------------------------------- | ---------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `79 changes need review`           | Needs review     | Screenshots changed, and one or more changes have no decision. | A maintainer approves or rejects each change.                                           |

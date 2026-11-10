@@ -158,9 +158,14 @@ it("keeps live workflow and authentication configuration only in production", ()
     "origin",
     "projectId",
     "repositoryOwnerId",
+    "statusCreatorId",
     "webhookSecret",
     "workflowOwned",
   ]);
+  // Production shows the result of a new commit as the commit status of the
+  // App bot, visonaut-ci[bot]. The preview has no App.
+  expect(apiBindings(env).configuration.statusCreatorId).toBe("332309535");
+  expect(preview.vars?.VISONAUT_STATUS_CREATOR_ID).toBe("");
 });
 
 it("selects the status surface only with the numeric user ID of the App bot", () => {
