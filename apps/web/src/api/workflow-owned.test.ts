@@ -1380,24 +1380,15 @@ describe("workflow-owned upload staging", () => {
       const submitToken = await signedToken(submitJobId);
       const originalGitHubFetch = test.context.configuration.github.fetch;
       if (!originalGitHubFetch) throw new Error("Expected fixture GitHub transport");
-      let createdChecks = 0;
+      let postedStatuses = 0;
       test.context.configuration.github.fetch = async (input, init) => {
         const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
         if (url.pathname.endsWith(`/git/commits/${test.manifest.run.testedSha}`)) {
           return Response.json({ parents: [{ sha: "a".repeat(40) }] });
         }
-        if (url.pathname.includes("/check-runs") && url.pathname.includes("/commits/")) {
-          return Response.json({ check_runs: [] });
-        }
-        if (url.pathname.endsWith("/check-runs") && init?.method === "POST") {
-          createdChecks += 1;
-          const check = {
-            ...JSON.parse(String(init.body)),
-            id: Number(submitJobId) + 30_000,
-            app: { id: 123 },
-          };
-          test.githubResponses.set(`/repos/ariakit/ariakit/check-runs/${check.id}`, check);
-          return Response.json(check, { status: 201 });
+        if (url.pathname.includes("/statuses/") && init?.method === "POST") {
+          postedStatuses += 1;
+          return Response.json({ id: postedStatuses }, { status: 201 });
         }
         return originalGitHubFetch(input, init);
       };
@@ -1431,7 +1422,8 @@ describe("workflow-owned upload staging", () => {
       const replay = await send(submitToken);
       expect(first?.status).toBe(202);
       expect(replay?.status).toBe(202);
-      expect(createdChecks).toBe(0);
+      // The attempt already has its status, so a Submit and its replay post none.
+      expect(postedStatuses).toBe(0);
       const receipt = object(await first?.json());
       expect(receipt).toMatchObject({ runId: test.runId, state: "submitted" });
       expect(await replay?.json()).toEqual(receipt);
@@ -2478,20 +2470,11 @@ describe("workflow-owned upload staging", () => {
       .bind(test.manifest.run.workflowRunId)
       .first<{ check_id: string }>();
     if (!check) throw new Error("Expected the App check.");
+    // The App status of the attempt failed.
     await database
-      .prepare("UPDATE pre_run_checks SET state='failed' WHERE check_id = ?")
+      .prepare("UPDATE pre_run_checks SET state='failed',status_state='failure' WHERE check_id = ?")
       .bind(check.check_id)
       .run();
-    const checkPath = `/repos/ariakit/ariakit/check-runs/${check.check_id}`;
-    const remoteCheck = test.githubResponses.get(checkPath);
-    if (!remoteCheck || typeof remoteCheck !== "object") {
-      throw new Error("Expected the remote App check.");
-    }
-    test.githubResponses.set(checkPath, {
-      ...remoteCheck,
-      status: "completed",
-      conclusion: "failure",
-    });
     await recordEvent(database, {
       kind: "staged-reconciliation",
       subject,

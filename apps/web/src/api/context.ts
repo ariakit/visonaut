@@ -18,12 +18,6 @@ export interface ApiConfiguration {
   webhookSecret: string;
   allowMainDispatch?: boolean;
   repositoryOwnerId: string;
-  /**
-   * The user ID of the bot account of the GitHub App. When it is set, the
-   * pre-run row of a new commit shows its result as a commit status, not as a
-   * check run. A row keeps its surface.
-   */
-  statusCreatorId?: string;
   /** Paths and job names of the workflow-owned capture and Submit jobs. */
   workflowOwned?: {
     callerWorkflowPath: string;

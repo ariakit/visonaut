@@ -1,16 +1,11 @@
 import {
-  CHECK_NAME,
-  findGitHubCheck,
-  numericId,
   postCommitStatus,
   SecurityError,
-  startingCheckOutput,
   startingCommitStatus,
   statusTargetUrl,
   type GitHubClient,
 } from "@visonaut/security";
 import type { ApiContext } from "./context.js";
-import { object } from "./input.js";
 import { ownsCommitStatusSql } from "../operations/check-state.ts";
 import { afterRestoreSql } from "../operations/recovery.ts";
 
@@ -38,12 +33,14 @@ export interface PreRunCheck {
   plan_reported_at: number | null;
   plan_job_id: string | null;
   external_id: string;
-  /** The ID of the check run. A status row stores its external ID. */
+  /**
+   * The key of the status outbox: the external ID of the row. A row from the
+   * time of check runs stores the ID of its check run.
+   */
   check_id: string | null;
   check_head_sha: string | null;
-  surface: "check" | "status";
   status_state: "pending" | "success" | "failure" | null;
-  state: "pending" | "creating" | "ambiguous" | "active" | "docs_complete" | "failed";
+  state: "pending" | "creating" | "active" | "docs_complete" | "failed";
   request_started: number;
   lease_until: number | null;
   workflow_run_id: string | null;
@@ -80,20 +77,6 @@ export async function attemptCheck(
     .first<PreRunCheck>();
 }
 
-export async function verifiedCheck(github: GitHubClient, row: PreRunCheck, checkId: string) {
-  const check = object(await github.request(`/repos/${github.repository}/check-runs/${checkId}`));
-  if (
-    numericId(check.id) !== checkId ||
-    check.name !== CHECK_NAME ||
-    check.external_id !== row.external_id ||
-    check.head_sha !== (row.check_head_sha ?? row.tested_sha) ||
-    numericId(object(check.app).id) !== github.appId
-  ) {
-    throw new SecurityError("wrong_check", 409, "The check does not belong to this commit.");
-  }
-  return check;
-}
-
 /** The page of a pre-run row: its pull request page with its identity, or the home page. */
 function preRunDetailsUrl(context: ApiContext, row: PreRunCheck) {
   const { origin } = context.configuration;
@@ -103,20 +86,6 @@ function preRunDetailsUrl(context: ApiContext, row: PreRunCheck) {
     origin,
   ).href;
 }
-
-/** The surface of the pre-run row of a new commit. */
-function configuredSurface(context: ApiContext) {
-  return context.configuration.statusCreatorId ? "status" : "check";
-}
-
-/**
- * The surface of a new row: the surface of the newest row of the same status
- * commit, or the configured one. One commit never shows both a check run and
- * a commit status.
- */
-const newSurfaceSql = `COALESCE((SELECT existing.surface FROM pre_run_checks existing
-  WHERE COALESCE(existing.check_head_sha,existing.tested_sha) IN (?,?)
-  ORDER BY existing.created_at DESC LIMIT 1),?)`;
 
 async function ownsCommitStatus(context: ApiContext, row: PreRunCheck) {
   const owner = await context.database
@@ -129,30 +98,23 @@ async function ownsCommitStatus(context: ApiContext, row: PreRunCheck) {
 }
 
 /**
- * The result that a pre-run row shows, as the `status` and `conclusion` of a
- * check run. A check row reads its check run on GitHub. All rows of a commit
- * share one commit status, so GitHub cannot give the result of one status
- * row. A status row reads its newest delivered update, or the state that the
- * service wrote directly. A closed row keeps the state that it wrote last.
+ * The result that a pre-run row shows: `in_progress`, or `completed` with its
+ * conclusion. All rows of a commit share one commit status, so GitHub cannot
+ * give the result of one row. A row reads its newest delivered update, or the
+ * state that the service wrote directly. A closed row keeps the state that it
+ * wrote last.
  */
 export async function preRunResult(
   context: ApiContext,
-  github: GitHubClient,
   row: PreRunCheck,
-): Promise<Record<string, unknown>> {
-  if (row.surface !== "status") {
-    if (!row.check_id) {
-      throw new SecurityError("check_pending", 503, "The check is not available yet.");
-    }
-    return verifiedCheck(github, row, row.check_id);
-  }
+): Promise<{ status: "in_progress" | "completed"; conclusion: string | null }> {
   const current = (await storedExternalId(context, row.external_id)) ?? row;
   const delivered = await context.database
     .prepare(`SELECT outbox.conclusion FROM work_checks checks
       JOIN work_status_outbox outbox
         ON outbox.check_id=checks.id AND outbox.revision=checks.delivered_revision
       WHERE checks.id=?`)
-    .bind(current.external_id)
+    .bind(current.check_id)
     .first<{ conclusion: string }>();
   const closed = current.state === "failed" || current.state === "docs_complete";
   const state =
@@ -170,9 +132,9 @@ interface CompletePreRunResultParams {
 }
 
 /**
- * Completes the result of a pre-run row. A check row gets a PATCH. A status
- * row posts the commit status only when no newer row of its commit started
- * its status, so that an older row never hides the result of a newer one.
+ * Completes the result of a pre-run row. The row posts the commit status only
+ * when no newer row of its commit started its status, so that an older row
+ * never hides the result of a newer one.
  * The POST comes before the stored state, so a later attempt sends a failed
  * POST again. A newer row can start between the owner read and the POST; its
  * next delivered update shows its result again.
@@ -184,18 +146,6 @@ export async function completePreRunResult({
   conclusion,
   output,
 }: CompletePreRunResultParams) {
-  if (row.surface !== "status") {
-    await github.request(`/repos/${github.repository}/check-runs/${row.check_id}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        status: "completed",
-        conclusion,
-        completed_at: new Date().toISOString(),
-        output,
-      }),
-    });
-    return;
-  }
   if (await ownsCommitStatus(context, row)) {
     const { origin } = context.configuration;
     await postCommitStatus({
@@ -236,26 +186,11 @@ export async function storedExternalId(context: ApiContext, externalId: string) 
     .first<PreRunCheck>();
 }
 
-async function finishCreation(
-  context: ApiContext,
-  github: GitHubClient,
-  row: PreRunCheck,
-  stillCurrent: () => Promise<boolean>,
-) {
-  const checkId = row.check_id;
-  if (!checkId) throw new SecurityError("check_pending", 503, "The check is not available yet.");
-  await verifiedCheck(github, row, checkId);
-  if (!(await stillCurrent())) {
-    throw new SecurityError("stale_candidate", 503, "The candidate changed before check creation.");
-  }
-  await context.database
-    .prepare(
-      "UPDATE pre_run_checks SET state=?,lease_until=NULL,updated_at=? WHERE external_id=? AND state='creating' AND check_id=?",
-    )
-    .bind("active", Date.now(), row.external_id, checkId)
-    .run();
-}
-
+/**
+ * Posts the starting commit status of a row and activates the row. A status
+ * has no ID to learn, so no POST is ambiguous. The claim keeps a late
+ * starting POST from hiding a result that the outbox delivered after it.
+ */
 export async function ensureStoredCheck(
   context: ApiContext,
   github: GitHubClient,
@@ -263,114 +198,15 @@ export async function ensureStoredCheck(
   stillCurrent: () => Promise<boolean>,
 ) {
   const now = Date.now();
-  let row = initial;
+  const row = initial;
   if (row.state === "active" || row.state === "docs_complete" || row.state === "failed") return;
-  if (row.state === "creating" && (row.lease_until ?? 0) <= now) {
-    await context.database
-      .prepare(
-        "UPDATE pre_run_checks SET state=CASE WHEN request_started=1 THEN 'ambiguous' ELSE 'pending' END,lease_until=NULL WHERE external_id=? AND state='creating' AND lease_until<=?",
-      )
-      .bind(row.external_id, now)
-      .run();
-    row = (await storedExternalId(context, row.external_id)) ?? row;
-  }
-  if (row.surface === "status") {
-    await ensureStoredStatus(context, github, row, stillCurrent);
-    return;
-  }
-  if (row.state === "ambiguous") {
-    const found = await findGitHubCheck({
-      github,
-      testedSha: row.check_head_sha ?? row.tested_sha,
-      externalId: row.external_id,
-    });
-    if (!found) {
-      throw new SecurityError("ambiguous_check", 503, "Check creation needs reconciliation.");
-    }
-    await context.database
-      .prepare(
-        "UPDATE pre_run_checks SET state='creating',check_id=?,lease_until=?,updated_at=? WHERE external_id=? AND state='ambiguous'",
-      )
-      .bind(found, now + 120_000, now, row.external_id)
-      .run();
-    row = (await storedExternalId(context, row.external_id)) ?? row;
-  }
-  if (row.state === "creating" && row.lease_until && row.lease_until > now && row.check_id) {
-    await finishCreation(context, github, row, stillCurrent);
-    return;
-  }
-  if (row.state === "creating") {
-    throw new SecurityError("check_pending", 503, "Check creation is in progress.");
-  }
-  const claimed = await context.database
+  // A claim that its invocation did not end is free again.
+  await context.database
     .prepare(
-      "UPDATE pre_run_checks SET state='creating',lease_until=?,updated_at=? WHERE external_id=? AND state='pending' RETURNING tested_sha",
+      "UPDATE pre_run_checks SET state='pending',lease_until=NULL WHERE external_id=? AND state='creating' AND lease_until<=?",
     )
-    .bind(now + 120_000, now, row.external_id)
-    .first();
-  if (!claimed) {
-    throw new SecurityError("check_pending", 503, "Check creation is in progress.");
-  }
-  try {
-    // A failed POST is ambiguous. Never make a second POST after it has started.
-    const found = await findGitHubCheck({
-      github,
-      testedSha: row.check_head_sha ?? row.tested_sha,
-      externalId: row.external_id,
-    });
-    let checkId = found;
-    if (!checkId) {
-      const started = await context.database
-        .prepare(
-          "UPDATE pre_run_checks SET request_started=1 WHERE external_id=? AND state='creating' AND lease_until>? RETURNING tested_sha",
-        )
-        .bind(row.external_id, Date.now())
-        .first();
-      if (!started) return;
-      const created = object(
-        await github.request(`/repos/${github.repository}/check-runs`, {
-          method: "POST",
-          body: JSON.stringify({
-            name: CHECK_NAME,
-            head_sha: row.check_head_sha ?? row.tested_sha,
-            external_id: row.external_id,
-            details_url: preRunDetailsUrl(context, row),
-            status: "in_progress",
-            output: startingCheckOutput,
-          }),
-        }),
-      );
-      checkId = numericId(created.id);
-    }
-    await context.database
-      .prepare("UPDATE pre_run_checks SET check_id=? WHERE external_id=? AND state='creating'")
-      .bind(checkId, row.external_id)
-      .run();
-    const current = await storedExternalId(context, row.external_id);
-    if (current?.state === "creating") await finishCreation(context, github, current, stillCurrent);
-  } catch (error) {
-    await context.database
-      .prepare(
-        "UPDATE pre_run_checks SET state=CASE WHEN request_started=1 THEN 'ambiguous' ELSE 'pending' END,lease_until=NULL,updated_at=? WHERE external_id=? AND state='creating'",
-      )
-      .bind(Date.now(), row.external_id)
-      .run();
-    throw error;
-  }
-}
-
-/**
- * Posts the starting commit status of a status row and activates the row. A
- * status has no ID to learn, so no POST is ambiguous. The claim still keeps a
- * late starting POST from hiding a result that the outbox delivered after it.
- */
-async function ensureStoredStatus(
-  context: ApiContext,
-  github: GitHubClient,
-  row: PreRunCheck,
-  stillCurrent: () => Promise<boolean>,
-) {
-  const now = Date.now();
+    .bind(row.external_id, now)
+    .run();
   const claimed = await context.database
     .prepare(
       "UPDATE pre_run_checks SET state='creating',lease_until=?,updated_at=? WHERE external_id=? AND state='pending' RETURNING tested_sha",
@@ -420,11 +256,8 @@ async function mainSuccessor(context: ApiContext, github: GitHubClient, candidat
     throw new SecurityError("check_conflict", 409, "The previous commit check is unavailable.");
   }
   if (previous.check_id) {
-    const check = await preRunResult(context, github, previous);
-    if (
-      check.status !== "completed" ||
-      (check.conclusion !== "success" && check.conclusion !== "neutral")
-    ) {
+    const check = await preRunResult(context, previous);
+    if (check.status !== "completed" || check.conclusion !== "success") {
       throw new SecurityError("check_conflict", 409, "The previous commit check has not passed.");
     }
   } else if (
@@ -438,7 +271,7 @@ async function mainSuccessor(context: ApiContext, github: GitHubClient, candidat
   const now = Date.now();
   await context.database
     .prepare(
-      `INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,surface,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,${newSurfaceSql},?,? WHERE NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND generation>=?) ON CONFLICT DO NOTHING`,
+      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,surface,created_at,updated_at) SELECT ?,?,?,?,?,?,?,?,?,?,?,'status',?,? WHERE NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND generation>=?) ON CONFLICT DO NOTHING",
     )
     .bind(
       candidate.testedSha,
@@ -452,9 +285,6 @@ async function mainSuccessor(context: ApiContext, github: GitHubClient, candidat
       0,
       externalId(candidate.testedSha, generation),
       candidate.testedSha,
-      candidate.testedSha,
-      candidate.testedSha,
-      configuredSurface(context),
       now,
       now,
       candidate.testedSha,
@@ -504,7 +334,7 @@ export async function storeCandidateCheck({
       `WITH next_generation AS (SELECT COALESCE(MAX(generation),-1)+1 AS value FROM pre_run_checks WHERE tested_sha=?)
       INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,surface,created_at,updated_at)
       SELECT ?,value,?,?,?,?,?,?,?,'visonaut:pre:'||?||CASE WHEN value=0 THEN '' ELSE ':'||value END,
-        CASE WHEN EXISTS(SELECT 1 FROM pre_run_checks legacy WHERE legacy.tested_sha=? AND legacy.kind='pull_request' AND legacy.check_head_sha IS NULL) THEN NULL ELSE ? END,${newSurfaceSql},?,?
+        CASE WHEN EXISTS(SELECT 1 FROM pre_run_checks legacy WHERE legacy.tested_sha=? AND legacy.kind='pull_request' AND legacy.check_head_sha IS NULL) THEN NULL ELSE ? END,'status',?,?
       FROM next_generation WHERE NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")}) ON CONFLICT DO NOTHING`,
     )
     .bind(
@@ -520,9 +350,6 @@ export async function storeCandidateCheck({
       candidate.testedSha,
       candidate.testedSha,
       candidate.kind === "pull_request" ? candidate.sourceSha : candidate.testedSha,
-      candidate.kind === "pull_request" ? candidate.sourceSha : candidate.testedSha,
-      candidate.testedSha,
-      configuredSurface(context),
       now,
       now,
       candidate.testedSha,
@@ -588,8 +415,8 @@ export async function findPreRunCheck(
   ) {
     throw new SecurityError("pre_run_check", 503, "The candidate App check is not ready.");
   }
-  const check = await preRunResult(context, github, row);
-  if (check.status !== "in_progress" && check.status !== "queued") {
+  const check = await preRunResult(context, row);
+  if (check.status !== "in_progress") {
     throw new SecurityError("pre_run_check", 409, "The candidate App check is already complete.");
   }
   return {

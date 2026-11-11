@@ -1,17 +1,8 @@
-export type GitHubCheckRuns = Map<string, Record<string, unknown>>;
-
 export interface GitHubStubParams {
   appId: string;
   installationId: string;
   repository: string;
   maintainer: { id: number; login: string };
-  /**
-   * The check runs by ID. The database of the app keeps these IDs, so the
-   * local runner gives the stub the check runs of the earlier starts.
-   */
-  checks?: GitHubCheckRuns;
-  /** Runs after the stub adds or changes a check run. */
-  onCheckChange?: (checks: GitHubCheckRuns) => void;
   /** The user ID of the App bot, which creates each commit status. */
   statusCreatorId?: number;
 }
@@ -27,16 +18,14 @@ async function jsonObject(request: Request): Promise<Record<string, unknown>> {
 /**
  * Answer the GitHub requests of the local backend. The stub knows the
  * installation token, the maintainer, the permission of the maintainer, the
- * check runs and the commit statuses that the service makes, and its pull
- * request comments. Each other request gets status 404.
+ * commit statuses that the service makes, and its pull request comments. Each
+ * other request gets status 404.
  */
 export function createGitHubStub({
   appId,
   installationId,
   repository,
   maintainer,
-  checks = new Map(),
-  onCheckChange,
   statusCreatorId = 1,
 }: GitHubStubParams) {
   const repositoryPath = `/repos/${repository}`;
@@ -71,13 +60,6 @@ export function createGitHubStub({
         role_name: "write",
       });
     }
-    if (route === `POST ${repositoryPath}/check-runs`) {
-      const id = checks.size + 1;
-      const check = { ...(await jsonObject(request)), id, app: { id: Number(appId) } };
-      checks.set(String(id), check);
-      onCheckChange?.(checks);
-      return Response.json(check, { status: 201 });
-    }
     const statusSha = path.startsWith(`${repositoryPath}/statuses/`)
       ? /^[a-f0-9]{40}$/.exec(path.slice(`${repositoryPath}/statuses/`.length))
       : null;
@@ -98,25 +80,6 @@ export function createGitHubStub({
       const perPage = Number(url.searchParams.get("per_page") ?? "30");
       const found = statuses.filter((status) => status.sha === sha);
       return Response.json(found.slice((page - 1) * perPage, page * perPage));
-    }
-    if (request.method === "GET" && path.startsWith(commits) && path.endsWith("/check-runs")) {
-      const sha = path.slice(commits.length, -"/check-runs".length);
-      const name = url.searchParams.get("check_name");
-      const found = [...checks.values()].filter(
-        (check) => check.head_sha === sha && (!name || check.name === name),
-      );
-      return Response.json({ total_count: found.length, check_runs: found });
-    }
-    const check = path.startsWith(`${repositoryPath}/check-runs/`)
-      ? checks.get(path.slice(`${repositoryPath}/check-runs/`.length))
-      : undefined;
-    if (check && request.method === "GET") {
-      return Response.json(check);
-    }
-    if (check && request.method === "PATCH") {
-      Object.assign(check, await jsonObject(request));
-      onCheckChange?.(checks);
-      return Response.json(check);
     }
     const issueComments = /^(\d+)\/comments$/.exec(path.slice(issues.length));
     if (path.startsWith(issues) && issueComments) {

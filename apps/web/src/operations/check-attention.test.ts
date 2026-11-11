@@ -55,7 +55,7 @@ it.each(["superseded-run", "missing-desired-revision", "new-generation", "delive
       now: fixture.state.time - 1,
     });
     const history = database.connection.prepare("SELECT * FROM work_status_outbox").all();
-    const sends = fixture.state.patches;
+    const sends = fixture.state.posts;
 
     expect((await readAttention(database)).events).toEqual([]);
     expect(database.connection.prepare("SELECT resolved_at FROM operations_events").get()).toEqual({
@@ -63,7 +63,7 @@ it.each(["superseded-run", "missing-desired-revision", "new-generation", "delive
     });
     expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual([]);
     expect(database.connection.prepare("SELECT * FROM work_status_outbox").all()).toEqual(history);
-    expect(fixture.state.patches).toBe(sends);
+    expect(fixture.state.posts).toBe(sends);
     const resolved = database.connection.prepare("SELECT * FROM operations_events").get();
     expect(resolved).toMatchObject({
       occurrences: 1,
@@ -153,11 +153,11 @@ it("does not spend delivery attempts or request continuation for an unplanned ch
   preRunCheck(database, null);
   database.connection.exec("UPDATE work_status_outbox SET state='pending',attempts=0");
   const history = database.connection.prepare("SELECT * FROM work_status_outbox").all();
-  const sends = fixture.state.patches;
+  const sends = fixture.state.posts;
   const report = await deliverGitHubStatuses(fixture.context);
   expect(report).toMatchObject({ completed: [], deferred: [], attention: [], hasMore: false });
   expect(database.connection.prepare("SELECT * FROM work_status_outbox").all()).toEqual(history);
-  expect(fixture.state.patches).toBe(sends);
+  expect(fixture.state.posts).toBe(sends);
 });
 
 it("selects current delivery before the page limit when an older check is unplanned", async () => {

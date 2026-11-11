@@ -1,13 +1,20 @@
-import { genericCheckOutput, GitHubUnavailableError } from "@visonaut/security";
+import { checkText, GitHubUnavailableError } from "@visonaut/security";
 import { reviewCountsOrZero, Service } from "@visonaut/service";
 import { expect, it, vi } from "vitest";
-import { dashboard } from "../api/dashboard.ts";
 import { deliverGitHubStatuses, deliverRunStatus } from "./checks.ts";
-import { addUndecidedChange, captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
+import {
+  addUndecidedChange,
+  captured,
+  context,
+  reserve,
+  shownStatus,
+  TestDatabase,
+} from "./test-fixtures.ts";
 
 type Fixture = ReturnType<typeof context>;
 
-const checkPath = "/repos/owner/repo/check-runs/1";
+/** The tested commit of each fixture run. */
+const testedCommit = "a".repeat(40);
 
 function readDelivery(database: TestDatabase) {
   return database.connection
@@ -98,29 +105,39 @@ function rejectedRuns(database: TestDatabase) {
     .map((row) => row.run_id);
 }
 
-interface ShownPatch {
-  status: string;
-  conclusion?: string;
-  output: { title: string; summary: string };
+/** The descriptions of the statuses that reached GitHub, oldest first. */
+function postedTitles(fixture: Fixture, sha = testedCommit) {
+  return fixture.state.statuses
+    .filter((status) => status.sha === sha)
+    .map((status) => status.description)
+    .reverse();
+}
+
+function isStatusRead(path: string, init?: RequestInit) {
+  return !init?.method && /\/commits\/[a-f0-9]{40}\/statuses\?/.test(path);
+}
+
+/** The next status POST fails before it reaches GitHub. */
+function dropNextPost(fixture: Fixture) {
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  let dropped = false;
+  fixture.context.github.request = async (path, init) => {
+    if (init?.method === "POST" && !dropped) {
+      dropped = true;
+      throw new Error("Lost POST request.");
+    }
+    return request(path, init);
+  };
 }
 
 /**
- * The PATCH bodies of the pass, in their order. GitHub shows the result of
- * each PATCH in the next read of the check.
+ * Move a fixture run to its own tested commit. Each fixture run tests the same
+ * commit, and the runs of one commit share its status.
  */
-function shownPatches(fixture: Fixture) {
-  const patches: ShownPatch[] = [];
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  fixture.context.github.request = async (path, init) => {
-    const result = await request(path, init);
-    if (init?.method === "PATCH") {
-      const body: ShownPatch = JSON.parse(String(init.body));
-      patches.push(body);
-      Object.assign(fixture.state.checks.get(path.split("/").at(-1) ?? "") ?? {}, body);
-    }
-    return result;
-  };
-  return patches;
+function moveToCommit(database: TestDatabase, runId: string, sha: string) {
+  database.connection
+    .prepare("UPDATE visonaut_runs SET tested_sha = ? WHERE id = ?")
+    .run(sha, runId);
 }
 
 function desiredRevision(database: TestDatabase) {
@@ -134,7 +151,6 @@ it("sends one update with a new revision for a decision that changes only a coun
   const fixture = context(database);
   await captured(fixture.context);
   await addUndecidedChange(database, "comparison-run");
-  const patches = shownPatches(fixture);
 
   await deliverGitHubStatuses(fixture.context);
   await reject(fixture, "run", 0);
@@ -145,34 +161,32 @@ it("sends one update with a new revision for a decision that changes only a coun
   await deliverGitHubStatuses(fixture.context);
 
   expect(desiredRevision(database)).toBeGreaterThan(Number(revision));
-  expect(patches.map((patch) => [patch.conclusion, patch.output.title])).toEqual([
-    ["failure", "1 change needs review"],
-    ["failure", "1 change rejected"],
+  expect(fixture.state.statuses.map((status) => [status.state, status.description])).toEqual([
     ["failure", "2 changes rejected"],
-  ]);
-  expect(patches.map((patch) => patch.output.summary.split("\n\n")[1])).toEqual([
-    "Changes: 1 need review, 0 rejected, 1 approved.",
-    "Changes: 1 need review, 1 rejected, 0 approved.",
-    "Changes: 0 need review, 2 rejected, 0 approved.",
+    ["failure", "1 change rejected"],
+    ["failure", "1 change needs review"],
   ]);
 
-  // A later event of another run changes no count of this run: no PATCH.
+  // A later event of another run changes no count of this run: no POST.
+  const anotherCommit = "b".repeat(40);
   fixture.state.time += 60_000;
   await reserve(fixture.context, "another");
+  moveToCommit(database, "another", anotherCommit);
   await deliverGitHubStatuses(fixture.context);
-  expect(patches.map((patch) => patch.output.title).slice(3)).toEqual(["Capturing screenshots"]);
+  expect(fixture.state.posts).toBe(4);
+  expect(postedTitles(fixture).at(-1)).toBe("2 changes rejected");
+  expect(postedTitles(fixture, anotherCommit)).toEqual(["Capturing screenshots"]);
 });
 
-it("sends no text of an update when a decision commits after the claim", async () => {
+it("sends no status of an update when a decision commits after the claim", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context);
-  const patches = shownPatches(fixture);
   const request = fixture.context.github.request.bind(fixture.context.github);
   let decided = false;
-  // The sender reads the check after the claim. The decision commits at that read.
+  // The sender reads the status after the claim. The decision commits at that read.
   fixture.context.github.request = async (path, init) => {
-    if (path === checkPath && !init?.method && !decided) {
+    if (isStatusRead(path, init) && !decided) {
       decided = true;
       await reject(fixture, "run");
     }
@@ -183,12 +197,12 @@ it("sends no text of an update when a decision commits after the claim", async (
 
   // The claimed update has the counts from before the decision, so it is not sent.
   expect(first).toMatchObject({ completed: [], deferred: ["1"], attention: [] });
-  expect(patches).toEqual([]);
+  expect(fixture.state.posts).toBe(0);
 
   const next = await deliverGitHubStatuses(fixture.context);
 
   expect(next).toMatchObject({ completed: ["1"], attention: [] });
-  expect(patches.map((patch) => patch.output.title)).toEqual(["1 change rejected"]);
+  expect(postedTitles(fixture)).toEqual(["1 change rejected"]);
 });
 
 it("sends an update two minutes after the invocation that claimed it stopped", async () => {
@@ -197,16 +211,15 @@ it("sends an update two minutes after the invocation that claimed it stopped", a
   // The production budget, so the check lease does not come from a short test budget.
   fixture.context.budget.leaseMilliseconds = 12 * 60 * 1000;
   await captured(fixture.context);
-  const patches = shownPatches(fixture);
   const request = fixture.context.github.request.bind(fixture.context.github);
   let claim = () => {};
   const claimed = new Promise<void>((resolve) => {
     claim = resolve;
   });
-  // The platform cancels the invocation while it reads the check after the
+  // The platform cancels the invocation while it reads the status after the
   // claim, so the pass never settles its lease.
   fixture.context.github.request = async (path, init) => {
-    if (path === checkPath && !init?.method) {
+    if (isStatusRead(path, init)) {
       claim();
       return new Promise(() => {});
     }
@@ -220,27 +233,15 @@ it("sends an update two minutes after the invocation that claimed it stopped", a
   const early = await deliverGitHubStatuses(fixture.context);
 
   expect(early).toMatchObject({ completed: [], deferred: [], attention: [] });
-  expect(patches).toEqual([]);
+  expect(fixture.state.posts).toBe(0);
 
   fixture.state.time += 1;
   const late = await deliverGitHubStatuses(fixture.context);
 
   expect(late).toMatchObject({ completed: ["1"], attention: [] });
-  expect(patches).toHaveLength(1);
+  expect(fixture.state.posts).toBe(1);
   expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
 });
-
-/** GitHub applies each PATCH before the fixture loses its answer. */
-function applyLostPatches(fixture: Fixture) {
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  fixture.context.github.request = async (path, init) => {
-    if (init?.method === "PATCH") {
-      const check = fixture.state.checks.get(path.split("/").at(-1) ?? "");
-      Object.assign(check ?? {}, JSON.parse(String(init.body)));
-    }
-    return request(path, init);
-  };
-}
 
 function openCheckAlerts(database: TestDatabase) {
   return database.connection
@@ -250,26 +251,25 @@ function openCheckAlerts(database: TestDatabase) {
     .all();
 }
 
-/** A shown first result, then a Reject whose PATCH gets no answer, so the check is locked. */
+/** A shown first result, then a Reject whose POST does not reach GitHub, so the check is locked. */
 async function lockAfterReject(database: TestDatabase, fixture: Fixture) {
   await captured(fixture.context);
   await addUndecidedChange(database, "comparison-run");
-  const patches = shownPatches(fixture);
   await deliverGitHubStatuses(fixture.context);
-  fixture.state.losePatch = true;
+  const request = fixture.context.github.request;
+  dropNextPost(fixture);
   await reject(fixture, "run", 0);
   expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  fixture.state.losePatch = false;
-  return patches;
+  fixture.context.github.request = request;
 }
 
 // The lease of the test budget (1 minute), and then one more lease of 2 minutes.
 const lockReleaseTime = 3 * 60 * 1000;
 
-it("releases the lock of a PATCH that GitHub did not apply, and sends the newest update", async () => {
+it("releases the lock of a POST that did not reach GitHub, and sends the newest update", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  const patches = await lockAfterReject(database, fixture);
+  await lockAfterReject(database, fixture);
   await reject(fixture, "run", 1);
 
   fixture.state.time += lockReleaseTime - 1;
@@ -281,10 +281,7 @@ it("releases the lock of a PATCH that GitHub did not apply, and sends the newest
   const late = await deliverGitHubStatuses(fixture.context);
 
   expect(late).toMatchObject({ completed: ["1"], attention: [] });
-  expect(patches.map((patch) => patch.output.title)).toEqual([
-    "1 change needs review",
-    "2 changes rejected",
-  ]);
+  expect(postedTitles(fixture)).toEqual(["1 change needs review", "2 changes rejected"]);
   expect(readDelivery(database)).toMatchObject({
     ambiguous: 0,
     lease_token: null,
@@ -293,27 +290,23 @@ it("releases the lock of a PATCH that GitHub did not apply, and sends the newest
   expect(openCheckAlerts(database)).toEqual([]);
 });
 
-it("settles a locked update that GitHub applied, and sends no PATCH again", async () => {
+it("settles a locked update that GitHub shows, and sends no POST again", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context);
   await addUndecidedChange(database, "comparison-run");
   await deliverGitHubStatuses(fixture.context);
-  applyLostPatches(fixture);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   await reject(fixture, "run", 0);
   expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  fixture.state.losePatch = false;
-  const requests = fixture.state.patches;
+  const posts = fixture.state.posts;
 
   fixture.state.time += lockReleaseTime;
   const report = await deliverGitHubStatuses(fixture.context);
 
   expect(report).toMatchObject({ completed: [], attention: [] });
-  expect(fixture.state.patches).toBe(requests);
-  expect(fixture.state.checks.get("1")).toMatchObject({
-    output: { title: "1 change rejected" },
-  });
+  expect(fixture.state.posts).toBe(posts);
+  expect(shownStatus(fixture.state)).toMatchObject({ description: "1 change rejected" });
   expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
   expect(
     database.connection
@@ -323,55 +316,49 @@ it("settles a locked update that GitHub applied, and sends no PATCH again", asyn
   expect(openCheckAlerts(database)).toEqual([]);
 });
 
-it("settles a locked pending update that GitHub shows as a check in progress", async () => {
+it("settles a locked pending update that GitHub shows as a pending status", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  applyLostPatches(fixture);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  fixture.state.losePatch = false;
-  expect(fixture.state.checks.get("1")).toMatchObject({
-    status: "in_progress",
-    output: { title: "Capturing screenshots" },
+  expect(shownStatus(fixture.state)).toMatchObject({
+    state: "pending",
+    description: "Capturing screenshots",
   });
 
   fixture.state.time += lockReleaseTime;
   const report = await deliverGitHubStatuses(fixture.context);
 
   expect(report).toMatchObject({ completed: [], attention: [] });
-  expect(fixture.state.patches).toBe(1);
+  expect(fixture.state.posts).toBe(1);
   expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
 });
 
-it("releases the lock of the first update when GitHub still shows the text of its creation", async () => {
+it("releases the lock of the first update when the commit has no status", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  const patches = shownPatches(fixture);
-  fixture.state.losePatch = true;
+  dropNextPost(fixture);
   expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  fixture.state.losePatch = false;
-  expect(fixture.state.checks.get("1")).toMatchObject({
-    output: { title: "Checking visual coverage" },
-  });
+  expect(fixture.state.statuses).toEqual([]);
 
   fixture.state.time += lockReleaseTime;
   const report = await deliverGitHubStatuses(fixture.context);
 
   expect(report).toMatchObject({ completed: ["1"], attention: [] });
-  expect(patches.map((patch) => patch.output.title)).toEqual(["Capturing screenshots"]);
+  expect(postedTitles(fixture)).toEqual(["Capturing screenshots"]);
   expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
   expect(openCheckAlerts(database)).toEqual([]);
 });
 
-it("keeps the lock when the read of the check fails, or the check has another commit", async () => {
+it("keeps the lock when the read of the status fails, and releases it after a later read", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  const patches = await lockAfterReject(database, fixture);
+  await lockAfterReject(database, fixture);
   const request = fixture.context.github.request.bind(fixture.context.github);
   fixture.context.github.request = async (path, init) => {
-    if (path === checkPath && !init?.method) {
+    if (isStatusRead(path, init)) {
       throw new GitHubUnavailableError(502);
     }
     return request(path, init);
@@ -385,49 +372,63 @@ it("keeps the lock when the read of the check fails, or the check has another co
     attention: ["1"],
     causes: [expect.objectContaining({ code: "github_unavailable", upstreamStatus: 502 })],
   });
-
-  fixture.context.github.request = request;
-  Object.assign(fixture.state.checks.get("1") ?? {}, { head_sha: "another" });
-  const otherCommit = await deliverGitHubStatuses(fixture.context);
-
-  expect(otherCommit).toMatchObject({ completed: [], attention: ["1"] });
-  expect(patches).toHaveLength(1);
+  expect(fixture.state.posts).toBe(1);
   expect(readDelivery(database)).toMatchObject({ ambiguous: 1, state: "sending" });
   expect(openCheckAlerts(database)).toEqual([{ code: "ambiguous" }]);
+
+  fixture.context.github.request = request;
+  const read = await deliverGitHubStatuses(fixture.context);
+
+  expect(read).toMatchObject({ completed: ["1"], attention: [] });
+  expect(postedTitles(fixture)).toEqual(["1 change needs review", "1 change rejected"]);
+  expect(openCheckAlerts(database)).toEqual([]);
 });
 
-it("keeps the lock when GitHub shows a text that the service did not send", async () => {
+// The required check of a ruleset accepts only the status of the App.
+it("sends the locked update again when the newest status has another creator", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  const patches = await lockAfterReject(database, fixture);
-  const check = fixture.state.checks.get("1");
-  Object.assign(check ?? {}, { output: { title: "Edited", summary: "Edited" } });
+  await lockAfterReject(database, fixture);
+  // Another user writes the text of the locked update.
+  fixture.state.statuses.unshift({
+    state: "failure",
+    description: "1 change rejected",
+    target_url: "https://visonaut.example/runs/run",
+    context: "Visonaut",
+    sha: testedCommit,
+    creator: { id: 7 },
+  });
 
   fixture.state.time += lockReleaseTime;
   const report = await deliverGitHubStatuses(fixture.context);
 
-  expect(report).toMatchObject({ completed: [], attention: ["1"] });
-  expect(patches).toHaveLength(1);
-  expect(readDelivery(database)).toMatchObject({ ambiguous: 1, state: "sending" });
-  expect(openCheckAlerts(database)).toEqual([{ code: "ambiguous" }]);
+  expect(report).toMatchObject({ completed: ["1"], attention: [] });
+  expect(fixture.state.posts).toBe(2);
+  expect(shownStatus(fixture.state)).toMatchObject({
+    description: "1 change rejected",
+    creator: { id: 99 },
+  });
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+  expect(openCheckAlerts(database)).toEqual([]);
 });
 
 // D-OPS-02: a review that waits for a maintainer must block the merge.
-it("keeps the check completed with the conclusion failure while a review waits", async () => {
+it("keeps the status in the state failure while a review waits", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   const service = await captured(fixture.context);
   await addUndecidedChange(database, "comparison-run");
-  const patches = shownPatches(fixture);
 
   await deliverGitHubStatuses(fixture.context);
 
   expect((await service.status("run")).status).toBe("needs-review");
-  expect(patches).toEqual([
+  expect(fixture.state.statuses).toEqual([
     expect.objectContaining({
-      status: "completed",
-      conclusion: "failure",
-      output: expect.objectContaining({ title: "1 change needs review" }),
+      sha: testedCommit,
+      context: "Visonaut",
+      state: "failure",
+      description: "1 change needs review",
+      target_url: "https://visonaut.example/runs/run",
     }),
   ]);
 });
@@ -505,10 +506,7 @@ it("gives the same status, check title, and conclusion from the rows of a caller
             loaded.status === "needs-review"
           ? "failure"
           : "pending";
-    const { title } = genericCheckOutput(
-      { ...loaded, ...reviewCountsOrZero(loaded), state: loaded.status },
-      "https://run.example",
-    );
+    const { title } = checkText({ state: loaded.status, ...reviewCountsOrZero(loaded) });
     const saved =
       (await reads(() => service.status(id))) -
       (await reads(() => service.status(id, { run, project, comparison })));
@@ -537,57 +535,12 @@ it("gives the same status, check title, and conclusion from the rows of a caller
   );
 });
 
-it("shows the counts of the run list in the check text after each decision", async () => {
+it("puts no item key, no variant key, and no login into the status", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context);
   await addUndecidedChange(database, "comparison-run");
-  // The run list needs the pull request number of the run.
-  database.connection.exec("UPDATE visonaut_runs SET lineage_key = 'pr:7' WHERE id = 'run'");
-  const patches = shownPatches(fixture);
-  const steps = [
-    async () => {},
-    () => saveDecision(fixture, { index: 0, verdict: "rejected" }),
-    () => saveDecision(fixture, { index: 1, verdict: "approved" }),
-    () => saveDecision(fixture, { index: 0, verdict: "approved" }),
-  ];
-  const listed: string[] = [];
-
-  for (const step of steps) {
-    await step();
-    await deliverGitHubStatuses(fixture.context);
-    const { runs } = await dashboard({
-      database,
-      configuration: {
-        projectId: "project",
-        github: { repositoryId: "123", repository: "owner/repo" },
-      },
-    });
-    const run = runs.find((candidate) => candidate.id === "run");
-    if (!run) {
-      throw new Error("Missing run.");
-    }
-    listed.push(
-      `Changes: ${(run.pending ?? 0) - (run.rejected ?? 0)} need review, ${run.rejected} rejected, ${run.approved} approved.`,
-    );
-  }
-
-  expect(listed).toEqual([
-    "Changes: 1 need review, 0 rejected, 1 approved.",
-    "Changes: 1 need review, 1 rejected, 0 approved.",
-    "Changes: 0 need review, 1 rejected, 1 approved.",
-    "Changes: 0 need review, 0 rejected, 2 approved.",
-  ]);
-  expect(patches.map((patch) => patch.output.summary.split("\n\n")[1])).toEqual(listed);
-});
-
-it("puts no item key, no variant key, and no login into the check text", async () => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  await captured(fixture.context);
-  await addUndecidedChange(database, "comparison-run");
-  const patches = shownPatches(fixture);
-  // A reviewer name that no sentence of the check text has.
+  // A reviewer name that no sentence of the status has.
   const actorId = "octo-reviewer-login";
 
   // Needs review, Rejected, and Passed for the run, then Capturing for a new run.
@@ -600,7 +553,7 @@ it("puts no item key, no variant key, and no login into the check text", async (
   await reserve(fixture.context, "another");
   await deliverGitHubStatuses(fixture.context);
 
-  expect(patches.map((patch) => patch.output.title)).toEqual([
+  expect(postedTitles(fixture)).toEqual([
     "1 change needs review",
     "1 change rejected",
     "2 changes approved",
@@ -615,10 +568,7 @@ it("puts no item key, no variant key, and no login into the check text", async (
     "chromium",
   ];
   expect(names).toEqual(expect.arrayContaining(["dialog", "menu", "light"]));
-  const shown = JSON.stringify([
-    ...patches.map((patch) => patch.output),
-    ...[...fixture.state.checks.values()].map((check) => check.output),
-  ]);
+  const shown = JSON.stringify(fixture.state.statuses);
   for (const name of names) {
     expect(shown).not.toContain(name);
   }
@@ -637,7 +587,7 @@ it("sends no request for a stored update that has no review state", async () => 
   // One failed read keeps the update in the queue.
   fixture.context.github.request = async (path, init) => {
     requests.push(`${init?.method ?? "GET"} ${path}`);
-    if (path === checkPath && !init?.method && failedReads === 0) {
+    if (isStatusRead(path, init) && failedReads === 0) {
       failedReads += 1;
       throw new GitHubUnavailableError(502);
     }
@@ -661,19 +611,19 @@ it("sends no request for a stored update that has no review state", async () => 
     attention: ["1"],
   });
   expect(requests).toEqual([]);
-  expect(fixture.state.patches).toBe(0);
+  expect(fixture.state.posts).toBe(0);
   expect(statusRead).not.toHaveBeenCalled();
   statusRead.mockRestore();
 });
 
-it("delivers an update in a later pass after one failed read of its check", async () => {
+it("delivers an update in a later pass after one failed read of its status", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
   const request = fixture.context.github.request.bind(fixture.context.github);
   let failedReads = 0;
   fixture.context.github.request = async (path, init) => {
-    if (path === checkPath && !init?.method && failedReads === 0) {
+    if (isStatusRead(path, init) && failedReads === 0) {
       failedReads += 1;
       throw new GitHubUnavailableError(502);
     }
@@ -693,7 +643,7 @@ it("delivers an update in a later pass after one failed read of its check", asyn
     ],
   });
   expect(failedReads).toBe(1);
-  expect(fixture.state.patches).toBe(0);
+  expect(fixture.state.posts).toBe(0);
   expect(readDelivery(database)).toEqual({
     ambiguous: 0,
     lease_token: null,
@@ -707,12 +657,12 @@ it("delivers an update in a later pass after one failed read of its check", asyn
   fixture.state.time += 29_999;
   const early = await deliverGitHubStatuses(fixture.context);
   expect(early).toMatchObject({ completed: [], deferred: [], attention: [], hasMore: false });
-  expect(fixture.state.patches).toBe(0);
+  expect(fixture.state.posts).toBe(0);
 
   fixture.state.time += 1;
   const later = await deliverGitHubStatuses(fixture.context);
   expect(later).toMatchObject({ completed: ["1"], deferred: [], attention: [] });
-  expect(fixture.state.patches).toBe(1);
+  expect(fixture.state.posts).toBe(1);
   expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
 });
 
@@ -720,12 +670,12 @@ it("asks for no more pass when the one update belongs to a locked check", async 
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  fixture.state.losePatch = false;
 
   // A later event of another run gives the locked check a newer update.
   await reserve(fixture.context, "another");
+  moveToCommit(database, "another", "b".repeat(40));
   expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual(["2"]);
   expect(readDelivery(database)).toMatchObject({ ambiguous: 1, state: "pending" });
 
@@ -733,36 +683,26 @@ it("asks for no more pass when the one update belongs to a locked check", async 
     const report = await deliverGitHubStatuses(fixture.context);
     expect(report).toEqual({ completed: [], deferred: [], attention: ["1"], hasMore: false });
   }
-  expect(fixture.state.patches).toBe(2);
+  expect(fixture.state.posts).toBe(2);
 });
 
-it("sends no PATCH for an unchanged completed result after a later event", async () => {
+it("sends no POST for an unchanged result that GitHub shows after a later event", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context);
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  const patched: string[] = [];
-  // GitHub shows the result of each PATCH in the next read of the check.
-  fixture.context.github.request = async (path, init) => {
-    const result = await request(path, init);
-    if (init?.method === "PATCH") {
-      const id = path.split("/").at(-1) ?? "";
-      patched.push(id);
-      Object.assign(fixture.state.checks.get(id) ?? {}, JSON.parse(String(init.body)));
-    }
-    return result;
-  };
 
   expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual(["1"]);
-  expect(fixture.state.checks.get("1")).toMatchObject({ status: "completed" });
-  const completedAt = fixture.state.checks.get("1")?.completed_at;
+  expect(shownStatus(fixture.state)).toMatchObject({ state: "success" });
 
   fixture.state.time += 60_000;
   await reserve(fixture.context, "another");
+  moveToCommit(database, "another", "b".repeat(40));
   expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual(["1", "2"]);
 
-  expect(patched).toEqual(["1", "2"]);
-  expect(fixture.state.checks.get("1")?.completed_at).toBe(completedAt);
+  expect(fixture.state.statuses.map((status) => status.target_url)).toEqual([
+    "https://visonaut.example/runs/another",
+    "https://visonaut.example/runs/run",
+  ]);
   expect(
     database.connection
       .prepare("SELECT desired_revision - delivered_revision AS behind FROM work_checks")
@@ -784,7 +724,7 @@ it("gives each run its update when a decision commits during the status step", a
 
   expect(rejectedRuns(database)).toEqual(["first"]);
   expect(report).toMatchObject({ completed: ["1", "2", "3"], deferred: [], attention: [] });
-  expect(fixture.state.patches).toBe(3);
+  expect(fixture.state.posts).toBe(3);
   // The second attempt of the run "first" read the state after the decision.
   expect(currentChecks(database)).toEqual(["1", "2", "3"]);
   expect(database.connection.prepare("SELECT * FROM operations_events").all()).toEqual([]);
@@ -804,14 +744,14 @@ it("goes to the next run when a second decision commits during the second attemp
   expect(rejectedRuns(database)).toEqual(["first", "second"]);
   // The run "first" waits for the next pass. The other runs get their update.
   expect(report).toMatchObject({ completed: ["2", "3"], deferred: ["first"], attention: [] });
-  expect(fixture.state.patches).toBe(2);
+  expect(fixture.state.posts).toBe(2);
   expect(currentChecks(database)).toEqual(["2", "3"]);
   expect(database.connection.prepare("SELECT * FROM operations_events").all()).toEqual([]);
 
   const next = await deliverGitHubStatuses(fixture.context);
 
   expect(next).toMatchObject({ completed: ["1"], deferred: [], attention: [] });
-  expect(fixture.state.patches).toBe(3);
+  expect(fixture.state.posts).toBe(3);
   expect(currentChecks(database)).toEqual(["1", "2", "3"]);
 });
 
@@ -844,7 +784,7 @@ it("goes to the next run when a newer attempt replaces a run that the step liste
 
     expect(next).toMatchObject({ completed: [], deferred: [], attention: [] });
     expect(prepare).not.toHaveBeenCalled();
-    expect(fixture.state.patches).toBe(1);
+    expect(fixture.state.posts).toBe(1);
     expect(database.connection.prepare("SELECT * FROM operations_events").all()).toEqual([]);
   } finally {
     prepare.mockRestore();
@@ -868,7 +808,7 @@ it("fails the status step when the update of a run fails for another cause", asy
 
 // A pre-run fence writes the pre-run state and then reads the request mark. So
 // one of the fence and the sender must see the write of the other.
-it("sends no PATCH when a pre-run fence closes the check directly before the request mark", async () => {
+it("sends no POST when a pre-run fence closes the check directly before the request mark", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
@@ -878,7 +818,7 @@ it("sends no PATCH when a pre-run fence closes the check directly before the req
       workflow_run_id,workflow_attempt,created_at,updated_at)
       VALUES(?,0,'123',?,?,'pull_request','refs/pull/1/merge',1,'visonaut:run','1','active',0,1,
         'run',1,1,1)`)
-    .run("a".repeat(40), "b".repeat(40), "c".repeat(40));
+    .run(testedCommit, "b".repeat(40), "c".repeat(40));
   let fenceSawSend: unknown = null;
   const prepare = database.prepare.bind(database);
   database.prepare = (sql) => {
@@ -893,18 +833,18 @@ it("sends no PATCH when a pre-run fence closes the check directly before the req
   };
   await deliverGitHubStatuses(fixture.context);
   expect(fenceSawSend).toBe(false);
-  expect(fixture.state.patches).toBe(0);
+  expect(fixture.state.posts).toBe(0);
   expect(readDelivery(database)).toMatchObject({ ambiguous: 0, lease_token: null });
 });
 
-it("sends the check of the reviewed run only, without the other runs of the project", async () => {
+it("sends the status of the reviewed run only, without the other runs of the project", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   for (const id of ["first", "second"]) {
     await captured(fixture.context, id);
   }
+  moveToCommit(database, "second", "b".repeat(40));
   await deliverGitHubStatuses(fixture.context);
-  const patches = shownPatches(fixture);
   const otherRevision = () =>
     database.connection.prepare("SELECT desired_revision FROM work_checks WHERE id = '2'").get();
   const other = otherRevision();
@@ -914,7 +854,8 @@ it("sends the check of the reviewed run only, without the other runs of the proj
   const report = await deliverRunStatus(fixture.context, "first");
 
   expect(report).toMatchObject({ completed: ["1"], deferred: [], attention: [] });
-  expect(patches.map((patch) => patch.output.title)).toEqual(["1 change rejected"]);
+  expect(postedTitles(fixture)).toEqual(["1 change approved", "1 change rejected"]);
+  expect(fixture.state.posts).toBe(3);
   expect(currentChecks(database)).toEqual(["1"]);
   // The other run gets no new update before the next pass.
   expect(otherRevision()).toEqual(other);
@@ -925,15 +866,14 @@ it("sends the newest update of the run when a decision commits during its send",
   const fixture = context(database);
   await captured(fixture.context);
   await deliverGitHubStatuses(fixture.context);
-  const patches = shownPatches(fixture);
   await addUndecidedChange(database, "comparison-run");
   await reject(fixture, "run", 0);
   const request = fixture.context.github.request.bind(fixture.context.github);
   let decided = false;
-  // The sender reads the check after the claim. A second decision commits at
+  // The sender reads the status after the claim. A second decision commits at
   // that read, so the claimed update is obsolete.
   fixture.context.github.request = async (path, init) => {
-    if (path === checkPath && !init?.method && !decided) {
+    if (isStatusRead(path, init) && !decided) {
       decided = true;
       await reject(fixture, "run", 1);
     }
@@ -943,25 +883,24 @@ it("sends the newest update of the run when a decision commits during its send",
   const report = await deliverRunStatus(fixture.context, "run");
 
   expect(report).toMatchObject({ completed: ["1"], attention: [] });
-  expect(patches.map((patch) => patch.output.title)).toEqual(["2 changes rejected"]);
+  expect(postedTitles(fixture)).toEqual(["1 change approved", "2 changes rejected"]);
   expect(currentChecks(database)).toEqual(["1"]);
 });
 
-it("sends the newest update of the run when a decision commits during its PATCH", async () => {
+it("sends the newest update of the run when a decision commits during its POST", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context);
   await deliverGitHubStatuses(fixture.context);
   await addUndecidedChange(database, "comparison-run");
   await reject(fixture, "run", 0);
-  const patches = shownPatches(fixture);
   const request = fixture.context.github.request.bind(fixture.context.github);
   let decided = false;
   let concurrent: Awaited<ReturnType<typeof deliverRunStatus>> | undefined;
   // A second decision commits after the request mark. The request of that
   // decision finds the check leased.
   fixture.context.github.request = async (path, init) => {
-    if (path === checkPath && init?.method === "PATCH" && !decided) {
+    if (init?.method === "POST" && !decided) {
       decided = true;
       await reject(fixture, "run", 1);
       concurrent = await deliverRunStatus(fixture.context, "run");
@@ -973,17 +912,20 @@ it("sends the newest update of the run when a decision commits during its PATCH"
 
   expect(concurrent).toMatchObject({ completed: [] });
   expect(report).toMatchObject({ completed: ["1", "1"], attention: [] });
-  expect(patches.map((patch) => patch.output.title)).toEqual([
+  expect(postedTitles(fixture)).toEqual([
+    "1 change approved",
     "1 change rejected",
     "2 changes rejected",
   ]);
   expect(currentChecks(database)).toEqual(["1"]);
 });
 
-it("creates no check for a run whose check the pass has not created", async () => {
+it("sends no request for a run that has no check", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await captured(fixture.context);
+  // Workflow materialization adopts no pre-run check for this run.
+  database.connection.exec("DELETE FROM operations_check_creations");
   const request = vi.spyOn(fixture.context.github, "request");
 
   const report = await deliverRunStatus(fixture.context, "run");
@@ -993,84 +935,46 @@ it("creates no check for a run whose check the pass has not created", async () =
 });
 
 const statusCommit = "b".repeat(40);
-const statusCheck = `visonaut:pre:${"a".repeat(40)}`;
 
 /**
- * A run whose check is the pre-run status row of its pull request head, as
- * workflow materialization adopts it. Returns the commit statuses that the
- * fake GitHub stores, newest first.
+ * A run whose check is the pre-run row of its pull request head, as workflow
+ * materialization adopts it. Its status goes to the head of the pull request.
  */
-interface StatusRunParams {
-  /**
-   * The failures of the first POSTs, in order: "drop" does not reach GitHub,
-   * and "answer" reaches GitHub and loses its answer.
-   */
-  failures?: ("drop" | "answer")[];
-}
-
-async function statusRun(fixture: Fixture, { failures = [] }: StatusRunParams = {}) {
+async function statusRun(database: TestDatabase, fixture: Fixture) {
   await captured(fixture.context);
-  const { database } = fixture.context;
   const now = fixture.context.now();
-  await database
+  database.connection
     .prepare(
       `INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,
-        pull_request_number,docs_only,external_id,check_id,check_head_sha,surface,state,
+        pull_request_number,docs_only,external_id,check_id,check_head_sha,state,
         plan_visual_required,workflow_run_id,workflow_attempt,created_at,updated_at)
-      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,?,?,?,'status','active',1,'run',1,?,?)`,
+      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'visonaut:run','1',?,'active',
+        1,'run',1,?,?)`,
     )
-    .bind(
-      "a".repeat(40),
-      statusCommit,
-      "c".repeat(40),
-      statusCheck,
-      statusCheck,
-      statusCommit,
-      now,
-      now,
-    )
-    .run();
-  await database
-    .prepare(
-      "INSERT INTO operations_check_creations(run_id,external_id,check_id,state,request_started,attempts,created_at,updated_at) VALUES('run',?,?,'complete',1,1,?,?)",
-    )
-    .bind(statusCheck, statusCheck, now, now)
-    .run();
-  fixture.context.statusCreatorId = "332309535";
-  const statuses: Record<string, unknown>[] = [];
-  const pending = [...failures];
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  fixture.context.github.request = async (path, init) => {
-    const posted = /\/statuses\/([a-f0-9]{40})$/.exec(path);
-    if (posted && init?.method === "POST") {
-      const failure = pending.shift();
-      if (failure === "drop") throw new Error("Lost POST request.");
-      statuses.unshift({
-        ...JSON.parse(String(init.body)),
-        sha: posted[1],
-        creator: { id: 332309535 },
-      });
-      if (failure === "answer") throw new Error("Lost POST response.");
-      return { id: statuses.length };
-    }
-    if (path.includes("/statuses?")) {
-      return statuses.filter((status) => path.includes(`/commits/${status.sha}/`));
-    }
-    return request(path, init);
-  };
-  return statuses;
+    .run(testedCommit, statusCommit, "c".repeat(40), statusCommit, now, now);
 }
 
-it("sends the update of a status row as the commit status of its pull request head", async () => {
+/** A newer merge of the same pull request head starts the commit status. */
+function startNewerRow(database: TestDatabase, fixture: Fixture) {
+  const now = fixture.context.now() + 1;
+  database.connection
+    .prepare(
+      `INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,
+        pull_request_number,docs_only,external_id,check_id,check_head_sha,state,created_at,updated_at)
+      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'newer','newer',?,'active',?,?)`,
+    )
+    .run("d".repeat(40), statusCommit, "c".repeat(40), statusCommit, now, now);
+}
+
+it("sends the update of a pre-run row as the commit status of its pull request head", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  const statuses = await statusRun(fixture);
+  await statusRun(database, fixture);
 
   const report = await deliverGitHubStatuses(fixture.context);
 
-  expect(report).toMatchObject({ completed: [statusCheck], attention: [] });
-  expect(fixture.state.posts).toBe(0);
-  expect(statuses).toEqual([
+  expect(report).toMatchObject({ completed: ["1"], attention: [] });
+  expect(fixture.state.statuses).toEqual([
     expect.objectContaining({
       sha: statusCommit,
       context: "Visonaut",
@@ -1082,89 +986,78 @@ it("sends the update of a status row as the commit status of its pull request he
   await database.prepare("UPDATE work_checks SET delivered_revision=NULL").run();
   await database.prepare("UPDATE work_status_outbox SET state='pending'").run();
   await deliverGitHubStatuses(fixture.context);
-  expect(statuses).toHaveLength(1);
+  expect(fixture.state.posts).toBe(1);
 });
 
-it("sends no update of a status row whose commit status a newer row started", async () => {
+it("sends no update of a pre-run row whose commit status a newer row started", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  const statuses = await statusRun(fixture);
-  // A newer merge of the same pull request head started the commit status.
-  await database
-    .prepare(
-      `INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,
-        pull_request_number,docs_only,external_id,check_id,check_head_sha,surface,state,created_at,updated_at)
-      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'newer','newer',?,'status','active',?,?)`,
-    )
-    .bind(
-      "d".repeat(40),
-      statusCommit,
-      "c".repeat(40),
-      statusCommit,
-      fixture.context.now() + 1,
-      fixture.context.now() + 1,
-    )
-    .run();
+  await statusRun(database, fixture);
+  startNewerRow(database, fixture);
 
   await deliverGitHubStatuses(fixture.context);
 
-  expect(statuses).toEqual([]);
+  expect(fixture.state.posts).toBe(0);
 });
 
-it("sends the update of a status row again after a POST with no answer", async () => {
+it("sends the update of a pre-run row again after a POST that did not reach GitHub", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  const statuses = await statusRun(fixture, { failures: ["drop"] });
+  await statusRun(database, fixture);
+  dropNextPost(fixture);
 
   const first = await deliverGitHubStatuses(fixture.context);
-  expect(first).toMatchObject({ completed: [], attention: [statusCheck] });
-  expect(statuses).toEqual([]);
+  expect(first).toMatchObject({ completed: [], attention: ["1"] });
+  expect(fixture.state.statuses).toEqual([]);
 
-  // After the lease and the delay of the lock, GitHub does not show the
-  // update, so the pass releases the lock and posts the update again.
-  fixture.state.time += 5 * 60 * 1000;
+  // After the lease and the delay of the lock, the head of the pull request
+  // does not show the update, so the pass releases the lock and posts again.
+  fixture.state.time += lockReleaseTime;
   const next = await deliverGitHubStatuses(fixture.context);
-  const last = await deliverGitHubStatuses(fixture.context);
 
-  expect([...next.completed, ...last.completed]).toEqual([statusCheck]);
-  expect(statuses).toHaveLength(1);
-  expect(readStatus(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+  expect(next).toMatchObject({ completed: ["1"], attention: [] });
+  expect(postedTitles(fixture, statusCommit)).toEqual(["1 change approved"]);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
 });
 
-it("settles the update of a status row that GitHub shows after a POST with no answer", async () => {
+it("settles the update of a pre-run row that its pull request head shows after a POST with no answer", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  const statuses = await statusRun(fixture, { failures: ["answer"] });
+  await statusRun(database, fixture);
+  fixture.state.losePost = true;
 
   const first = await deliverGitHubStatuses(fixture.context);
-  expect(first).toMatchObject({ completed: [], attention: [statusCheck] });
-  expect(statuses).toHaveLength(1);
+  expect(first).toMatchObject({ completed: [], attention: ["1"] });
+  expect(fixture.state.posts).toBe(1);
 
   // GitHub shows the locked update, so the pass settles it and posts nothing.
-  fixture.state.time += 5 * 60 * 1000;
+  fixture.state.time += lockReleaseTime;
   await deliverGitHubStatuses(fixture.context);
   await deliverGitHubStatuses(fixture.context);
 
-  expect(statuses).toHaveLength(1);
-  expect(readStatus(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+  expect(fixture.state.posts).toBe(1);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
 });
 
-it("settles the update of a status row that GitHub shows after its last attempt lost its answer", async () => {
+it("settles an update that GitHub shows after its last attempt lost its answer", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  // The fixture budget has 2 attempts.
-  const statuses = await statusRun(fixture, { failures: ["drop", "answer"] });
+  await captured(fixture.context);
+  // The fixture budget has 2 attempts. The first POST does not reach GitHub,
+  // and the second one reaches GitHub and loses its answer.
+  dropNextPost(fixture);
+  fixture.state.losePost = true;
   const lockAndRelease = async () => {
     await deliverGitHubStatuses(fixture.context);
-    fixture.state.time += 5 * 60 * 1000;
+    fixture.state.time += lockReleaseTime;
     await deliverGitHubStatuses(fixture.context);
   };
 
   await lockAndRelease();
   await lockAndRelease();
 
-  expect(statuses).toHaveLength(1);
-  expect(readStatus(database)).toMatchObject({ ambiguous: 0, state: "complete" });
+  expect(fixture.state.posts).toBe(1);
+  expect(readDelivery(database)).toMatchObject({ ambiguous: 0, state: "complete" });
   expect(
     database.connection
       .prepare("SELECT code FROM operations_events WHERE resolved_at IS NULL")
@@ -1172,10 +1065,10 @@ it("settles the update of a status row that GitHub shows after its last attempt 
   ).toEqual([]);
 });
 
-it("closes the alert of a dead update of a status row whose commit status a newer row started", async () => {
+it("closes the alert of a dead update of a pre-run row whose commit status a newer row started", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
-  await statusRun(fixture);
+  await statusRun(database, fixture);
   await deliverGitHubStatuses(fixture.context);
   // A decision gives a new update, and the update ends dead.
   await reject(fixture, "run");
@@ -1186,22 +1079,8 @@ it("closes the alert of a dead update of a status row whose commit status a newe
     )
     .run();
   const dead = await deliverGitHubStatuses(fixture.context);
-  expect(dead.attention).toEqual([statusCheck]);
-  await database
-    .prepare(
-      `INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,
-        pull_request_number,docs_only,external_id,check_id,check_head_sha,surface,state,created_at,updated_at)
-      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'newer','newer',?,'status','active',?,?)`,
-    )
-    .bind(
-      "d".repeat(40),
-      statusCommit,
-      "c".repeat(40),
-      statusCommit,
-      fixture.context.now() + 1,
-      fixture.context.now() + 1,
-    )
-    .run();
+  expect(dead.attention).toEqual(["1"]);
+  startNewerRow(database, fixture);
 
   const closed = await deliverGitHubStatuses(fixture.context);
 
@@ -1214,12 +1093,3 @@ it("closes the alert of a dead update of a status row whose commit status a newe
       .all(),
   ).toEqual([{ code: "exhausted", resolved: 1 }]);
 });
-
-function readStatus(database: TestDatabase) {
-  return database.connection
-    .prepare(`SELECT checks.ambiguous, outbox.state FROM work_checks checks
-      JOIN work_status_outbox outbox
-        ON outbox.check_id = checks.id AND outbox.revision = checks.desired_revision
-      WHERE checks.id = ?`)
-    .get(statusCheck);
-}

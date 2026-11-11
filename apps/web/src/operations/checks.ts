@@ -9,39 +9,21 @@ import {
   statusRunEligibleSql,
   type StatusDelivery,
 } from "@visonaut/service";
-import {
-  ensureGitHubCheck,
-  findGitHubCheck,
-  sendCommitStatus,
-  sendGitHubCheck,
-  shownCheckUpdate,
-  showsStatusUpdate,
-} from "@visonaut/security";
+import { sendCommitStatus, showsStatusUpdate } from "@visonaut/security";
 import { mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 import { currentPreRunCheckSql, obsoleteCheckDeliverySql } from "./check-state.ts";
 import { noteCause, withCause } from "./failure.ts";
 
-interface CheckCreation {
-  run_id: string;
-  external_id: string;
-  check_id: string | null;
-  state: "pending" | "creating" | "ambiguous" | "complete" | "dead";
-  request_started: number;
-  attempts: number;
-  lease_token: string | null;
-  lease_until: number | null;
-}
-
 // Bound GitHub request fan-out while letting independent checks finish together.
 const maximumConcurrentStatusDeliveries = 3;
 // A send takes seconds, and each GitHub request stops after 15 seconds. A short
 // lease lets a later pass send the update of a stopped invocation sooner, and
-// still outlasts the PATCH that follows the request mark.
+// still outlasts the POST that follows the request mark.
 const statusLeaseMilliseconds = 2 * 60 * 1000;
 // A write request with no answer stops after 15 seconds, and it started before
 // the end of its lease. One more lease after that end is a wide margin, so a
-// late request cannot change the check after the pass reads it.
+// late request cannot change the status after the pass reads it.
 const lockReleaseDelayMilliseconds = statusLeaseMilliseconds;
 
 function reviewDetailsUrl(run: { id: string }, origin: string) {
@@ -58,159 +40,6 @@ export async function isCurrentPreRunCheck(
     .bind(checkId)
     .first();
   return current !== null;
-}
-
-async function createChecks(context: OperationsContext, report: OperationReport) {
-  const { database, budget } = context;
-  await database
-    .prepare(`INSERT INTO operations_check_creations(run_id,external_id,created_at,updated_at)
-    SELECT run.id,'visonaut:'||run.id,?,? FROM visonaut_runs run WHERE ${statusRunEligibleSql}
-    ON CONFLICT(run_id) DO NOTHING`)
-    .bind(context.now(), context.now())
-    .run();
-  await database
-    .prepare(`UPDATE operations_check_creations SET state=CASE WHEN request_started=1 THEN 'ambiguous' WHEN attempts>=? THEN 'dead' ELSE 'pending' END,
-    lease_token=NULL,lease_until=NULL WHERE state='creating' AND lease_until<=?`)
-    .bind(budget.maxAttempts, context.now())
-    .run();
-  await database
-    .prepare(
-      "UPDATE operations_check_creations SET state='dead' WHERE state='pending' AND attempts>=?",
-    )
-    .bind(budget.maxAttempts)
-    .run();
-  const candidates = await database
-    .prepare(`SELECT creation.* FROM operations_check_creations creation JOIN visonaut_runs run ON run.id=creation.run_id
-    WHERE ${statusRunEligibleSql} AND creation.state='pending' ORDER BY creation.updated_at,creation.run_id LIMIT ?`)
-    .bind(budget.tasksPerStep)
-    .all<CheckCreation>();
-  const cursor = await database
-    .prepare("SELECT value FROM operations_cursors WHERE id='creation-attention'")
-    .first<{ value: string | null }>();
-  const attention = await database
-    .prepare(`SELECT creation.* FROM operations_check_creations creation JOIN visonaut_runs run ON run.id=creation.run_id
-    WHERE ${statusRunEligibleSql} AND creation.state IN ('ambiguous','dead') AND creation.run_id>? ORDER BY creation.run_id LIMIT ?`)
-    .bind(cursor?.value ?? "", budget.tasksPerStep)
-    .all<CheckCreation>();
-  await database
-    .prepare(
-      "INSERT INTO operations_cursors(id,value) VALUES('creation-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
-    )
-    .bind(
-      attention.results?.length === budget.tasksPerStep
-        ? (attention.results.at(-1)?.run_id ?? null)
-        : null,
-    )
-    .run();
-  const service = new Service(database);
-  for (const creation of [...(candidates.results ?? []), ...(attention.results ?? [])]) {
-    if (creation.state === "dead") {
-      await recordEvent(database, {
-        kind: "check-creation",
-        subject: creation.run_id,
-        code: "exhausted",
-        now: context.now(),
-      });
-      report.attention.push(creation.run_id);
-      continue;
-    }
-    const run = await service.run(creation.run_id);
-    const detailsUrl = reviewDetailsUrl(run, context.origin);
-    const input = {
-      github: context.github,
-      testedSha: run.tested_sha,
-      externalId: creation.external_id,
-      detailsUrl,
-      origin: context.origin,
-    };
-    if (creation.state === "ambiguous") {
-      try {
-        // Finding the sole persisted creation attempt proves that POST completed.
-        const existing = await findGitHubCheck(input);
-        if (existing) {
-          await database
-            .prepare(
-              "UPDATE operations_check_creations SET check_id=?,state='complete',lease_token=NULL,lease_until=NULL WHERE run_id=? AND state='ambiguous'",
-            )
-            .bind(existing, run.id)
-            .run();
-          await resolveEvents(database, "check-creation", run.id, context.now());
-          continue;
-        }
-      } catch (error) {
-        // Keep the durable fence when reconciliation is unavailable.
-        noteCause(report, error);
-      }
-      await recordEvent(database, {
-        kind: "check-creation",
-        subject: run.id,
-        code: "ambiguous",
-        now: context.now(),
-      });
-      report.attention.push(run.id);
-      continue;
-    }
-    const token = crypto.randomUUID();
-    const claimed = await database
-      .prepare(`UPDATE operations_check_creations SET state='creating',lease_token=?,lease_until=?,attempts=attempts+1,updated_at=?
-      WHERE run_id=? AND state='pending' AND attempts<? RETURNING run_id`)
-      .bind(
-        token,
-        context.now() + budget.leaseMilliseconds,
-        context.now(),
-        run.id,
-        budget.maxAttempts,
-      )
-      .first();
-    if (!claimed) continue;
-    let started = false;
-    try {
-      const github = {
-        ...context.github,
-        request: async (requestPath: string, init?: RequestInit) => {
-          if (init?.method === "POST") {
-            const permitted = await database
-              .prepare(`UPDATE operations_check_creations SET request_started=1
-            WHERE run_id=? AND state='creating' AND lease_token=? AND lease_until>?
-              AND EXISTS(SELECT 1 FROM visonaut_runs run WHERE run.id=? AND ${statusRunEligibleSql}) RETURNING run_id`)
-              .bind(run.id, token, context.now(), run.id)
-              .first();
-            if (!permitted) throw new ConflictError("The check creation lease changed.");
-            started = true;
-          }
-          return context.github.request(requestPath, init);
-        },
-      };
-      const checkId = await ensureGitHubCheck({ ...input, github });
-      await database
-        .prepare(`UPDATE operations_check_creations SET state='complete',check_id=?,lease_token=NULL,lease_until=NULL,updated_at=?
-        WHERE run_id=? AND lease_token=?`)
-        .bind(checkId, context.now(), run.id, token)
-        .run();
-      await resolveEvents(database, "check-creation", run.id, context.now());
-    } catch (error) {
-      noteCause(report, error);
-      await database
-        .prepare(`UPDATE operations_check_creations SET state=CASE WHEN request_started=1 THEN 'ambiguous'
-        WHEN attempts>=? THEN 'dead' ELSE 'pending' END,last_error=?,updated_at=?,lease_token=NULL,lease_until=NULL
-        WHERE run_id=? AND lease_token=?`)
-        .bind(
-          budget.maxAttempts,
-          started ? "ambiguous" : "unavailable",
-          context.now(),
-          run.id,
-          token,
-        )
-        .run();
-      await recordEvent(database, {
-        kind: "check-creation",
-        subject: run.id,
-        code: started ? "ambiguous" : "unavailable",
-        now: context.now(),
-      });
-      report.attention.push(run.id);
-    }
-  }
 }
 
 /**
@@ -236,13 +65,14 @@ async function prepareStatusUpdate(prepare: () => Promise<unknown>) {
 }
 
 /**
- * The tested commit of the run of an update, and the identity of its pre-run
- * check. A status row also gives the commit of its status.
+ * The commit whose status shows the result of the run of an update: the head
+ * of its pull request, or its tested commit. A run from before the pre-run
+ * rows uses its tested commit, as its check run did.
  */
-async function checkTarget(context: OperationsContext, intent: StatusDelivery) {
+async function statusTarget(context: OperationsContext, intent: StatusDelivery) {
   const run = await new Service(context.database).run(intent.run_id);
   const precreated = await context.database
-    .prepare(`SELECT check_head_sha,external_id,surface FROM pre_run_checks
+    .prepare(`SELECT check_head_sha FROM pre_run_checks
       WHERE check_id=? AND repository_id=? AND tested_sha=?
         AND workflow_run_id=? AND workflow_attempt=? AND external_id=(
           SELECT external_id FROM operations_check_creations WHERE run_id=?)`)
@@ -254,21 +84,14 @@ async function checkTarget(context: OperationsContext, intent: StatusDelivery) {
       run.attempt,
       run.id,
     )
-    .first<{ check_head_sha: string | null; external_id: string; surface: "check" | "status" }>();
-  const headSha = precreated?.check_head_sha ?? run.tested_sha;
-  return {
-    testedSha: run.tested_sha,
-    checkIdentity: precreated ? { headSha, externalId: precreated.external_id } : undefined,
-    statusSha: precreated?.surface === "status" ? headSha : undefined,
-  };
+    .first<{ check_head_sha: string | null }>();
+  return precreated?.check_head_sha ?? run.tested_sha;
 }
 
 /**
- * Release the lock of a write request with no answer when GitHub shows which
- * update the check has: the locked one, or the last confirmed one (the text of
- * its creation when it has none). Any other text, or a failed read, keeps the
- * lock for a person. A status has no text that needs a person: its update is
- * delivered when the App shows it, and is due again otherwise.
+ * Release the lock of a write request with no answer. A status has no text
+ * that needs a person: its update is delivered when the App shows it, and is
+ * due again otherwise. A failed read keeps the lock.
  */
 async function releaseLock(context: OperationsContext, checkId: string, report: OperationReport) {
   const endedBefore = context.now() - lockReleaseDelayMilliseconds;
@@ -276,48 +99,25 @@ async function releaseLock(context: OperationsContext, checkId: string, report: 
     const lock = await readStatusLock(context.database, { id: checkId, endedBefore });
     if (!lock) return false;
     const { locked, delivered } = lock;
-    const { statusSha, ...target } = await checkTarget(context, locked);
-    if (statusSha) {
-      // A release as "not-sent" counts the attempt, so a delivered update must
-      // settle here: after its last attempt, it is not sent again. With no
-      // known creator, no read can prove a delivery.
-      const { statusCreatorId } = context;
-      const shown =
-        statusCreatorId !== undefined &&
-        (await showsStatusUpdate({
-          github: context.github,
-          sha: statusSha,
-          update: locked,
-          origin: context.origin,
-          creatorId: statusCreatorId,
-        }));
-      return await releaseStatusLock(context.database, {
-        id: checkId,
-        token: lock.token,
-        revision: locked.revision,
-        deliveredRevision: delivered?.revision ?? null,
-        outcome: shown ? "delivered" : "not-sent",
-        endedBefore,
-        now: context.now(),
-      });
-    }
-    const shown = await shownCheckUpdate({
-      github: context.github,
-      // The locked update comes first: when both have the same text, GitHub shows it.
-      updates: delivered ? [locked, delivered] : [locked],
-      ...target,
-      origin: context.origin,
-    });
-    if (!shown) return false;
-    // A check with no confirmed update still shows the text of its creation
-    // when the first PATCH did not reach GitHub.
-    if (shown === "starting" && delivered) return false;
+    // A release as "not-sent" counts the attempt, so a delivered update must
+    // settle here: after its last attempt, it is not sent again. With no
+    // known creator, no read can prove a delivery.
+    const { statusCreatorId } = context;
+    const shown =
+      statusCreatorId !== undefined &&
+      (await showsStatusUpdate({
+        github: context.github,
+        sha: await statusTarget(context, locked),
+        update: locked,
+        origin: context.origin,
+        creatorId: statusCreatorId,
+      }));
     return await releaseStatusLock(context.database, {
       id: checkId,
       token: lock.token,
       revision: locked.revision,
       deliveredRevision: delivered?.revision ?? null,
-      outcome: shown === locked ? "delivered" : "not-sent",
+      outcome: shown ? "delivered" : "not-sent",
       endedBefore,
       now: context.now(),
     });
@@ -414,7 +214,7 @@ async function sendCheck(
     leaseMs: Math.min(budget.leaseMilliseconds, statusLeaseMilliseconds),
   });
   if (!intent) return "skipped" as const;
-  const { statusSha, ...target } = await checkTarget(context, intent);
+  const statusSha = await statusTarget(context, intent);
   const result = await deliverStatus(database, {
     id: delivery.id,
     token,
@@ -430,22 +230,14 @@ async function sendCheck(
         // The outbox sets the request mark, so its call is the last one.
         const current = async (options?: { request?: boolean }) =>
           (await service.isStatusIntentCurrent(latest)) && (await isCurrent(options));
-        const outcome = statusSha
-          ? await sendCommitStatus({
-              github: context.github,
-              sha: statusSha,
-              intent: latest,
-              origin: context.origin,
-              creatorId: context.statusCreatorId ?? null,
-              isCurrent: current,
-            })
-          : await sendGitHubCheck({
-              github: context.github,
-              intent: latest,
-              ...target,
-              origin: context.origin,
-              isCurrent: current,
-            });
+        const outcome = await sendCommitStatus({
+          github: context.github,
+          sha: statusSha,
+          intent: latest,
+          origin: context.origin,
+          creatorId: context.statusCreatorId ?? null,
+          isCurrent: current,
+        });
         // A failed read is a result, and not an error of the sender.
         if (typeof outcome === "object") {
           noteCause(report, outcome.error);
@@ -474,7 +266,6 @@ async function sendCheck(
 export async function deliverGitHubStatuses(context: OperationsContext): Promise<OperationReport> {
   const { database, budget } = context;
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
-  await createChecks(context, report);
   const updates = await prepareStatusUpdates(context, report);
   const cursor = await database
     .prepare("SELECT value FROM operations_cursors WHERE id='check-attention'")
@@ -489,14 +280,13 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
   // Reconciliation first fences expired sends. Resolve only delivery alerts
   // whose stored owner is now obsolete or has completed delivery. A locked
   // check is never obsolete, so its 'ambiguous' alert stays open until the
-  // unlock. A closed run gets no check, so its creation alerts close too. The
-  // creation code 'ambiguous' stays open: GitHub can still have the check.
+  // release. The service creates no check run any more, so an alert of a
+  // check creation from that time closes.
   await database
     .prepare(`UPDATE operations_events SET resolved_at=? WHERE id IN (
       SELECT id FROM operations_events WHERE resolved_at IS NULL
         AND ((kind='check-delivery' AND ${obsoleteCheckDeliverySql("subject_id")})
-          OR (kind='check-creation' AND code!='ambiguous' AND NOT EXISTS(
-            SELECT 1 FROM visonaut_runs run WHERE run.id=subject_id AND ${statusRunEligibleSql})))
+          OR kind='check-creation')
       ORDER BY last_seen_at,id LIMIT ?)`)
     .bind(context.now(), budget.tasksPerStep)
     .run();

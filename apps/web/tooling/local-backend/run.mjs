@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { generateKeyPairSync, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -112,10 +112,6 @@ export default {
   },
 };
 `;
-// The database of the app keeps the IDs of the check runs that the stub made,
-// so the check runs stay in the data folder too.
-const checksFile = resolve(state, "github-checks.json");
-const checks = new Map(existsSync(checksFile) ? JSON.parse(readFileSync(checksFile, "utf8")) : []);
 const queue = "visonaut-local-operations";
 const runtime = new Miniflare(
   convertV4MiniflareOptions({
@@ -165,11 +161,6 @@ const runtime = new Miniflare(
       maintainer,
       // The bot of a commit status is the creator that the service expects.
       statusCreatorId: Number(environment.vars.VISONAUT_STATUS_CREATOR_ID) || undefined,
-      checks,
-      onCheckChange() {
-        mkdirSync(state, { recursive: true });
-        writeFileSync(checksFile, JSON.stringify([...checks]));
-      },
     }),
   }),
 );

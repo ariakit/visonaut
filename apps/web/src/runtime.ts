@@ -204,12 +204,12 @@ export async function assertOperationsProject(env: BackendEnv) {
 }
 
 /**
- * The configuration of `VISONAUT_STATUS_CREATOR_ID`. An empty value keeps
- * check runs for new commits.
+ * The configuration of `VISONAUT_STATUS_CREATOR_ID`: the user ID of the App
+ * bot. With an empty value, no status proves a delivery.
  */
 export function statusCreatorConfiguration(
   value: string,
-): Pick<ApiConfiguration, "statusCreatorId"> {
+): Pick<OperationsContext, "statusCreatorId"> {
   if (!value) return {};
   if (!/^[1-9]\d*$/.test(value)) {
     throw new Error("VISONAUT_STATUS_CREATOR_ID must be the numeric user ID of the App bot.");
@@ -250,7 +250,6 @@ export function apiBindings(env: BackendEnv): ApiBindings {
     allowMainDispatch:
       enabled(env.VISONAUT_ALLOW_MAIN_DISPATCH) && auth.environment !== "production",
     repositoryOwnerId: required(env.GITHUB_OWNER_ID, "GITHUB_OWNER_ID"),
-    ...statusCreatorConfiguration(env.VISONAUT_STATUS_CREATOR_ID),
     workflowOwned: workflowOwnedConfiguration,
     limits: {
       maximumImageBytes: limits.maximumImageBytes,

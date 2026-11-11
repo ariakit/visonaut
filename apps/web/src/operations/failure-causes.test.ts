@@ -21,29 +21,17 @@ import { captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
 
 afterEach(() => vi.restoreAllMocks());
 
-const checkPath = "/repos/owner/repo/check-runs/1";
+const statusListPath = `/repos/owner/repo/commits/${"a".repeat(40)}/statuses?`;
 
-it("logs the cause when GitHub does not answer the search for a check with a lost answer", async () => {
+it("logs the cause when GitHub does not answer the read of a status with a lost answer", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
   fixture.state.losePost = true;
   await deliverGitHubStatuses(fixture.context);
-  fixture.context.github.request = async () => {
-    throw new HostileError();
-  };
-  const { entry } = await passStep({
-    context: fixture.context,
-    message: { kind: "status" },
-    step: "checks",
-  });
-  expect(entry).toEqual(stepWithCause({ completed: 0, deferred: 0, attention: 1 }, hostileCause));
-});
-
-it("logs the cause of a failed check creation", async () => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  await reserve(fixture.context);
+  // The pass reads the status of the locked update after the lease and the
+  // release delay.
+  fixture.state.time += fixture.context.budget.leaseMilliseconds + 2 * 60 * 1000 + 1;
   fixture.context.github.request = async () => {
     throw new HostileError();
   };
@@ -74,13 +62,13 @@ it("logs the cause when the second attempt to prepare a status update has a conf
   );
 });
 
-it("logs the cause of a failed read of the check sender", async () => {
+it("logs the cause of a failed read of the status sender", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
   const request = fixture.context.github.request.bind(fixture.context.github);
   fixture.context.github.request = async (path, init) => {
-    if (path === checkPath && !init?.method) {
+    if (path.startsWith(statusListPath)) {
       throw new HostileError();
     }
     return request(path, init);
@@ -93,13 +81,13 @@ it("logs the cause of a failed read of the check sender", async () => {
   expect(entry).toEqual(stepWithCause({ completed: 0, deferred: 1, attention: 0 }, hostileCause));
 });
 
-it("logs the cause of a failed write of the check sender", async () => {
+it("logs the cause of a failed write of the status sender", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
   const request = fixture.context.github.request.bind(fixture.context.github);
   fixture.context.github.request = async (path, init) => {
-    if (init?.method === "PATCH") {
+    if (init?.method === "POST") {
       throw new HostileError();
     }
     return request(path, init);

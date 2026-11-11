@@ -167,7 +167,7 @@ export async function completeNoVisualPlan(
   const current = await storedExternalId(context, row.external_id);
   if (!current || current.plan_visual_required !== 0 || !current.check_id) return;
   if (current.state === "docs_complete") return;
-  await preRunResult(context, github, current);
+  await preRunResult(context, current);
   const latest = await storedCheck(context, row.tested_sha);
   if (latest?.external_id !== row.external_id)
     throw new SecurityError("stale_plan", 409, "A newer attempt supersedes this Plan.");

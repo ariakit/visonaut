@@ -45,85 +45,48 @@ function closeRun(database: TestDatabase, id: string) {
     .run(id);
 }
 
-/** GitHub answers no request, so no check creation starts. */
-function stopGitHub(fixture: ReturnType<typeof context>) {
-  const request = fixture.context.github.request;
-  fixture.context.github.request = async () => {
-    throw new Error("GitHub is unavailable.");
-  };
-  return () => {
-    fixture.context.github.request = request;
-  };
-}
-
 describe("check creation alerts", () => {
-  it("closes the alert in the pass after GitHub answers again", async () => {
+  it("closes each alert of a check creation in the next status pass", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     await reserve(fixture.context);
-    const startGitHub = stopGitHub(fixture);
-    await runOperations(fixture.context, { kind: "status" });
-    expect(openAlerts(database)).toEqual(["check-creation:run:unavailable"]);
-    startGitHub();
+    // The alerts of the check runs that an earlier version created. The
+    // service creates no check run now, so nothing can complete them.
+    for (const code of ["ambiguous", "exhausted", "unavailable"]) {
+      await recordEvent(database, {
+        kind: "check-creation",
+        subject: "run",
+        code,
+        now: fixture.state.time,
+      });
+    }
+    expect(openAlerts(database)).toEqual([
+      "check-creation:run:ambiguous",
+      "check-creation:run:exhausted",
+      "check-creation:run:unavailable",
+    ]);
+    fixture.state.time++;
     await runOperations(fixture.context, { kind: "status" });
     expect(openAlerts(database)).toEqual([]);
+    expect(database.connection.prepare("SELECT resolved_at FROM operations_events").all()).toEqual(
+      Array(3).fill({ resolved_at: fixture.state.time }),
+    );
   });
+});
 
-  it("closes the alert of a lost answer in the pass that finds the check", async () => {
+describe("check delivery alerts", () => {
+  it("closes the alert of a lost answer in the pass that finds the status", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     await reserve(fixture.context);
     fixture.state.losePost = true;
     await runOperations(fixture.context, { kind: "status" });
-    expect(openAlerts(database)).toEqual(["check-creation:run:ambiguous"]);
-    fixture.state.losePost = false;
+    expect(openAlerts(database)).toEqual(["check-delivery:1:ambiguous"]);
+    // A later pass reads the status after the lease and the release delay.
+    fixture.state.time += fixture.context.budget.leaseMilliseconds + 2 * 60 * 1000 + 1;
     await runOperations(fixture.context, { kind: "status" });
     expect(openAlerts(database)).toEqual([]);
-  });
-
-  it("closes the alerts of a closed run, and keeps the code 'ambiguous' open", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    await reserve(fixture.context, "closed");
-    await reserve(fixture.context, "open");
-    stopGitHub(fixture);
-    // The second failed attempt is the last one, and the third pass reports it.
-    for (let pass = 0; pass < 3; pass++) {
-      await runOperations(fixture.context, { kind: "status" });
-    }
-    // The alert of a creation request with no answer. The check can exist.
-    await recordEvent(database, {
-      kind: "check-creation",
-      subject: "closed",
-      code: "ambiguous",
-      now: fixture.state.time,
-    });
-    expect(openAlerts(database)).toEqual([
-      "check-creation:closed:ambiguous",
-      "check-creation:closed:exhausted",
-      "check-creation:closed:unavailable",
-      "check-creation:open:exhausted",
-      "check-creation:open:unavailable",
-    ]);
-    closeRun(database, "closed");
-    fixture.state.time++;
-    await runOperations(fixture.context, { kind: "status" });
-    expect(openAlerts(database)).toEqual([
-      "check-creation:closed:ambiguous",
-      "check-creation:open:exhausted",
-      "check-creation:open:unavailable",
-    ]);
-    expect(
-      database.connection
-        .prepare(
-          "SELECT id,resolved_at FROM operations_events WHERE subject_id='closed' ORDER BY id",
-        )
-        .all(),
-    ).toEqual([
-      { id: "check-creation:closed:ambiguous", resolved_at: null },
-      { id: "check-creation:closed:exhausted", resolved_at: fixture.state.time },
-      { id: "check-creation:closed:unavailable", resolved_at: fixture.state.time },
-    ]);
+    expect(fixture.state.posts).toBe(1);
   });
 });
 
