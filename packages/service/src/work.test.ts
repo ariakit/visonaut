@@ -460,6 +460,54 @@ describe("serialized GitHub status outbox", () => {
     expect(sent).toEqual(["failure"]);
   });
 
+  it("ends a pending update as obsolete when a newer revision replaces it", async () => {
+    using database = new TestDatabase();
+    const states = () =>
+      database.connection
+        .prepare("SELECT revision, state FROM work_status_outbox ORDER BY revision")
+        .all();
+    await database.batch(statusIntentStatements(database, statusInput(1, "failure")));
+    await database.batch(statusIntentStatements(database, statusInput(2)));
+    expect(states()).toEqual([
+      { revision: 1, state: "obsolete" },
+      { revision: 2, state: "pending" },
+    ]);
+    // A baseline promotion raises the newest revision with no outbox row.
+    database.connection.exec("UPDATE work_checks SET desired_revision = 3");
+    expect(states()).toEqual([
+      { revision: 1, state: "obsolete" },
+      { revision: 2, state: "obsolete" },
+    ]);
+  });
+
+  it("keeps a sending update until its lease settles it", async () => {
+    using database = new TestDatabase();
+    const states = () =>
+      database.connection
+        .prepare("SELECT revision, state FROM work_status_outbox ORDER BY revision")
+        .all();
+    await database.batch(statusIntentStatements(database, statusInput(1, "failure")));
+    await claimStatus(database, { id: "github:123", token: "old", now: 100, leaseMs: 10 });
+    await database.batch(statusIntentStatements(database, statusInput(2)));
+    expect(states()).toEqual([
+      { revision: 1, state: "sending" },
+      { revision: 2, state: "pending" },
+    ]);
+    expect(
+      await deliverStatus(database, {
+        id: "github:123",
+        token: "old",
+        revision: 1,
+        now: () => 101,
+        send: async () => {},
+      }),
+    ).toBe("stale");
+    expect(states()).toEqual([
+      { revision: 1, state: "obsolete" },
+      { revision: 2, state: "pending" },
+    ]);
+  });
+
   // A review decision can write a new revision while a delivery pass claims the
   // check. The lease of that claim must not block the new revision.
   it("leaves no unusable lease when a new revision lands during a claim", async () => {

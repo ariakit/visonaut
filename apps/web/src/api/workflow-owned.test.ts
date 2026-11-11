@@ -2735,12 +2735,14 @@ describe("workflow-owned upload staging", () => {
     expect(undeliveredCheck?.state).toBe("failed");
     if (!undeliveredCheck) throw new Error("Expected the undelivered App check.");
     expect(await isCurrentPreRunCheck(database, undeliveredCheck.check_id)).toBe(false);
+    // The expiry raised the newest revision of the check, so its unsent update
+    // ends obsolete. The check is no longer current, so no newer update follows.
     expect(
       await database
         .prepare("SELECT conclusion, state FROM work_status_outbox WHERE check_id = ?")
         .bind(undeliveredCheck.check_id)
         .first(),
-    ).toEqual({ conclusion: "failure", state: "pending" });
+    ).toEqual({ conclusion: "failure", state: "obsolete" });
     expect(
       await database
         .prepare(
