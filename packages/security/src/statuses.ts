@@ -1,9 +1,8 @@
 import {
-  CHECK_NAME,
   checkReview,
   checkText,
   reviewUrl,
-  startingCheckOutput,
+  startingCheckTitle,
   statusReadFailure,
   type StatusDelivery,
   type StatusReadFailure,
@@ -11,11 +10,8 @@ import {
 import { numericId, record, SecurityError } from "./errors.js";
 import type { GitHubClient } from "./github.js";
 
-/**
- * The context of the commit status. It is the name of the check, so that the
- * required check of a repository ruleset accepts both.
- */
-export const STATUS_CONTEXT = CHECK_NAME;
+/** The context of the commit status: the name of the required check. */
+export const STATUS_CONTEXT = "Visonaut";
 
 // The list has the statuses of each context of the commit, newest first.
 // The read stops after these pages.
@@ -75,7 +71,7 @@ export function statusTargetUrl(url: string, origin: string): string {
 export function startingCommitStatus(targetUrl: string, origin: string): CommitStatus {
   return {
     state: "pending",
-    description: startingCheckOutput.title,
+    description: startingCheckTitle,
     target_url: statusTargetUrl(targetUrl, origin),
   };
 }

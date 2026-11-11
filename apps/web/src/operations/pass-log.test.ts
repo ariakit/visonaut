@@ -36,8 +36,8 @@ it("names the failed step, the queue wait, and the failed items of each step", a
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context, "private-run-id");
-  // GitHub answers no request, so the check creation of the run fails inside
-  // the step `checks`. The step itself completes.
+  // GitHub answers no request, so the status read of the run fails inside the
+  // step `checks`, and its update waits. The step itself completes.
   fixture.context.github.request = async () => {
     throw new Error("private-error-text");
   };
@@ -67,8 +67,8 @@ it("names the failed step, the queue wait, and the failed items of each step", a
         checks: {
           ...stepLog,
           completed: 0,
-          deferred: 0,
-          attention: 1,
+          deferred: 1,
+          attention: 0,
           causes: [{ errorName: "Error", count: 1 }],
         },
         comments: stepLog,
@@ -93,19 +93,16 @@ it("names the failed step, the queue wait, and the failed items of each step", a
   // The line has no ID of an item and no text of an error.
   expect(text).not.toContain("private");
   // The line is a log only: the pass writes the same alert rows as before.
-  expect(events()).toEqual([
-    { id: "check-creation:private-run-id:unavailable", occurrences: 1 },
-    { id: "promotion:scheduler:step-failed", occurrences: 1 },
-  ]);
+  expect(events()).toEqual([{ id: "promotion:scheduler:step-failed", occurrences: 1 }]);
 });
 
 it("names the class, the code, and the GitHub status of a failed step and of a failed item", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context, "private-run-id");
-  // GitHub answers 502, so the check creation of the run fails inside the
-  // step `checks`. The step `promotion` fails with an error of a class that
-  // is not on the list.
+  // GitHub answers 502, so the status read of the run fails inside the step
+  // `checks`. The step `promotion` fails with an error of a class that is not
+  // on the list.
   fixture.context.github.request = async () => {
     throw new GitHubUnavailableError(502);
   };
@@ -122,8 +119,8 @@ it("names the class, the code, and the GitHub status of a failed step and of a f
   expect(lines[0].steps.checks).toEqual({
     ...stepLog,
     completed: 0,
-    deferred: 0,
-    attention: 1,
+    deferred: 1,
+    attention: 0,
     causes: [
       { errorName: "SecurityError", code: "github_unavailable", upstreamStatus: 502, count: 1 },
     ],

@@ -6,9 +6,6 @@ import { context, reserve, TestDatabase } from "./test-fixtures.ts";
 
 const guide = readFileSync(new URL("./README.md", import.meta.url), "utf8");
 const section = guide.slice(guide.indexOf("## Locked check"), guide.indexOf("## Native database"));
-const checkPath = "/repos/owner/repo/check-runs/1";
-const identityError =
-  "SecurityError: The check does not belong to this application and tested commit.";
 
 /** Each Wrangler command of the section, with the SQL of its --command text. */
 function guideSql() {
@@ -32,6 +29,20 @@ function openCheckAlerts(database: TestDatabase) {
       "SELECT code FROM operations_events WHERE kind='check-delivery' AND resolved_at IS NULL",
     )
     .all();
+}
+
+/** Each status POST fails before it reaches GitHub. */
+function dropPosts(fixture: ReturnType<typeof context>) {
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  fixture.context.github.request = async (path, init) => {
+    if (init?.method === "POST") {
+      throw new Error("Lost POST request.");
+    }
+    return request(path, init);
+  };
+  return () => {
+    fixture.context.github.request = request;
+  };
 }
 
 function runGuide(database: TestDatabase, kind: "SELECT" | "UPDATE") {
@@ -58,15 +69,16 @@ it("sends an update again after a release on its last attempt, with the command 
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  fixture.state.losePatch = true;
-  // Each pass after the lease and one more lease releases the lock, and the
-  // lost PATCH of the next attempt locks the check again.
+  const restorePosts = dropPosts(fixture);
+  // Each pass after the lease and one more lease releases the lock, because
+  // GitHub does not show the update. The lost POST of the next attempt locks
+  // the check again.
   const lockReleaseTime = 3 * 60 * 1000;
   for (let attempt = 0; attempt < 3; attempt++) {
     await deliverGitHubStatuses(fixture.context);
     fixture.state.time += lockReleaseTime;
   }
-  fixture.state.losePatch = false;
+  restorePosts();
   expect(readLock(database)).toMatchObject({ ambiguous: 0, request_started: 0, state: "dead" });
   expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
   expect(openCheckAlerts(database)).toEqual([{ code: "exhausted" }]);
@@ -76,17 +88,17 @@ it("sends an update again after a release on its last attempt, with the command 
   expect(readLock(database)).toMatchObject({ state: "pending" });
 
   expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual(["1"]);
+  expect(fixture.state.posts).toBe(1);
   expect(readLock(database)).toMatchObject({ ambiguous: 0, state: "complete" });
   expect(openCheckAlerts(database)).toEqual([]);
 });
 
-it("unlocks a check after a PATCH with no answer, and the next pass sends the update", async () => {
+it("unlocks a check after a POST with no answer, and the next pass settles the update that GitHub shows", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  fixture.state.losePatch = false;
   expect(readLock(database)).toMatchObject({ ambiguous: 1, request_started: 1, state: "sending" });
   expect(
     database.connection
@@ -98,8 +110,9 @@ it("unlocks a check after a PATCH with no answer, and the next pass sends the up
   runGuide(database, "UPDATE");
   expect(readLock(database)).toMatchObject({ ambiguous: 0, request_started: 0, state: "pending" });
 
+  // GitHub shows the same status of the App, so the pass posts nothing.
   expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual(["1"]);
-  expect(fixture.state.patches).toBe(2);
+  expect(fixture.state.posts).toBe(1);
   expect(readLock(database)).toMatchObject({ ambiguous: 0, state: "complete" });
   expect(
     database.connection
@@ -121,9 +134,8 @@ it("repairs an update that is still sending when only the lock was removed, as t
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   await deliverGitHubStatuses(fixture.context);
-  fixture.state.losePatch = false;
   const [, , makeDue, removeLock] = guideSql();
   database.connection.exec(removeLock ?? "");
   expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual([]);
@@ -136,7 +148,7 @@ it("does not make the update of a check due while a sender holds a live lease", 
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   await deliverGitHubStatuses(fixture.context);
   // A live sender: a lease token and no lock.
   database.connection.exec("UPDATE work_checks SET ambiguous = 0 WHERE id = '1'");
@@ -149,11 +161,15 @@ it("makes the held update obsolete and sends the newer one after a new decision"
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   await deliverGitHubStatuses(fixture.context);
-  fixture.state.losePatch = false;
   // A later event gives the locked check a newer update.
   await reserve(fixture.context, "another");
+  // The other run has a commit of its own, so its status does not replace
+  // the status of the locked check.
+  database.connection.exec(
+    `UPDATE visonaut_runs SET tested_sha = '${"b".repeat(40)}' WHERE id = 'another'`,
+  );
   await deliverGitHubStatuses(fixture.context);
   expect(readLock(database)).toMatchObject({ ambiguous: 1, state: "pending" });
   expect(
@@ -186,9 +202,8 @@ it("sends no update and closes the alert after the unlock when the run of the ch
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   await deliverGitHubStatuses(fixture.context);
-  fixture.state.losePatch = false;
   database.connection.exec("UPDATE visonaut_runs SET active = 0, state = 'superseded'");
   const readAlert = () =>
     database.connection
@@ -205,8 +220,8 @@ it("sends no update and closes the alert after the unlock when the run of the ch
       })
     ).events.length;
 
-  // The check on GitHub can show an old result while it is locked.
-  const patches = fixture.state.patches;
+  // The status on GitHub can show an old result while the check is locked.
+  const posts = fixture.state.posts;
   await deliverGitHubStatuses(fixture.context);
   expect(readAlert()).toEqual([{ code: "ambiguous", resolved_at: null }]);
   expect(await listedAlerts()).toBe(1);
@@ -216,7 +231,7 @@ it("sends no update and closes the alert after the unlock when the run of the ch
   expect(await listedAlerts()).toBe(0);
   fixture.state.time += 1;
   await deliverGitHubStatuses(fixture.context);
-  expect(fixture.state.patches).toBe(patches);
+  expect(fixture.state.posts).toBe(posts);
   expect(readAlert()).toEqual([{ code: "ambiguous", resolved_at: fixture.state.time }]);
 });
 
@@ -224,43 +239,10 @@ it("can run the unlock commands again with no other effect", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
-  fixture.state.losePatch = true;
+  fixture.state.losePost = true;
   await deliverGitHubStatuses(fixture.context);
   runGuide(database, "UPDATE");
   const once = readLock(database);
   runGuide(database, "UPDATE");
   expect(readLock(database)).toEqual(once);
-});
-
-it("does not lock a check with a wrong identity, as the guide says", async () => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  await reserve(fixture.context);
-  const request = fixture.context.github.request.bind(fixture.context.github);
-  fixture.context.github.request = async (path, init) => {
-    const result = await request(path, init);
-    return path === checkPath && !init?.method
-      ? { ...(result as object), head_sha: "b".repeat(40) }
-      : result;
-  };
-  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual([]);
-  expect(readLock(database)).toEqual({
-    ambiguous: 0,
-    request_started: 0,
-    state: "pending",
-    last_error: identityError,
-  });
-  expect(section).toContain(`\`${identityError}\``);
-
-  // The update tries again as after a failed read, and its last attempt makes it dead.
-  fixture.state.time += 30_000;
-  await deliverGitHubStatuses(fixture.context);
-  expect(readLock(database)).toMatchObject({ ambiguous: 0, state: "dead" });
-  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  expect(
-    database.connection
-      .prepare("SELECT code FROM operations_events WHERE kind='check-delivery'")
-      .all(),
-  ).toEqual([{ code: "exhausted" }]);
-  expect(fixture.state.patches).toBe(0);
 });

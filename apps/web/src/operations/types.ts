@@ -70,8 +70,8 @@ export interface OperationsContext {
   now: () => number;
   /**
    * The user ID of the bot account of the App, from
-   * `VISONAUT_STATUS_CREATOR_ID`. A status row still gets its updates without
-   * it: the sender then posts each update.
+   * `VISONAUT_STATUS_CREATOR_ID`. The updates still go out without it: the
+   * sender then posts each update.
    */
   statusCreatorId?: string;
 }

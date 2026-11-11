@@ -124,10 +124,10 @@ it("writes no more rows in the status step that sends the update of one decision
   await captured(step.operations, "delivered");
   expect((await deliverGitHubStatuses(step.operations)).completed).toEqual(["1"]);
   await reject(step.service, "delivered");
-  const patches = step.state.patches;
+  const posts = step.state.posts;
   step.measured.reset();
   expect((await deliverGitHubStatuses(step.operations)).completed).toEqual(["1"]);
-  expect(step.state.patches - patches).toBe(1);
+  expect(step.state.posts - posts).toBe(1);
   expect({
     writingStatements: step.measured.costs.filter((cost) => cost.rows_written > 0).length,
     rowsWritten: step.measured.totals().rows_written,
@@ -144,7 +144,7 @@ function writes(fixture: MeasuredFixture) {
 }
 
 /**
- * The writes, the D1 round trips, and the PATCH requests of the pass that
+ * The writes, the D1 round trips, and the status POSTs of the pass that
  * sends an update which waited after one failed read.
  */
 async function waitingUpdateCosts() {
@@ -153,7 +153,7 @@ async function waitingUpdateCosts() {
   const request = fixture.operations.github.request.bind(fixture.operations.github);
   let failedReads = 0;
   fixture.operations.github.request = async (path, init) => {
-    if (!init?.method && path.includes("/check-runs/") && failedReads === 0) {
+    if (!init?.method && path.includes("/statuses?") && failedReads === 0) {
       failedReads += 1;
       throw new GitHubUnavailableError(502);
     }
@@ -161,13 +161,13 @@ async function waitingUpdateCosts() {
   };
   await deliverGitHubStatuses(fixture.operations);
   fixture.state.time += 30_000;
-  const patches = fixture.state.patches;
+  const posts = fixture.state.posts;
   fixture.measured.reset();
   expect((await deliverGitHubStatuses(fixture.operations)).completed).toEqual(["1"]);
   return {
     ...writes(fixture),
     roundTrips: fixture.measured.roundTrips(),
-    patches: fixture.state.patches - patches,
+    posts: fixture.state.posts - posts,
   };
 }
 
@@ -176,8 +176,8 @@ it("sends a waiting update with its stored review values and no status read", as
   expect(await waitingUpdateCosts()).toEqual({
     writingStatements: 5,
     rowsWritten: 7,
-    roundTrips: 25,
-    patches: 1,
+    roundTrips: 18,
+    posts: 1,
   });
 });
 

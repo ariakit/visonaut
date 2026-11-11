@@ -12,7 +12,7 @@ Use the [release and deployment guide](.github/workflows/README.md) for executio
 
 Open the review link from the GitHub check and sign in with GitHub. Access requires current write permission to the configured repository. Check the commit and attempt, select a screenshot and a variant, then inspect its images before you approve or reject it.
 
-A pull request author with no write permission cannot open the review link, and does not need it. The title of the Visonaut check names the state of the run, and its summary says who acts next. For example, `79 changes need review` waits for a maintainer, and `3 changes rejected` waits for a commit of the author that corrects the rejected changes. The [review guide](docs/review-guide.md#read-the-github-check) lists the title of each run state.
+A pull request author with no write permission cannot open the review link, and does not need it. The title of the Visonaut status names the state of the run, and the pull request comment says who acts next. For example, `79 changes need review` waits for a maintainer, and `3 changes rejected` waits for a commit of the author that corrects the rejected changes. The [review guide](docs/review-guide.md#read-the-github-status) lists the title of each run state.
 
 Only a pull request whose branch is in this repository gets a Visonaut check. A pull request from a fork gets none, so its author has no title to read.
 

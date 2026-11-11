@@ -3,7 +3,9 @@ import { fileURLToPath } from "node:url";
 import { validateImage } from "@visonaut/compare";
 import {
   GitHubUnavailableError,
+  postCommitStatus,
   PULL_REQUEST_COMMENT_MARKER,
+  readCommitStatus,
   sendPullRequestComment,
   type GitHubClient,
 } from "@visonaut/security";
@@ -235,14 +237,15 @@ it("saves one Approve to the database through the review queue", async () => {
   for (const message of messages.splice(0)) {
     await runScheduledOperations(env, message);
   }
-  // The status pass makes the check of each run through the GitHub stub.
+  // The status pass sends the update of each seed run to the status of its
+  // tested commit, and GitHub shows each one.
   const checks = await env.DB.prepare(
-    "SELECT state FROM operations_check_creations ORDER BY run_id",
+    "SELECT id, desired_revision = delivered_revision AS delivered FROM work_checks ORDER BY id",
   ).all();
   expect(checks.results).toEqual([
-    { state: "complete" },
-    { state: "complete" },
-    { state: "complete" },
+    expect.objectContaining({ delivered: 1 }),
+    expect.objectContaining({ delivered: 1 }),
+    expect.objectContaining({ delivered: 1 }),
   ]);
   const alerts = await env.DB.prepare(
     "SELECT kind,code FROM operations_events WHERE resolved_at IS NULL",
@@ -262,49 +265,16 @@ it("saves one Approve to the database through the review queue", async () => {
   expect(after?.pending).toBe(1);
 });
 
-it("keeps the check runs of the stub for the next start", async () => {
-  const stub = { appId: "11", installationId: "12", repository: "local/fixture", maintainer };
-  const checkRuns = "https://api.github.com/repos/local/fixture/check-runs";
-  let stored = "[]";
-  const first = createGitHubStub({
-    ...stub,
-    onCheckChange: (checks) => {
-      stored = JSON.stringify([...checks]);
-    },
-  });
-  const created = await first(
-    new Request(checkRuns, { method: "POST", body: JSON.stringify({ name: "Visonaut" }) }),
-  );
-  expect(created.status).toBe(201);
-  await first(
-    new Request(`${checkRuns}/1`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: "completed" }),
-    }),
-  );
-  // The local runner reads the stored check runs at its next start.
-  const second = createGitHubStub({ ...stub, checks: new Map(JSON.parse(stored)) });
-  const read = await second(new Request(`${checkRuns}/1`));
-  expect(await read.json()).toEqual({
-    id: 1,
-    app: { id: 11 },
-    name: "Visonaut",
-    status: "completed",
-  });
-  const next = await second(
-    new Request(checkRuns, { method: "POST", body: JSON.stringify({ name: "Visonaut" }) }),
-  );
-  expect(await next.json()).toMatchObject({ id: 2 });
-});
-
-it("creates and edits the pull request comment of the service", async () => {
+/** A GitHub client whose requests go to a new stub of the repository `local/fixture`. */
+function stubClient({ statusCreatorId }: { statusCreatorId?: number } = {}): GitHubClient {
   const stub = createGitHubStub({
     appId: "11",
     installationId: "12",
     repository: "local/fixture",
     maintainer,
+    statusCreatorId,
   });
-  const client: GitHubClient = {
+  return {
     appId: "11",
     repository: "local/fixture",
     repositoryId: "1",
@@ -314,6 +284,29 @@ it("creates and edits the pull request comment of the service", async () => {
       return response.json();
     },
   };
+}
+
+it("answers the newest commit status of the service from the statuses that it posted", async () => {
+  const client = stubClient({ statusCreatorId: 99 });
+  const sha = "a".repeat(40);
+  const status = (description: string) => ({
+    state: "pending" as const,
+    description,
+    target_url: "https://visonaut.example/",
+  });
+  expect(await readCommitStatus({ github: client, sha })).toBeNull();
+  await postCommitStatus({ github: client, sha, status: status("first") });
+  await postCommitStatus({ github: client, sha, status: status("second") });
+  expect(await readCommitStatus({ github: client, sha })).toEqual({
+    ...status("second"),
+    creatorId: "99",
+  });
+  // A status of one commit is not a status of another commit.
+  expect(await readCommitStatus({ github: client, sha: "b".repeat(40) })).toBeNull();
+});
+
+it("creates and edits the pull request comment of the service", async () => {
+  const client = stubClient();
   const send = (body: string) =>
     sendPullRequestComment({ github: client, pullRequestNumber: 12, commentId: null, body });
   const marked = `${PULL_REQUEST_COMMENT_MARKER}\n\n`;

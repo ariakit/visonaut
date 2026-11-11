@@ -184,16 +184,20 @@ export function summaryDecision(summary: ArchivedRunHistory | null, rowIndex = 0
 export function digest(value: string | Uint8Array) {
   return createHash("sha256").update(value).digest("hex");
 }
+/** The user ID of the App bot in the fixture. */
+export const fixtureStatusCreatorId = "99";
+
 export function context(database: TestDatabase) {
   const images = new MemoryStore();
   const quarantine = new MemoryStore();
   const state = {
     time: Date.UTC(2026, 8, 22),
+    /** The number of status POSTs. */
     posts: 0,
-    patches: 0,
+    /** The next status POST reaches GitHub, and its answer is lost. */
     losePost: false,
-    losePatch: false,
-    checks: new Map<string, Record<string, unknown>>(),
+    /** The commit statuses, newest first. */
+    statuses: [] as Record<string, unknown>[],
   };
   const value: OperationsContext = {
     database,
@@ -208,31 +212,45 @@ export function context(database: TestDatabase) {
       maximumObjectBytes: 1024 * 1024,
     },
     now: () => state.time,
+    statusCreatorId: fixtureStatusCreatorId,
     github: {
       appId: "12",
       repository: "owner/repo",
       repositoryId: "123",
       async request(path, init) {
-        if (init?.method === "POST") {
+        const posted = /^\/repos\/owner\/repo\/statuses\/([a-f0-9]{40})$/.exec(path);
+        if (posted && init?.method === "POST") {
           state.posts++;
-          const body = JSON.parse(String(init.body));
-          const id = String(state.posts);
-          state.checks.set(id, { ...body, id, app: { id: 12 } });
-          if (state.losePost) throw new Error("Lost POST response.");
-          return { id };
+          state.statuses.unshift({
+            ...JSON.parse(String(init.body)),
+            id: state.posts,
+            sha: posted[1],
+            creator: { id: Number(fixtureStatusCreatorId) },
+          });
+          if (state.losePost) {
+            state.losePost = false;
+            throw new Error("Lost POST response.");
+          }
+          return { id: state.posts };
         }
-        if (init?.method === "PATCH") {
-          state.patches++;
-          if (state.losePatch) throw new Error("Lost PATCH response.");
-          return {};
+        const listed = /^\/repos\/owner\/repo\/commits\/([a-f0-9]{40})\/statuses\?/.exec(path);
+        if (listed) {
+          const page = Number(new URL(path, "https://api.github.com").searchParams.get("page"));
+          const found = state.statuses.filter((status) => status.sha === listed[1]);
+          return found.slice((page - 1) * 100, page * 100);
         }
-        if (path.includes("/commits/")) return { check_runs: [...state.checks.values()] };
-        return state.checks.get(path.split("/").at(-1) ?? "");
+        return undefined;
       },
     },
   };
   return { context: value, images, quarantine, state };
 }
+
+/** The newest commit status of the fixture commit. */
+export function shownStatus(state: ReturnType<typeof context>["state"], sha = "a".repeat(40)) {
+  return state.statuses.find((status) => status.sha === sha);
+}
+
 /** Create the fixture project on first use. */
 async function projectService(context: OperationsContext) {
   const service = new Service(context.database);
@@ -276,6 +294,15 @@ export async function reserve(
     rerunShardKeys: ["chromium"],
     now: context.now(),
   });
+  // Workflow materialization adopts the pre-run check of a run. The fixture
+  // gives each run the next numeric check ID instead.
+  await context.database
+    .prepare(
+      `INSERT INTO operations_check_creations(run_id,external_id,check_id,state,request_started,attempts,created_at,updated_at)
+      SELECT ?,?,CAST(COUNT(*)+1 AS TEXT),'complete',1,1,?,? FROM operations_check_creations`,
+    )
+    .bind(id, `visonaut:${id}`, context.now(), context.now())
+    .run();
   return service;
 }
 export async function captured(

@@ -2,13 +2,11 @@
 
 Open Visonaut in Chrome Desktop. Sign in with a GitHub account that has current write permission to the configured repository. A review link does not grant access. The [current system guide](current-contract.md) owns the requirements and selected changes. Validated image URLs need no session; anyone with a URL can view and copy those pixels. Labels, verdicts, audit data, export files, and quarantine remain private.
 
-## Read the GitHub check
+## Read the GitHub status
 
-Each run has one check with the name **Visonaut** on its commit. The title of the check names the state of the run, and its summary says who acts next. You do not need access to Visonaut to read it. The check shows totals only: it has no screenshot name and no reviewer name.
+Each run has one commit status with the name **Visonaut** on its commit. Its description is the title of the state of the run, and a click on it opens the run in Visonaut. You do not need access to Visonaut to read the title. The title shows totals only: it has no screenshot name and no reviewer name.
 
-From the change of 2026-11-10, the result of a new commit is a commit status with the name **Visonaut**, not a check run. The pull request shows the same title, and a click on the status opens the run in Visonaut. A status has no summary: the comment of Visonaut on a pull request with changes has the next step, and the run in Visonaut has the totals. A commit that already had a Visonaut check run keeps it. The titles, states, and colors below apply to both. The paragraphs about the summary apply to a check run only.
-
-| Title of the check                 | State of the run | Meaning                                                        | Who acts next                                                                           |
+| Title of the status                | State of the run | Meaning                                                        | Who acts next                                                                           |
 | ---------------------------------- | ---------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `79 changes need review`           | Needs review     | Screenshots changed, and one or more changes have no decision. | A maintainer approves or rejects each change.                                           |
 | `3 changes rejected`               | Rejected         | A maintainer rejected one or more changes.                     | The author pushes a commit that corrects them. A maintainer can also change a decision. |
@@ -19,17 +17,17 @@ From the change of 2026-11-10, the result of a new commit is a commit status wit
 | `No longer active`                 | Replaced         | The run is closed, and its result does not change.             | The author pushes a commit, or a maintainer runs the CI workflow again.                 |
 | `Capture or comparison failed`     | Failed           | The capture or the comparison did not complete.                | A maintainer runs the CI workflow again, or the author pushes a commit.                 |
 
-A closed run usually keeps the last title of its check, for example `79 changes need review` on an older commit. So read the check of the newest commit of the pull request. Only the check of an old pull request can show `No longer active`. The tested commit of such a pull request is from before the change of 2026-10-02 that put the check on the head commit of each pull request.
+A closed run usually keeps the last title of its status, for example `79 changes need review` on an older commit. So read the status of the newest commit of the pull request. Only an old pull request can show `No longer active`. The tested commit of such a pull request is from before the change of 2026-10-02 that put the result on the head commit of each pull request. A commit from before 2026-11-10 shows a check run with the same name and title instead.
 
-The summary of a run that needs review, is rejected, or has approved changes also has the three totals, for example `Changes: 76 need review, 3 rejected, 0 approved.` A rejected change is not in the number of changes that need review.
+A status has no summary. The comment of Visonaut on a pull request with changes has the next step, and the run in Visonaut has the totals. A rejected change is not in the number of changes that need review.
 
-The check of a pull request is red while a review waits: it is completed with the conclusion `failure`, so the required check blocks the merge until each change is approved. A check in progress is yellow, and a passed check is green.
+The status of a pull request is red while a review waits: its state is `failure`, so the required check blocks the merge until each change is approved. A pending status is yellow, and a passed status is green.
 
-If you are the author of a pull request and you have no write access to the repository, you cannot open the review link of the summary. Read the title. `79 changes need review` waits for a maintainer: push a commit only if a change is not intended. `3 changes rejected` waits for you: push a commit that corrects the rejected changes.
+If you are the author of a pull request and you have no write access to the repository, you cannot open the run. Read the title. `79 changes need review` waits for a maintainer: push a commit only if a change is not intended. `3 changes rejected` waits for you: push a commit that corrects the rejected changes.
 
-The check can also show a title that is not a state of a run, for example `Checking visual coverage` before the run starts, or `Visual capture is not required` when the workflow selected no visual capture for the commit.
+The status can also show a title that is not a state of a run, for example `Checking visual coverage` before the run starts, or `Visual capture is not required` when the workflow selected no visual capture for the commit.
 
-Only a pull request whose branch is in this repository gets a Visonaut check. A pull request from a fork gets none, so its author has no title to read.
+Only a pull request whose branch is in this repository gets a Visonaut status. A pull request from a fork gets none, so its author has no title to read.
 
 ## Check service attention
 

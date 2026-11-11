@@ -1,6 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { closedRunRetentionMs, retentionPinStatement, Service } from "@visonaut/service";
-import { TestDatabase, MemoryStore, context, reserve, captured, digest } from "./test-fixtures.ts";
+import {
+  TestDatabase,
+  MemoryStore,
+  context,
+  reserve,
+  captured,
+  digest,
+  shownStatus,
+} from "./test-fixtures.ts";
 import * as comparisonAlerts from "./comparison-alerts.ts";
 import * as exportCleanup from "./exports.ts";
 import { expireExports } from "./exports.ts";
@@ -53,7 +61,7 @@ describe("protected object operations", () => {
     expect(Object.keys(result.reports)).toEqual(["main-retirement", "finalization"]);
     expect(result.reports["main-retirement"]?.completed).toEqual([]);
   });
-  it("delivers a passed main check before verifying source originals in bounded pages", async () => {
+  it("delivers a passed main status before verifying source originals in bounded pages", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     const service = await captured(fixture.context, "seed", "main");
@@ -75,8 +83,8 @@ describe("protected object operations", () => {
     const events: string[] = [];
     const request = fixture.context.github.request.bind(fixture.context.github);
     vi.spyOn(fixture.context.github, "request").mockImplementation(async (path, init) => {
-      if (init?.method === "PATCH") {
-        events.push("check");
+      if (init?.method === "POST") {
+        events.push("status");
       }
       return request(path, init);
     });
@@ -88,7 +96,7 @@ describe("protected object operations", () => {
       return put(key, value, options);
     });
     const first = await runOperations(fixture.context);
-    expect(events[0]).toBe("check");
+    expect(events[0]).toBe("status");
     expect(first.reports.promotion?.hasMore).toBe(true);
     expect(
       await database.prepare("SELECT SUM(copied) AS count FROM visonaut_snapshot_images").first(),
@@ -172,30 +180,20 @@ describe("protected object operations", () => {
 });
 
 describe("GitHub checks", () => {
-  it("creates a successful check after promotion and stops writing it after baseline advance", async () => {
+  it("sends a successful status after promotion and stops writing it after baseline advance", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     const service = await captured(fixture.context, "seed", "main");
     expect((await promoteBaselines(fixture.context)).completed).toEqual(["seed"]);
     expect(await service.run("seed")).toMatchObject({ active: 0, state: "accepted" });
-    expect(
-      await database.prepare("SELECT run_id FROM operations_check_creations").first(),
-    ).toBeNull();
 
-    const patches: { id: string; conclusion: string }[] = [];
-    const request = fixture.context.github.request.bind(fixture.context.github);
-    vi.spyOn(fixture.context.github, "request").mockImplementation(async (path, init) => {
-      if (init?.method === "PATCH")
-        patches.push({
-          id: path.split("/").at(-1) ?? "",
-          conclusion: JSON.parse(String(init.body)).conclusion,
-        });
-      return request(path, init);
-    });
+    const sent = () =>
+      fixture.state.statuses.map(({ target_url, state }) => ({ target_url, state })).reverse();
     expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual(["1"]);
     await deliverGitHubStatuses(fixture.context);
-    expect(fixture.state.posts).toBe(1);
-    expect(patches).toEqual([{ id: "1", conclusion: "success" }]);
+    expect(sent()).toEqual([
+      { target_url: "https://visonaut.example/runs/seed", state: "success" },
+    ]);
     const firstRevision = await database
       .prepare("SELECT desired_revision FROM work_checks WHERE id='1'")
       .first();
@@ -220,73 +218,81 @@ describe("GitHub checks", () => {
     expect((await service.status("seed")).status).toBe("passed");
     expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual(["2"]);
     await deliverGitHubStatuses(fixture.context);
-    expect(fixture.state.posts).toBe(2);
-    expect(patches).toEqual([
-      { id: "1", conclusion: "success" },
-      { id: "2", conclusion: "success" },
+    expect(sent()).toEqual([
+      { target_url: "https://visonaut.example/runs/seed", state: "success" },
+      { target_url: "https://visonaut.example/runs/next", state: "success" },
     ]);
     expect(
       await database.prepare("SELECT desired_revision FROM work_checks WHERE id='1'").first(),
     ).toEqual(firstRevision);
   });
 
-  it("opens the exact run from check creation and later status delivery", async () => {
+  it("opens the exact run from the commit status and its stored update", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     await reserve(fixture.context);
     await database.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'").run();
     await deliverGitHubStatuses(fixture.context);
-    expect(fixture.state.checks.get("1")?.details_url).toBe("https://visonaut.example/runs/run");
+    expect(shownStatus(fixture.state)?.target_url).toBe("https://visonaut.example/runs/run");
     expect(
       await database
         .prepare("SELECT details_url FROM work_status_outbox WHERE check_id='1'")
         .first(),
     ).toEqual({ details_url: "https://visonaut.example/runs/run" });
   });
-  it("reconciles a lost creation response without a second POST", async () => {
+  it("settles a lost status response without a second POST", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     await reserve(fixture.context);
     fixture.state.losePost = true;
-    expect((await deliverGitHubStatuses(fixture.context)).attention).toContain("run");
-    fixture.state.losePost = false;
-    await deliverGitHubStatuses(fixture.context);
+    expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
+    // A later pass reads the status after the lease and the release delay.
+    fixture.state.time += fixture.context.budget.leaseMilliseconds + 2 * 60 * 1000 + 1;
+    expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual([]);
     expect(fixture.state.posts).toBe(1);
-    expect(fixture.state.patches).toBe(1);
+    expect(
+      await database.prepare("SELECT ambiguous,delivered_revision FROM work_checks").first(),
+    ).toEqual({ ambiguous: 0, delivered_revision: 1 });
   });
-  it("holds ambiguous PATCH delivery across scheduler retries and newer source revisions", async () => {
+  it("holds ambiguous status delivery across scheduler retries and newer source revisions", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     await reserve(fixture.context);
-    fixture.state.losePatch = true;
+    fixture.state.losePost = true;
     await deliverGitHubStatuses(fixture.context);
     await reserve(fixture.context, "another");
     await deliverGitHubStatuses(fixture.context);
-    expect(fixture.state.patches).toBe(2); // One per distinct check, never a second write to the blocked first check.
+    // One for each check, and never a second write for the locked first check.
+    expect(fixture.state.posts).toBe(2);
     expect(
       await database.prepare("SELECT ambiguous FROM work_checks WHERE id='1'").first(),
     ).toEqual({ ambiguous: 1 });
   });
-  it("delivers separate checks with at most three concurrent PATCH requests", async () => {
+  it("delivers separate checks with at most three concurrent status POSTs", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     for (const id of ["first", "second", "third", "fourth"]) {
       await reserve(fixture.context, id);
     }
     const originalRequest = fixture.context.github.request.bind(fixture.context.github);
-    let releasePatches = () => {};
-    const patchesReleased = new Promise<void>((resolve) => {
-      releasePatches = () => resolve();
+    let releasePosts = () => {};
+    const postsReleased = new Promise<void>((resolve) => {
+      releasePosts = () => resolve();
     });
-    const patchIds: string[] = [];
+    // The runs share one commit, so the link of each status names its run.
+    const postedRuns: string[] = [];
     let inFlight = 0;
     let maximumInFlight = 0;
     vi.spyOn(fixture.context.github, "request").mockImplementation(async (path, init) => {
-      if (init?.method === "PATCH") {
-        patchIds.push(path.split("/").at(-1) ?? "");
+      if (init?.method === "POST") {
+        postedRuns.push(
+          String(JSON.parse(String(init.body)).target_url)
+            .split("/")
+            .at(-1) ?? "",
+        );
         inFlight += 1;
         maximumInFlight = Math.max(maximumInFlight, inFlight);
-        await patchesReleased;
+        await postsReleased;
         inFlight -= 1;
       }
       return originalRequest(path, init);
@@ -294,55 +300,56 @@ describe("GitHub checks", () => {
 
     const delivery = deliverGitHubStatuses(fixture.context);
     try {
-      await vi.waitFor(() => expect(patchIds).toHaveLength(3));
+      await vi.waitFor(() => expect(postedRuns).toHaveLength(3));
       expect(inFlight).toBe(3);
-      expect(patchIds).toEqual(["1", "2", "3"]);
+      expect(postedRuns).toEqual(["first", "second", "third"]);
     } finally {
-      releasePatches();
+      releasePosts();
       await delivery;
     }
     const report = await delivery;
     expect(maximumInFlight).toBe(3);
-    expect(patchIds).toEqual(["1", "2", "3", "4"]);
+    expect(postedRuns).toEqual(["first", "second", "third", "fourth"]);
     expect(report.completed).toEqual(["1", "2", "3", "4"]);
   });
-  it("keeps an in-flight check locked and fences an ambiguous PATCH after a new revision", async () => {
+  it("keeps an in-flight check locked and fences an ambiguous POST after a new revision", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     await reserve(fixture.context);
     const originalRequest = fixture.context.github.request.bind(fixture.context.github);
-    let markPatchStarted = () => {};
-    const patchStarted = new Promise<void>((resolve) => {
-      markPatchStarted = () => resolve();
+    let markPostStarted = () => {};
+    const postStarted = new Promise<void>((resolve) => {
+      markPostStarted = () => resolve();
     });
-    let releasePatch = () => {};
-    const patchReleased = new Promise<void>((resolve) => {
-      releasePatch = () => resolve();
+    let releasePost = () => {};
+    const postReleased = new Promise<void>((resolve) => {
+      releasePost = () => resolve();
     });
-    let firstCheckPatches = 0;
+    let firstCheckPosts = 0;
     vi.spyOn(fixture.context.github, "request").mockImplementation(async (path, init) => {
-      if (init?.method === "PATCH" && path.endsWith("/1")) {
-        firstCheckPatches += 1;
-        markPatchStarted();
-        await patchReleased;
-        throw new Error("Lost PATCH response.");
+      const firstRun = String(init?.body).includes('https://visonaut.example/runs/run"');
+      if (init?.method === "POST" && firstRun) {
+        firstCheckPosts += 1;
+        markPostStarted();
+        await postReleased;
+        throw new Error("Lost POST response.");
       }
       return originalRequest(path, init);
     });
 
     const delivery = deliverGitHubStatuses(fixture.context);
-    await patchStarted;
+    await postStarted;
     try {
       await deliverGitHubStatuses(fixture.context);
-      expect(firstCheckPatches).toBe(1);
+      expect(firstCheckPosts).toBe(1);
     } finally {
-      releasePatch();
+      releasePost();
       await delivery;
     }
     expect((await delivery).attention).toEqual(["1"]);
     await reserve(fixture.context, "another");
     await deliverGitHubStatuses(fixture.context);
-    expect(firstCheckPatches).toBe(1);
+    expect(firstCheckPosts).toBe(1);
     expect(
       await database.prepare("SELECT ambiguous FROM work_checks WHERE id='1'").first(),
     ).toEqual({ ambiguous: 1 });
@@ -352,10 +359,19 @@ describe("GitHub checks", () => {
     const fixture = context(database);
     await reserve(fixture.context);
     await deliverGitHubStatuses(fixture.context);
-    const before = fixture.state.patches;
+    const before = fixture.state.posts;
     await reserve(fixture.context, "another");
     await deliverGitHubStatuses(fixture.context);
-    expect(fixture.state.patches).toBe(before + 2);
+    // The refreshed update of the first check shows the same status, so only
+    // the new check posts one. The first check still settles its update.
+    expect(fixture.state.posts).toBe(before + 1);
+    expect(
+      await database
+        .prepare(
+          "SELECT desired_revision=delivered_revision AS settled FROM work_checks WHERE id='1'",
+        )
+        .first(),
+    ).toEqual({ settled: 1 });
     expect(
       await database
         .prepare(
@@ -365,21 +381,6 @@ describe("GitHub checks", () => {
     ).toEqual(
       await database.prepare("SELECT revision AS source_revision FROM visonaut_projects").first(),
     );
-  });
-  it("terminalizes an exhausted unstarted check creation lease", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    await reserve(fixture.context);
-    await database
-      .prepare(
-        "INSERT INTO operations_check_creations(run_id,external_id,state,attempts,lease_token,lease_until,created_at,updated_at) VALUES('run','visonaut:run','creating',2,'old',0,0,0)",
-      )
-      .run();
-    await deliverGitHubStatuses(fixture.context);
-    expect(await database.prepare("SELECT state FROM operations_check_creations").first()).toEqual({
-      state: "dead",
-    });
-    expect(fixture.state.posts).toBe(0);
   });
 });
 

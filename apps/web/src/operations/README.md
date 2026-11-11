@@ -29,64 +29,52 @@ Closed runs keep their identity, status, all actor decisions, exact tuples, expl
 
 ## Locked check
 
-The service sends the result of a run to GitHub as the text of one required check. Each change of that result is one PATCH request. A check is locked when the service cannot know if such a PATCH reached GitHub. A locked check gets no update. It keeps the title and the conclusion of the last update that reached GitHub, also after a Reject or a new decision. The two tables that hold the lock are `work_checks` and `work_status_outbox`.
-
-### A commit status
-
-A pre-run row with the surface `status` shows the result as the commit status "Visonaut" instead of a check run. A click on a commit status opens the run directly. When `VISONAUT_STATUS_CREATOR_ID` in the production variables of the [Wrangler configuration](../../wrangler.jsonc) has the user ID of the App bot, the row of a new commit uses the status. A row of a commit that already has a row keeps the surface of that row, so one commit never shows both. An empty value gives new commits a check run again, and the open status rows still get their updates.
-
-All rows of a commit share its status, so only the newest row that started the status of the commit sends to it. A status has no text that needs a person. When the lease of a status update ended 2 minutes ago or more, the pass reads the newest status of the commit. When the App shows the locked update, the update is delivered. Otherwise the update is due again, and GitHub shows its new POST as the newest status. A release on the last attempt ends the update `dead`, as for a check run. With an empty `VISONAUT_STATUS_CREATOR_ID`, no read can prove a delivery, so each locked update is due again, or ends `dead` after its last attempt even when GitHub shows it. A failed read keeps the lock and its alert until a pass reads the status, and the `causes` field of the `operations_pass` log has the cause. Of the procedures below, only the read commands of "See the lock" and "Send a dead update again" are for a status update. The subject of the alert of a status row is the external ID of the row, such as `visonaut:pre:<sha>`. Use it as `CHECK_ID` in the read commands of "See the lock" and in "Send a dead update again".
+The service sends the result of a run to GitHub as the commit status "Visonaut" of one commit: the head of its pull request, or its tested commit. All pre-run rows of a commit share that status, so only the newest row that started the status of the commit sends to it. Each change of the result is one POST request. An update is locked when the service cannot know if its POST reached GitHub. A locked update gets no new send until the pass releases it. The two tables that hold the lock are `work_checks` and `work_status_outbox`. A commit from before 2026-11-10 shows a check run with the same name instead, and that check run keeps its last text.
 
 ### Release by the service
 
-Usually the service removes the lock itself. When the lease of the update ended 2 minutes ago or more, each pass reads the check on GitHub. A PATCH that got no answer stops after 15 seconds, so after this time it cannot change the check. The pass then compares the text, the conclusion, and the link of the check with two updates:
+The service removes the lock itself. A status has no text that needs a person. When the lease of the update ended 2 minutes ago or more, each pass reads the newest status of the commit. A POST that got no answer stops after 15 seconds, so after this time it cannot change the status. Then:
 
-- The locked update. The PATCH reached GitHub. The service records the update as delivered.
-- The last update that GitHub confirmed (`delivered_revision`), or the text "Checking visual coverage" of a new check when GitHub confirmed no update. The PATCH did not reach GitHub. The update becomes due again, or `obsolete` when a newer update exists. The release counts the attempt, so a send that fails each time does not loop: after the last attempt, the update is `dead`, and the alert has the code `exhausted`.
+- When the App shows the locked update, the POST reached GitHub. The service records the update as delivered.
+- Otherwise, the update becomes due again, or `obsolete` when a newer update exists. The sender reads the newest status first and posts nothing when the App already shows the update. The release counts the attempt, so a send that fails each time does not loop: after the last attempt, the update is `dead`, and the alert has the code `exhausted`. See "Send a dead update again".
 
-In both cases, the lock and its alert go away, and the pass sends the newest update when it is due. A release on the last attempt ends the update `dead` instead: see "Send a dead update again". Do the procedure below only when the alert stays: the check shows another text, the read of the check fails, or the check does not belong to the App and the tested commit. The `causes` field of the `operations_pass` log has the cause of a failed read.
+`VISONAUT_STATUS_CREATOR_ID` in the production variables of the [Wrangler configuration](../../wrangler.jsonc) is the user ID of the App bot. With an empty value, no read can prove a delivery: the sender posts each update, and each locked update is due again, or ends `dead` after its last attempt even when GitHub shows it.
 
-A restore of the database also sets `ambiguous = 1` for each check and makes its unfinished updates `obsolete`. Do not use this section for that state: follow step 5 of "Native database recovery".
+A failed read keeps the lock and its alert until a pass reads the status. The `causes` field of the `operations_pass` log has the cause.
+
+A restore of the database also sets `ambiguous = 1` for each update and makes its unfinished updates `obsolete`. Do not use this section for that state: follow step 5 of "Native database recovery".
 
 ### See the lock
 
-The Status page lists the alert "A GitHub check needs attention". Open the alert: its last line has the kind `check-delivery`, the code `ambiguous`, and the ID of the check on GitHub as its subject. Replace `CHECK_ID` with that ID. For a check run, it has digits only. Run these two commands from the root of the repository, with the Cloudflare account of the production Worker. They only read.
+The Status page lists the alert "A GitHub check needs attention". Open the alert: its last line has the kind `check-delivery`, the code `ambiguous` or `exhausted`, and the key of the update as its subject: the external ID of the pre-run row, such as `visonaut:pre:<sha>`, or the digits of the check run of an older commit. Replace `CHECK_ID` with that key. Run these two commands from the root of the repository, with the Cloudflare account of the production Worker. They only read.
 
 ```sh
 pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT id, desired_revision, delivered_revision, ambiguous, request_started, lease_until FROM work_checks WHERE id = 'CHECK_ID'"
 pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT revision, state, attempts, max_attempts, last_error FROM work_status_outbox WHERE check_id = 'CHECK_ID' ORDER BY revision DESC LIMIT 3"
 ```
 
-A locked check has `ambiguous = 1`. The update that the lock holds has the state `sending`, and `last_error` is on that row. After a new decision, a newer update with the state `pending` is above it. `lease_until` is a time in milliseconds since 1970.
+A locked update has `ambiguous = 1`. The update that the lock holds has the state `sending`, and `last_error` is on that row. After a new decision, a newer update with the state `pending` is above it. `lease_until` is a time in milliseconds since 1970.
 
-Open the check on GitHub. Its title is the text of the last update that reached GitHub, for example `79 changes need review`, `3 changes rejected`, `12 changes approved`, `Passed`, or `Capturing screenshots`. Compare it with the state of the run in Visonaut.
-
-### The lock that remains
-
-- **A PATCH with no answer.** The PATCH failed, or the service did not get its answer, or the Worker stopped while it sent the PATCH and the lease of the update ended. GitHub can have applied it. `last_error` has the error text of the send. After a stopped Worker it is empty, or it has an older error text of the same update.
-
-The service marks the update directly before the PATCH (`request_started = 1`), and only a marked update can get the lock. So each failure before that point sets no lock: a failed read of the check, a D1 error, or a Worker that stops. The update waits and tries again.
-
-The identity test of the check also sets no lock. The sender reads the check before it sends the PATCH. It stops when the check has another commit, another name, another external ID, or another GitHub App. `last_error` then reads `SecurityError: The check does not belong to this application and tested commit.` No PATCH was sent. The update tries again as after a failed read. After its last attempt, its state is `dead`, and the alert has the code `exhausted`. Find out why the ID of the check points to another commit, name, or App. This guide has no procedure for that.
+On GitHub, the status of the commit has the title of the last update that reached GitHub, for example `79 changes need review`, `3 changes rejected`, `12 changes approved`, `Passed`, or `Capturing screenshots`. Compare it with the state of the run in Visonaut.
 
 ### Unlock
 
-Wait until `lease_until` has passed. The lease of a check lasts 2 minutes. Unlocking is then safe in practice. First compare the check on GitHub with the update of `delivered_revision` and with the locked update. When `delivered_revision` is empty, compare it with the text "Checking visual coverage" of a new check. If it shows one of them, the next pass removes the lock: wait for it. If a very late request of the first send reaches GitHub after the new one, the check shows an older text until the next change of the result. The sender reads the check on GitHub first. For the check of a run, it sends no PATCH when the check already shows the same completed result. It sends the PATCH again when the result is not there.
+Use this procedure only when a lock stays after its lease and its delay, for example because each read of the status fails. Wait until `lease_until` has passed. The lease of an update lasts 2 minutes. Unlocking is then safe in practice, because the sender reads the newest status first and posts nothing when the App already shows the update.
 
-If the run of the check is closed or replaced, the update is not sent, and the first status or recovery pass after the change closes the alert.
+If the run of the update is closed or replaced, the update is not sent, and the first status or recovery pass after the change closes the alert.
 
-Replace `CHECK_ID` in both commands. Run them in this order. The first command makes the update due. The second command removes the lock. A check that has no lock and an update in the state `sending` is never sent again. If that happens, run the first command again. You can run both commands again.
+Replace `CHECK_ID` in both commands. Run them in this order. The first command makes the update due. The second command removes the lock. An update that has no lock and the state `sending` is never sent again. If that happens, run the first command again. You can run both commands again.
 
 ```sh
 pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "UPDATE work_status_outbox SET state = CASE WHEN revision = (SELECT desired_revision FROM work_checks WHERE id = 'CHECK_ID') THEN 'pending' ELSE 'obsolete' END, attempts = 0, available_at = 0 WHERE check_id = 'CHECK_ID' AND state = 'sending' AND EXISTS (SELECT 1 FROM work_checks WHERE id = 'CHECK_ID' AND (ambiguous = 1 OR lease_token IS NULL))"
 pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "UPDATE work_checks SET ambiguous = 0, request_started = 0, lease_token = NULL, lease_until = NULL, lease_revision = NULL WHERE id = 'CHECK_ID' AND ambiguous = 1"
 ```
 
-The first command changes nothing for a check that has a lease and no lock: a sender can be at work. Run it again after the lease has ended and a pass has run.
+The first command changes nothing for an update that has a lease and no lock: a sender can be at work. Run it again after the lease has ended and a pass has run.
 
 ### Send a dead update again
 
-A release on the last attempt of the update ends it `dead`. The next pass shows the alert with the code `exhausted`, and the check on GitHub keeps its old text until the next change of the result. Read `last_error` with the second read command, and repair its cause first. When it is empty, a Worker stopped during the send: run the command when the platform problem has ended. Then replace `CHECK_ID` and run this command. It makes the newest update due again with all its attempts. It changes nothing for an older update, or for a check that has a lock or a lease. The identity test of "The lock that remains" also ends an update `dead`: do not use this command for it before you know why the check belongs to another commit, name, or App.
+A release on the last attempt of the update ends it `dead`. The next pass shows the alert with the code `exhausted`, and the status on GitHub keeps its old title until the next change of the result. Read `last_error` with the second read command, and repair its cause first. When it is empty, a Worker stopped during the send: run the command when the platform problem has ended. Then replace `CHECK_ID` and run this command. It makes the newest update due again with all its attempts. It changes nothing for an older update, or for an update that has a lock or a lease.
 
 ```sh
 pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "UPDATE work_status_outbox SET state = 'pending', attempts = 0, available_at = 0 WHERE check_id = 'CHECK_ID' AND state = 'dead' AND revision = (SELECT desired_revision FROM work_checks WHERE id = 'CHECK_ID' AND ambiguous = 0 AND lease_token IS NULL)"
@@ -94,7 +82,7 @@ pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env producti
 
 ### Check the result
 
-The first status or recovery pass after the change sends the update. A pass runs at least every 5 minutes. When many checks are due, a check can wait for more than one pass. Run the two read commands again. `delivered_revision` equals `desired_revision`, the newest update has the state `complete`, and the alert is closed. The check on GitHub shows the text of the run. If the check is locked again, read `last_error`: the cause is still there.
+The first status or recovery pass after the change sends the update. A pass runs at least every 5 minutes. When many updates are due, an update can wait for more than one pass. Run the two read commands again. `delivered_revision` equals `desired_revision`, the newest update has the state `complete`, and the alert is closed. The status on GitHub shows the title of the run. If the update is locked again, read `last_error`: the cause is still there.
 
 ## Native database recovery
 
@@ -120,7 +108,7 @@ The local recovery test restores an actual SQLite snapshot into a separate datab
 
 ## GitHub App settings
 
-Sign-in, the repository checks, and the pull request comments use one GitHub App. `GITHUB_APP_ID` in the production variables of the [Wrangler configuration](../../wrangler.jsonc) is its ID. The registration of this App must have the five settings below. This file records the requirement, not the state. Read the settings on the settings page of the App, and read them again after each change of the registration.
+Sign-in, the repository checks, and the pull request comments use one GitHub App. `GITHUB_APP_ID` in the production variables of the [Wrangler configuration](../../wrangler.jsonc) is its ID. The registration of this App must have the six settings below. This file records the requirement, not the state. Read the settings on the settings page of the App, and read them again after each change of the registration.
 
 | Setting                         | Required value | Place on the settings page of the App                                                                                                           |
 | ------------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -128,13 +116,14 @@ Sign-in, the repository checks, and the pull request comments use one GitHub App
 | User-to-server token expiration | On             | Optional Features. The page has the button "Opt-in" or "Opt-out". The documentation does not say which button an App with the setting on shows. |
 | Device flow                     | Off            | "Identifying and authorizing users". "Enable Device Flow" has no mark.                                                                          |
 | Pull requests permission        | Read and write | "Permissions & events", "Repository permissions". The installation must accept the new permission before the comments work.                     |
-| Commit statuses permission      | Read and write | "Permissions & events", "Repository permissions". The installation must accept the new permission before a status row can send its status.      |
+| Commit statuses permission      | Read and write | "Permissions & events", "Repository permissions". The installation must accept the new permission before the service can send a status.         |
+| Checks permission               | Read-only      | "Permissions & events", "Repository permissions". The `check_run` event of the Submit job wakes the ingest. The service writes no check run.    |
 
 The labels of this table are from [Modifying a GitHub App registration](https://docs.github.com/en/apps/maintaining-github-apps/modifying-a-github-app-registration) and [Refreshing user access tokens](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/refreshing-user-access-tokens), read on 2026-10-08. The label of the "Commit statuses" permission is from [Permissions required for GitHub Apps](https://docs.github.com/en/rest/authentication/permissions-required-for-github-apps), read on 2026-11-10.
 
 ## Pull request comment
 
-The service keeps one comment on each pull request whose run has a change. The comment has the title and the next step of the check, and a link to the newest run, because a click on the check opens the check page of GitHub and not the run. Each newer status of the check edits the same comment. A pull request with no change gets no comment. The table `operations_pull_request_comments` stores the comment and the status that it shows. A comment that a person deletes gets no new comment. A failed send changes no check: it raises the alert `pull-request-comment`, and the next pass tries again.
+The service keeps one comment on each pull request whose run has a change. The comment has the title and the next step of the result, and a link to the newest run, because the commit status shows only the title. Each newer delivered status update edits the same comment. A pull request with no change gets no comment. The table `operations_pull_request_comments` stores the comment and the status that it shows. A comment that a person deletes gets no new comment. A failed send changes no status: it raises the alert `pull-request-comment`, and the next pass tries again.
 
 ## Webhook delivery
 

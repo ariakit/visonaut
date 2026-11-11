@@ -175,7 +175,7 @@ it.each([
     expect(database.connection.prepare("SELECT * FROM visonaut_lineage").all()).toEqual(
       history.lineage,
     );
-    expect(fixture.state.patches).toBe(0);
+    expect(fixture.state.posts).toBe(0);
     expect((await read()).events).toHaveLength(obsolete ? 0 : 1);
   },
 );

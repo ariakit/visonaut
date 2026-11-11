@@ -234,3 +234,109 @@ it("keeps an explicit old schema before a migration regression", () => {
   ).toBeUndefined();
   expect(() => readTestMigrations({ through: "0017_missing" })).toThrow("Unknown test migration");
 });
+
+it("closes the started check-run creations and gives the closed check rows their result", () => {
+  using database = new DatabaseSync(":memory:");
+  for (const migration of readTestMigrations({ through: "0048_pre_run_status_surface" })) {
+    database.exec(migration.sql);
+  }
+  const insert = database.prepare(`INSERT INTO pre_run_checks
+    (tested_sha, generation, repository_id, source_sha, base_sha, kind, ref, docs_only,
+      external_id, check_id, state, request_started, lease_until, created_at, updated_at)
+    VALUES (?, 0, 'repository', 'source', 'base', 'main', 'refs/heads/main', 0, ?, ?, ?, ?, ?, 1, 1)`);
+  const rows = [
+    // A creation request started, so a check run can exist with no known ID.
+    ["ambiguous", null, "ambiguous", 1, null],
+    ["started", null, "creating", 1, 5],
+    // A claim with no request starts again as a commit status.
+    ["claimed", null, "creating", 0, 5],
+    // Closed rows whose direct PATCH kept the result only on GitHub.
+    ["docs", "1", "docs_complete", 1, null],
+    ["failed", "2", "failed", 1, null],
+    // A failed row with a delivered update keeps reading that update.
+    ["delivered", "3", "failed", 1, null],
+    ["active", "4", "active", 1, null],
+    // A pending row never started a check run.
+    ["pending", null, "pending", 0, null],
+  ] as const;
+  for (const [name, checkId, state, requestStarted, leaseUntil] of rows) {
+    insert.run(name, `external-${name}`, checkId, state, requestStarted, leaseUntil);
+  }
+  database.exec(
+    "INSERT INTO work_checks(id, desired_revision, delivered_revision) VALUES ('3', 1, 1)",
+  );
+
+  const migration = readTestMigrations().find(
+    ({ name }) => name === "0049_pre_run_status_only.sql",
+  );
+  database.exec(migration?.sql ?? "");
+
+  expect(
+    database
+      .prepare(
+        "SELECT tested_sha, state, lease_until, status_state, surface FROM pre_run_checks ORDER BY rowid",
+      )
+      .all(),
+  ).toEqual([
+    {
+      tested_sha: "ambiguous",
+      state: "failed",
+      lease_until: null,
+      status_state: "failure",
+      surface: "check",
+    },
+    {
+      tested_sha: "started",
+      state: "failed",
+      lease_until: null,
+      status_state: "failure",
+      surface: "check",
+    },
+    {
+      tested_sha: "claimed",
+      state: "pending",
+      lease_until: null,
+      status_state: null,
+      surface: "status",
+    },
+    {
+      tested_sha: "docs",
+      state: "docs_complete",
+      lease_until: null,
+      status_state: "success",
+      surface: "check",
+    },
+    {
+      tested_sha: "failed",
+      state: "failed",
+      lease_until: null,
+      status_state: "failure",
+      surface: "check",
+    },
+    {
+      tested_sha: "delivered",
+      state: "failed",
+      lease_until: null,
+      status_state: null,
+      surface: "check",
+    },
+    {
+      tested_sha: "active",
+      state: "active",
+      lease_until: null,
+      status_state: null,
+      surface: "check",
+    },
+    {
+      tested_sha: "pending",
+      state: "pending",
+      lease_until: null,
+      status_state: null,
+      surface: "status",
+    },
+  ]);
+  // The guard of the surface still refuses a change.
+  expect(() =>
+    database.exec("UPDATE pre_run_checks SET surface='check' WHERE tested_sha='pending'"),
+  ).toThrow("Check surface conflicts with stored identity");
+});

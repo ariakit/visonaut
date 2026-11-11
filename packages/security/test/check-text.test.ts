@@ -1,18 +1,16 @@
 import { reviewStateWords, type RunReviewState } from "@visonaut/protocol";
 import { expect, it } from "vitest";
-import { genericCheckOutput, startingCheckOutput, type CheckReview } from "../src/index.js";
-
-const url = "https://visonaut.example/runs/run-1";
-const link = `[Open the run in Visonaut](${url}). Only a person with write access to the repository can open it.`;
+import { checkText, startingCheckTitle, type CheckReview } from "../src/index.js";
 
 interface ApprovedRow extends CheckReview {
   title: string;
-  /** The paragraphs before the link. */
-  summary: string[];
+  /** Who acts next. */
+  next: string;
 }
 
 // The table that the maintainer approved on 2026-10-09 (#267). GitHub shows
-// this text on each pull request, so a change of a word needs a new approval.
+// the title on each pull request, and the pull request comment shows both, so
+// a change of a word needs a new approval.
 // `pending` includes the rejected changes: 79 pending with 3 rejected is 76
 // that need review.
 const approved: ApprovedRow[] = [
@@ -22,10 +20,7 @@ const approved: ApprovedRow[] = [
     rejected: 0,
     approved: 12,
     title: "79 changes need review",
-    summary: [
-      "Next: a maintainer approves or rejects each change. If a change is not intended, the author pushes a commit that removes it.",
-      "Changes: 79 need review, 0 rejected, 12 approved.",
-    ],
+    next: "Next: a maintainer approves or rejects each change. If a change is not intended, the author pushes a commit that removes it.",
   },
   {
     state: "rejected",
@@ -33,10 +28,7 @@ const approved: ApprovedRow[] = [
     rejected: 3,
     approved: 0,
     title: "3 changes rejected",
-    summary: [
-      "Next: the author pushes a commit that corrects the rejected changes. A maintainer can also change a decision.",
-      "Changes: 76 need review, 3 rejected, 0 approved.",
-    ],
+    next: "Next: the author pushes a commit that corrects the rejected changes. A maintainer can also change a decision.",
   },
   {
     state: "passed",
@@ -44,10 +36,7 @@ const approved: ApprovedRow[] = [
     rejected: 0,
     approved: 12,
     title: "12 changes approved",
-    summary: [
-      "No action is necessary. Each change is approved.",
-      "Changes: 0 need review, 0 rejected, 12 approved.",
-    ],
+    next: "No action is necessary. Each change is approved.",
   },
   {
     state: "incomplete",
@@ -55,7 +44,7 @@ const approved: ApprovedRow[] = [
     rejected: 0,
     approved: 0,
     title: "Capturing screenshots",
-    summary: ["No action is necessary. CI captures the screenshots of this commit."],
+    next: "No action is necessary. CI captures the screenshots of this commit.",
   },
   {
     state: "comparing",
@@ -63,7 +52,7 @@ const approved: ApprovedRow[] = [
     rejected: 0,
     approved: 0,
     title: "Comparing screenshots",
-    summary: ["No action is necessary. Visonaut compares the screenshots with the baseline."],
+    next: "No action is necessary. Visonaut compares the screenshots with the baseline.",
   },
   {
     state: "needs-recompare",
@@ -71,9 +60,7 @@ const approved: ApprovedRow[] = [
     rejected: 0,
     approved: 0,
     title: "Rerun needed",
-    summary: [
-      "Next: a maintainer runs the CI workflow of this commit again. The baseline changed after the comparison of this run.",
-    ],
+    next: "Next: a maintainer runs the CI workflow of this commit again. The baseline changed after the comparison of this run.",
   },
   {
     state: "superseded",
@@ -81,9 +68,7 @@ const approved: ApprovedRow[] = [
     rejected: 0,
     approved: 0,
     title: "No longer active",
-    summary: [
-      "This run is closed, and its result does not change. Next: the author pushes a commit, or a maintainer runs the CI workflow again, to start a new run.",
-    ],
+    next: "This run is closed, and its result does not change. Next: the author pushes a commit, or a maintainer runs the CI workflow again, to start a new run.",
   },
   {
     state: "failed",
@@ -91,9 +76,7 @@ const approved: ApprovedRow[] = [
     rejected: 0,
     approved: 0,
     title: "Capture or comparison failed",
-    summary: [
-      "The capture or the comparison did not complete. Next: a maintainer runs the CI workflow again, or the author pushes a commit.",
-    ],
+    next: "The capture or the comparison did not complete. Next: a maintainer runs the CI workflow again, or the author pushes a commit.",
   },
 ];
 
@@ -101,10 +84,9 @@ it("has one approved row for each state of the shared map", () => {
   expect(approved.map((row) => row.state)).toEqual(Object.keys(reviewStateWords));
 });
 
-it.each(approved)("gives the state $state the approved title and summary", (row) => {
-  const output = genericCheckOutput(row, url);
-  // The output has a title and a summary only: no image and no result of one image.
-  expect(output).toEqual({ title: row.title, summary: [...row.summary, link].join("\n\n") });
+it.each(approved)("gives the state $state the approved title and next step", (row) => {
+  // The text has no image and no result of one image.
+  expect(checkText(row)).toMatchObject({ title: row.title, next: row.next });
 });
 
 it.each([
@@ -112,31 +94,29 @@ it.each([
   ["rejected", { pending: 1, rejected: 1, approved: 0 }, "1 change rejected"],
   ["passed", { pending: 0, rejected: 0, approved: 1 }, "1 change approved"],
 ] as const)("uses the singular form for one change of the state %s", (state, counts, title) => {
-  expect(genericCheckOutput({ state, ...counts }, url).title).toBe(title);
+  expect(checkText({ state, ...counts }).title).toBe(title);
 });
 
 // A run with no change has no approval, and the accepted baseline run reads no counts.
 it("gives a passed run with no approved change a text with no number", () => {
-  expect(
-    genericCheckOutput({ state: "passed", pending: 0, rejected: 0, approved: 0 }, url),
-  ).toEqual({
+  expect(checkText({ state: "passed", pending: 0, rejected: 0, approved: 0 })).toEqual({
     title: "Passed",
-    summary: ["No action is necessary. No change needs review.", link].join("\n\n"),
+    next: "No action is necessary. No change needs review.",
   });
 });
 
 it("counts a rejected change as rejected and not as a change that needs review", () => {
-  const output = genericCheckOutput(
-    { state: "rejected", pending: 3, rejected: 3, approved: 9 },
-    url,
+  expect(checkText({ state: "rejected", pending: 3, rejected: 3, approved: 9 }).title).toBe(
+    "3 changes rejected",
   );
-  expect(output.title).toBe("3 changes rejected");
-  expect(output.summary).toContain("Changes: 0 need review, 3 rejected, 9 approved.");
+  expect(checkText({ state: "needs-review", pending: 3, rejected: 1, approved: 9 }).title).toBe(
+    "2 changes need review",
+  );
 });
 
-// The titles that other code writes on the same check, and the start text.
+// The titles that other code writes on the same status, and the start text.
 const otherTitles = [
-  startingCheckOutput.title,
+  startingCheckTitle,
   "Visual capture is not required",
   "Visual capture was superseded",
   "Visual capture did not complete",
@@ -150,10 +130,12 @@ it("gives no two states the same title, for each set of counts", () => {
     for (const rejected of counts) {
       for (const waiting of counts) {
         for (const approvedCount of counts) {
-          const { title } = genericCheckOutput(
-            { state, pending: waiting + rejected, rejected, approved: approvedCount },
-            url,
-          );
+          const { title } = checkText({
+            state,
+            pending: waiting + rejected,
+            rejected,
+            approved: approvedCount,
+          });
           expect(otherTitles).not.toContain(title);
           expect(stateOfTitle.get(title) ?? state).toBe(state);
           stateOfTitle.set(title, state);
@@ -164,9 +146,6 @@ it("gives no two states the same title, for each set of counts", () => {
   expect(new Set(stateOfTitle.values()).size).toBe(8);
 });
 
-it("gives a check with no state yet a text that names no state", () => {
-  expect(startingCheckOutput).toEqual({
-    title: "Checking visual coverage",
-    summary: "Visonaut is verifying this commit.",
-  });
+it("gives a result with no state yet a title that names no state", () => {
+  expect(startingCheckTitle).toBe("Checking visual coverage");
 });

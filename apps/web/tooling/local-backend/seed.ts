@@ -428,6 +428,15 @@ async function submit({ service, database, images, run, pictures, now, ...projec
     rerunShardKeys: ["combined"],
     now,
   });
+  // Workflow materialization adopts the pre-run check of a run. A seed run has
+  // none, so its updates go to the status of its tested commit.
+  const checkId = `visonaut:${run.id}`;
+  await database
+    .prepare(
+      "INSERT INTO operations_check_creations(run_id,external_id,check_id,state,request_started,attempts,created_at,updated_at) VALUES(?,?,?,'complete',1,1,?,?)",
+    )
+    .bind(run.id, checkId, checkId, now, now)
+    .run();
   const compared: ComparedCapture[] = [];
   const stored = new Map<string, ValidatedImage>();
   for (const capture of drawn) {

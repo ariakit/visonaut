@@ -296,14 +296,6 @@ export async function fixture(
       )
       .bind(Date.now(), checkId)
       .run();
-    githubResponses.set(`/repos/ariakit/ariakit/check-runs/${checkId}`, {
-      id: Number(checkId),
-      name: "Visonaut",
-      external_id: externalId,
-      head_sha: event === "pull_request" ? sourceHead : testedSha,
-      app: { id: 123 },
-      status: "in_progress",
-    });
     return { checkId, externalId };
   }
   await registerPreRunCheck(1);

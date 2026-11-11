@@ -27,7 +27,6 @@ export const errorNames = [
  * source.
  */
 export const errorCodes = [
-  "ambiguous_check",
   "body_too_large",
   "capacity_exceeded",
   "capacity_unavailable",
@@ -39,7 +38,6 @@ export const errorCodes = [
   "closed_shard",
   "credential_required",
   "database_size_exceeded",
-  "duplicate_check",
   "github_delivery_body_unavailable",
   "github_delivery_cursor_invalid",
   "github_delivery_date_invalid",
@@ -63,7 +61,6 @@ export const errorCodes = [
   "invalid_body",
   "invalid_capability",
   "invalid_challenge",
-  "invalid_checks",
   "invalid_content_type",
   "invalid_history",
   "invalid_id",
@@ -120,7 +117,6 @@ export const errorCodes = [
   "stale_pull_request",
   "stale_reference",
   "submit_conflict",
-  "too_many_checks",
   "too_many_targets",
   "unknown_image",
   "unknown_shard",
@@ -143,7 +139,6 @@ export const errorCodes = [
   "workflow_configuration",
   "workflow_conflict",
   "workflow_identity",
-  "wrong_check",
   "wrong_origin",
   "wrong_repository",
   "wrong_run",
