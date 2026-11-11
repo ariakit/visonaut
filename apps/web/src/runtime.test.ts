@@ -168,7 +168,7 @@ it("keeps live workflow and authentication configuration only in production", ()
   expect(preview.vars?.VISONAUT_STATUS_CREATOR_ID).toBe("");
 });
 
-it("selects the status surface only with the numeric user ID of the App bot", () => {
+it("reads the status creator only as the numeric user ID of the App bot", () => {
   expect(statusCreatorConfiguration("")).toEqual({});
   expect(statusCreatorConfiguration("332309535")).toEqual({ statusCreatorId: "332309535" });
   for (const value of ["visonaut-ci[bot]", "0", "12a", " 1"]) {
