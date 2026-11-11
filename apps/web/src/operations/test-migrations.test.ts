@@ -377,3 +377,48 @@ it("drops the surface of the pre-run checks and keeps their rows", () => {
     database.prepare("SELECT external_id, check_id, state, status_state FROM pre_run_checks").all(),
   ).toEqual([{ external_id: "external", check_id: "1", state: "failed", status_state: "failure" }]);
 });
+
+it("ends the pending status updates that a newer revision replaced", () => {
+  using database = new DatabaseSync(":memory:");
+  for (const migration of readTestMigrations({ through: "0050_drop_pre_run_check_surface" })) {
+    database.exec(migration.sql);
+  }
+  database.exec(`INSERT INTO work_checks (id, desired_revision, delivered_revision)
+    VALUES ('replaced', 3, 2), ('current', 4, NULL)`);
+  const insert = database.prepare(`INSERT INTO work_status_outbox
+    (check_id, revision, run_id, attempt, comparison_revision, source_revision, conclusion,
+      details_url, max_attempts, available_at, state)
+    VALUES (?, ?, 'run', 1, 1, 1, 'success', 'https://visonaut.example/runs/run', 5, 1, ?)`);
+  const rows = [
+    // An older pending update that no claim reads.
+    ["replaced", 1, "pending"],
+    ["replaced", 2, "complete"],
+    ["replaced", 3, "dead"],
+    // The newest revision stays due.
+    ["current", 4, "pending"],
+  ] as const;
+  for (const [checkId, revision, state] of rows) {
+    insert.run(checkId, revision, state);
+  }
+
+  const migration = readTestMigrations().find(
+    ({ name }) => name === "0051_obsolete_superseded_status_updates.sql",
+  );
+  database.exec(migration?.sql ?? "");
+
+  const states = () =>
+    database
+      .prepare(
+        "SELECT check_id, revision, state FROM work_status_outbox ORDER BY check_id, revision",
+      )
+      .all();
+  expect(states()).toEqual([
+    { check_id: "current", revision: 4, state: "pending" },
+    { check_id: "replaced", revision: 1, state: "obsolete" },
+    { check_id: "replaced", revision: 2, state: "complete" },
+    { check_id: "replaced", revision: 3, state: "dead" },
+  ]);
+  // A later raise of the newest revision ends the replaced pending update.
+  database.exec("UPDATE work_checks SET desired_revision = 5 WHERE id = 'current'");
+  expect(states()[0]).toEqual({ check_id: "current", revision: 4, state: "obsolete" });
+});
