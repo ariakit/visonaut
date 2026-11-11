@@ -340,3 +340,40 @@ it("closes the started check-run creations and gives the closed check rows their
     database.exec("UPDATE pre_run_checks SET surface='check' WHERE tested_sha='pending'"),
   ).toThrow("Check surface conflicts with stored identity");
 });
+
+it("drops the surface of the pre-run checks and keeps their rows", () => {
+  using database = new DatabaseSync(":memory:");
+  for (const migration of readTestMigrations({ through: "0049_pre_run_status_only" })) {
+    database.exec(migration.sql);
+  }
+  database.exec(`INSERT INTO pre_run_checks
+    (tested_sha, generation, repository_id, source_sha, base_sha, kind, ref, docs_only,
+      external_id, check_id, state, status_state, created_at, updated_at)
+    VALUES ('tested', 0, 'repository', 'source', 'base', 'main', 'refs/heads/main', 0,
+      'external', '1', 'failed', 'failure', 1, 1)`);
+  const columns = () =>
+    database
+      .prepare("SELECT name FROM pragma_table_info('pre_run_checks')")
+      .all()
+      .map((column) => column.name);
+  const schemaNames = (type: string) =>
+    database
+      .prepare("SELECT name FROM sqlite_schema WHERE type=? AND tbl_name='pre_run_checks'")
+      .all(type)
+      .map((row) => row.name);
+  expect(columns()).toContain("surface");
+  expect(schemaNames("trigger")).toContain("pre_run_check_surface_identity");
+
+  const migration = readTestMigrations().find(
+    ({ name }) => name === "0050_drop_pre_run_check_surface.sql",
+  );
+  database.exec(migration?.sql ?? "");
+
+  expect(columns()).not.toContain("surface");
+  expect(schemaNames("trigger")).not.toContain("pre_run_check_surface_identity");
+  // The index that finds the row that owns the commit status stays.
+  expect(schemaNames("index")).toContain("pre_run_checks_status_commit");
+  expect(
+    database.prepare("SELECT external_id, check_id, state, status_state FROM pre_run_checks").all(),
+  ).toEqual([{ external_id: "external", check_id: "1", state: "failed", status_state: "failure" }]);
+});
