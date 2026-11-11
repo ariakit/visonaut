@@ -850,7 +850,7 @@ async function bindWorkflowCheck(
   const now = Date.now();
   await context.database
     .prepare(
-      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,surface,workflow_run_id,workflow_attempt,created_at,updated_at) SELECT tested_sha,generation+1,repository_id,source_sha,base_sha,kind,ref,pull_request_number,0,?,check_head_sha,'status',?,?,?,? FROM pre_run_checks WHERE external_id=? ON CONFLICT DO NOTHING",
+      "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_head_sha,workflow_run_id,workflow_attempt,created_at,updated_at) SELECT tested_sha,generation+1,repository_id,source_sha,base_sha,kind,ref,pull_request_number,0,?,check_head_sha,?,?,?,? FROM pre_run_checks WHERE external_id=? ON CONFLICT DO NOTHING",
     )
     .bind(
       externalId(candidate.tested_sha, nextGeneration),
