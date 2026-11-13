@@ -25,7 +25,7 @@
     "@playwright/test": "1.65.0",
     "@types/node": "26.6.6",
     "lefthook": "2.2.2",
-    "oxfmt": "0.77.0",
+    "oxfmt": "0.78.0",
     "oxlint": "1.92.0",
     "tsup": "9.0.0",
     "typescript": "npm:@typescript/typescript6@6.0.2",
