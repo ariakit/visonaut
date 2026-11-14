@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@visonaut/protocol": "workspace:*",
-    "better-auth": "1.7.18",
+    "better-auth": "1.7.20",
     "jose": "6.2.15"
   },
   "devDependencies": {

@@ -27,7 +27,7 @@
     "@visonaut/protocol": "workspace:*",
     "@visonaut/security": "workspace:*",
     "@visonaut/service": "workspace:*",
-    "better-auth": "1.7.18",
+    "better-auth": "1.7.20",
     "clava": "0.7.2",
     "lucide-react": "1.70.0",
     "react": "19.3.1",
