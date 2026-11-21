@@ -1,5 +1,10 @@
 # @visonaut/web
 
+## 0.3.15
+
+- Changed the Visonaut result of a commit from a GitHub check run to a commit status, so a click on it in a pull request opens the run in Visonaut directly. A check run from before this change keeps its last result and gets no more updates. A required check named `Visonaut` with the Visonaut App as its source accepts the status, but GitHub requires both on a commit that also has an old check run, so such a commit whose check run did not pass needs a new commit.
+- Fixed the GitHub check of a run taking minutes to show a review decision while other background work was running.
+
 ## 0.3.14
 
 - Fixed Submit failing at once when the service could not reach GitHub because of a GitHub server error, timeout, or network error (HTTP 503, `github_unavailable`). The service now marks these errors as retryable, and Submit retries them with a growing wait within the same deadline. Submit still stops at once when GitHub refuses the request in a way that repeats, such as a missing resource or a rate limit.
